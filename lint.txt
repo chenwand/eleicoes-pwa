@@ -1,0 +1,10 @@
+
+> eleicoes-pwa@0.0.0 lint
+> eslint .
+
+
+C:\Users\chenw\git\eleicoes-pwa-1\src\pages\Validator.tsx
+  297:4  error  Parsing error: ')' expected
+
+Ô£û 1 problem (1 error, 0 warnings)
+

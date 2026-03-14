@@ -5,6 +5,7 @@ import { Header } from './components/Header';
 import { Home } from './pages/Home';
 import { ByRegion } from './pages/ByRegion';
 import { Timeline } from './pages/Timeline';
+import { Validator } from './pages/Validator';
 import type { Turno } from './types/election';
 
 const queryClient = new QueryClient({
@@ -26,7 +27,8 @@ function App() {
           <Header turno={turno} onTurnoChange={setTurno} />
           <main className="container mx-auto px-4 py-6">
             <Routes>
-              <Route path="/" element={<Home turno={turno} />} />
+              <Route path="/" element={<Validator />} />
+              <Route path="/resultados" element={<Home turno={turno} />} />
               <Route path="/regioes" element={<ByRegion turno={turno} />} />
               <Route path="/timeline" element={<Timeline turno={turno} />} />
             </Routes>

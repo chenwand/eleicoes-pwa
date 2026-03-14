@@ -25,7 +25,13 @@ export function Header({ turno, onTurnoChange }: HeaderProps) {
               to="/" 
               className="px-4 py-2 rounded hover:bg-blue-600 transition"
             >
-              Início
+              Consultar Pleito
+            </Link>
+            <Link 
+              to="/resultados" 
+              className="px-4 py-2 rounded hover:bg-blue-600 transition"
+            >
+              Resultados Prévios
             </Link>
             <Link 
               to="/regioes" 

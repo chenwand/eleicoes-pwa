@@ -6,7 +6,7 @@ export const regionMapping: Record<UF, Region> = {
   ES: 'sudeste', MG: 'sudeste', RJ: 'sudeste', SP: 'sudeste',
   PR: 'sul', RS: 'sul', SC: 'sul',
   DF: 'centro-oeste', GO: 'centro-oeste', MT: 'centro-oeste', MS: 'centro-oeste',
-  BR: 'br', ZZ: 'exterior'
+  BR: 'br' as Region, ZZ: 'exterior'
 };
 
 export const regionNames: Record<Region, string> = {
@@ -15,7 +15,8 @@ export const regionNames: Record<Region, string> = {
   sudeste: 'Sudeste',
   sul: 'Sul',
   'centro-oeste': 'Centro-Oeste',
-  exterior: 'Exterior'
+  exterior: 'Exterior',
+  br: 'Brasil'
 };
 
 export const regionUFMapping: Record<Region, UF[]> = {
@@ -24,7 +25,8 @@ export const regionUFMapping: Record<Region, UF[]> = {
   sudeste: ['ES', 'MG', 'RJ', 'SP'],
   sul: ['PR', 'RS', 'SC'],
   'centro-oeste': ['DF', 'GO', 'MT', 'MS'],
-  exterior: ['ZZ']
+  exterior: ['ZZ'],
+  br: []
 };
 
 export const allUFs: UF[] = [

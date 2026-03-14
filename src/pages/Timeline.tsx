@@ -89,7 +89,7 @@ export function Timeline({ turno }: TimelineProps) {
               <XAxis dataKey="time" />
               <YAxis domain={[0, 100]} tickFormatter={(v) => `${v}%`} />
               <Tooltip 
-                formatter={(value: number) => `${value.toFixed(2)}%`}
+                formatter={(value: number | string, name: string) => [`${Number(value).toFixed(2)}%`, name]}
                 contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}
               />
               <Legend />

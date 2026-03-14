@@ -43,7 +43,10 @@ export function VoteChart({ candidates, type = 'bar' }: VoteChartProps) {
               paddingAngle={2}
               dataKey="percentage"
               nameKey="name"
-              label={({ name, percentage }) => `${name}: ${percentage.toFixed(1)}%`}
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              label={({ percent, name }: any) => {
+                return `${name}: ${(percent * 100).toFixed(1)}%`;
+              }}
               labelLine={false}
             >
               {chartData.map((_, index) => (
@@ -51,7 +54,8 @@ export function VoteChart({ candidates, type = 'bar' }: VoteChartProps) {
               ))}
             </Pie>
             <Tooltip 
-              formatter={(value: number) => `${value.toFixed(2)}%`}
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              formatter={((value: number, name: string) => [`${value.toFixed(2)}%`, name]) as any}
               contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}
             />
             <Legend />
@@ -75,9 +79,9 @@ export function VoteChart({ candidates, type = 'bar' }: VoteChartProps) {
             tick={{ fontSize: 12 }}
           />
           <Tooltip 
-            formatter={(value: number, name: string, props: { payload: ChartDataPoint }) => [
-              `${value.toLocaleString('pt-BR')} votes (${props.payload.percentage.toFixed(2)}%)`,
-              props.payload.fullName
+            formatter={(value: number | string, _name: string, props: any) => [
+              `${Number(value).toLocaleString('pt-BR')} votos (${props.payload.percentage.toFixed(2)}%)`,
+              props.payload.fullName || _name
             ]}
             contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}
           />

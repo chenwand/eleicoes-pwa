@@ -1,4 +1,4 @@
-export type Region = 'norte' | 'nordeste' | 'sudeste' | 'sul' | 'centro-oeste' | 'exterior';
+export type Region = 'norte' | 'nordeste' | 'sudeste' | 'sul' | 'centro-oeste' | 'exterior' | 'br';
 
 export type UF = 
   | 'AC' | 'AM' | 'AP' | 'PA' | 'RO' | 'RR' | 'TO'
@@ -83,7 +83,8 @@ export interface ElectionData {
 }
 
 export interface RegionData {
-  region: Region;
+  region: Region | UF;
+  regionName: string;
   totalVotes: number;
   percentageTotalized: number;
   candidates: {
