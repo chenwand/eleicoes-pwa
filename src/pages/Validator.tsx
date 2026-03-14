@@ -73,8 +73,8 @@ export function Validator() {
     return (
       <div className="flex justify-center items-center h-64">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Acessando ele-c.json...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400">Acessando ele-c.json...</p>
         </div>
       </div>
     );
@@ -82,9 +82,9 @@ export function Validator() {
 
   if (isEA11Error || !ea11Data) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center max-w-2xl mx-auto mt-8">
-        <h2 className="text-xl font-bold text-red-700 mb-2">Erro de Conexão</h2>
-        <p className="text-red-600">
+      <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/30 rounded-lg p-6 text-center max-w-2xl mx-auto mt-8 transition-colors duration-300">
+        <h2 className="text-xl font-bold text-red-700 dark:text-red-400 mb-2">Erro de Conexão</h2>
+        <p className="text-red-600 dark:text-red-300">
           {error11 instanceof Error ? error11.message : 'Não foi possível carregar a configuração oficial do TSE.'}
         </p>
       </div>
@@ -131,10 +131,10 @@ export function Validator() {
 
   return (
     <div className={`mx-auto space-y-6 transition-all duration-300 ${selectedEleicaoCd ? 'max-w-[1600px] px-4' : 'max-w-5xl'}`}>
-      <div className="bg-white rounded-lg shadow-md p-6">
+      <div className="bg-white dark:bg-slate-900 rounded-lg shadow-md p-6 dark:border dark:border-slate-800 transition-colors duration-300">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-3">
+            <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-3">
               {selectedEleicaoCd && (
                 <button
                   onClick={() => {
@@ -142,7 +142,7 @@ export function Validator() {
                     setMunSearchText('');
                     setSelectedMunCd(null);
                   }}
-                  className="p-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full transition-colors flex items-center justify-center"
+                  className="p-1.5 bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-full transition-colors flex items-center justify-center"
                   title="Voltar para a lista de eleições"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
@@ -150,12 +150,12 @@ export function Validator() {
               )}
               Validador de Recursos TSE (EA11)
             </h1>
-            <p className="text-sm text-gray-500 mt-1">
-              Ciclo: <span className="font-semibold text-blue-600">{ea11Data.c}</span> |
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              Ciclo: <span className="font-semibold text-blue-600 dark:text-blue-400">{ea11Data.c}</span> |
               Gerado em: {ea11Data.dg} às {ea11Data.hg}
             </p>
           </div>
-          <span className="bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded-full border border-green-400">
+          <span className="bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 text-xs font-medium px-2.5 py-0.5 rounded-full border border-green-400 dark:border-green-800">
             Ambiente Oficial
           </span>
         </div>
@@ -175,34 +175,34 @@ export function Validator() {
               return (
                 <div
                   key={eleicao.cd}
-                  className="bg-white rounded-lg border border-gray-200 shadow-sm"
+                  className="bg-white dark:bg-slate-800/50 rounded-lg border border-gray-200 dark:border-slate-700 shadow-sm"
                 >
-                  <div className="bg-gray-50 p-4 border-b border-gray-200">
+                  <div className="bg-gray-50 dark:bg-slate-800/80 p-4 border-b border-gray-200 dark:border-slate-700">
                     <div className="flex justify-between items-start gap-4 mb-3">
-                      <h3 className="font-bold text-gray-800 text-lg flex-1">
+                      <h3 className="font-bold text-gray-800 dark:text-gray-100 text-lg flex-1">
                         {eleicao.nm.replace(/&#186;/g, 'º')}
                       </h3>
-                      <span className="shrink-0 bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-1 rounded whitespace-nowrap border border-blue-200">
+                      <span className="shrink-0 bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300 text-xs font-semibold px-2 py-1 rounded whitespace-nowrap border border-blue-200 dark:border-blue-800">
                         Eleição: {eleicao.cd}
                       </span>
                     </div>
-                    <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600">
-                      <span className="bg-gray-200 text-gray-700 px-2.5 py-0.5 rounded-full font-medium text-xs">Turno {eleicao.t}</span>
+                    <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600 dark:text-gray-400">
+                      <span className="bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300 px-2.5 py-0.5 rounded-full font-medium text-xs">Turno {eleicao.t}</span>
                       <span>•</span>
                       <span className="font-medium text-xs">{formatTipoEleicao(eleicao.tp)}</span>
                       <span>•</span>
-                      <span className="bg-white px-2 py-0.5 rounded shadow-sm border border-gray-200 text-xs">
-                        Pleito: <strong className="text-gray-800">{eleicao.pleitoCd}</strong> ({eleicao.pleitoDt})
+                      <span className="bg-white dark:bg-slate-900 px-2 py-0.5 rounded shadow-sm border border-gray-200 dark:border-slate-700 text-xs">
+                        Pleito: <strong className="text-gray-800 dark:text-gray-200">{eleicao.pleitoCd}</strong> ({eleicao.pleitoDt})
                       </span>
                       {selectedEleicaoCd === eleicao.cd ? (
                         <div className="w-full sm:w-auto flex-1 mt-2 sm:mt-0 relative" ref={dropdownRef}>
                           {isEA12Loading ? (
-                            <div className="text-sm text-blue-600 flex items-center gap-2 px-3 py-1 bg-white rounded border border-blue-100 h-8">
-                              <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
+                            <div className="text-sm text-blue-600 dark:text-blue-400 flex items-center gap-2 px-3 py-1 bg-white dark:bg-slate-900 rounded border border-blue-100 dark:border-blue-900 h-8">
+                              <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600 dark:border-blue-400"></div>
                               Carregando...
                             </div>
                           ) : isEA12Error ? (
-                            <div className="text-xs text-red-600 px-3 py-1 bg-red-50 rounded border border-red-100 h-8 flex items-center">Erro ao carregar locais.</div>
+                            <div className="text-xs text-red-600 dark:text-red-400 px-3 py-1 bg-red-50 dark:bg-red-900/20 rounded border border-red-100 dark:border-red-900 h-8 flex items-center">Erro ao carregar locais.</div>
                           ) : ea12Data ? (
                             <>
                               <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center w-full">
@@ -215,7 +215,7 @@ export function Validator() {
                                         className="w-4 h-3 object-contain rounded-sm shadow-sm"
                                       />
                                     ) : (
-                                      <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <svg className="w-4 h-4 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
                                       </svg>
@@ -234,27 +234,30 @@ export function Validator() {
                                       }
                                     }}
                                     placeholder="Selecione a abrangência..."
-                                    className="w-full border border-gray-300 rounded shadow-sm pl-8 pr-3 py-1 text-sm focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900 h-8 placeholder-gray-400"
+                                    className="w-full border border-gray-300 dark:border-slate-600 rounded shadow-sm pl-8 pr-3 py-1 text-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-slate-900 text-gray-900 dark:text-gray-100 h-8 placeholder-gray-400 dark:placeholder-gray-500"
                                   />
                                 </div>
                                 {selectedMun && (
-                                  <div className="flex items-center gap-1.5 shrink-0 bg-white px-2 py-0.5 rounded border border-gray-300 h-8 shadow-sm">
-                                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">Zona</label>
+                                  <div 
+                                    className="flex items-center gap-1.5 shrink-0 px-2 py-0.5 rounded border shadow-sm h-8"
+                                    style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)' }}
+                                  >
+                                    <label className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-tighter">Zona</label>
                                     <select
                                       value={selectedZona}
                                       onChange={(e) => setSelectedZona(e.target.value)}
-                                      className="border-none bg-transparent text-sm focus:ring-0 focus:outline-none text-gray-700 font-medium pr-1 cursor-pointer"
+                                      className="border-none bg-transparent text-sm focus:ring-0 focus:outline-none text-gray-700 dark:text-gray-200 font-medium pr-1 cursor-pointer"
                                     >
-                                      <option value="Todas">Todas</option>
+                                      <option value="Todas" className="dark:bg-slate-900 dark:text-gray-200">Todas</option>
                                       {selectedMun.z.sort((a,b) => parseInt(a) - parseInt(b)).map(z => (
-                                        <option key={z} value={z}>{z}</option>
+                                        <option key={z} value={z} className="dark:bg-slate-900 dark:text-gray-200">{z}</option>
                                       ))}
                                     </select>
                                   </div>
                                 )}
                               </div>
                               {isDropdownOpen && (
-                                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
+                                <div className="absolute z-10 w-full mt-1 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-md shadow-lg max-h-60 overflow-auto">
                                   {(() => {
                                     const filtered = flattenEA12Municipios(ea12Data!)
                                       .filter(mun => {
@@ -273,7 +276,7 @@ export function Validator() {
                                       return (
                                         <div key={`${mun.ufCd}-${mun.munCdTse}-${idx}`}>
                                           {showUfHeader && (
-                                            <div className="bg-gray-100 px-3 py-1 text-[10px] font-bold text-gray-500 uppercase tracking-wider sticky top-0 z-10 border-y border-gray-200 flex items-center gap-2">
+                                            <div className="bg-gray-100 dark:bg-slate-800 px-3 py-1 text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider sticky top-0 z-10 border-y border-gray-200 dark:border-slate-700 flex items-center gap-2">
                                               <img
                                                 src={`/flags/${mun.ufCd.toLowerCase()}.svg`}
                                                 alt={mun.ufCd}
@@ -284,7 +287,7 @@ export function Validator() {
                                             </div>
                                           )}
                                           <div
-                                            className={`px-3 py-2 text-sm cursor-pointer hover:bg-blue-50 ${isSelected ? 'bg-blue-100 text-blue-900 font-medium' : 'text-gray-700'}`}
+                                            className={`px-3 py-2 text-sm cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/30 ${isSelected ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-900 dark:text-blue-100 font-medium' : 'text-gray-700 dark:text-gray-300'}`}
                                             onClick={() => {
                                               setMunSearchText(label);
                                               setSelectedMunCd(mun.munCdTse);
@@ -320,32 +323,32 @@ export function Validator() {
                   </div>
 
                   {eleicaoT2 && (
-                    <div className="bg-blue-50/20 p-4 border-b border-gray-100 ml-4 border-l-4 border-l-blue-400">
+                    <div className="bg-blue-50/20 dark:bg-blue-900/10 p-4 border-b border-gray-100 dark:border-slate-700 ml-4 border-l-4 border-l-blue-400 dark:border-l-blue-600">
                       <div className="flex justify-between items-start gap-4 mb-3">
-                        <h4 className="font-semibold text-gray-700 flex-1 text-base">
+                        <h4 className="font-semibold text-gray-700 dark:text-gray-200 flex-1 text-base">
                           ↳ 2º Turno: {eleicaoT2.nm.replace(/&#186;/g, 'º')}
                         </h4>
-                        <span className="shrink-0 bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-1 rounded whitespace-nowrap border border-blue-200">
+                        <span className="shrink-0 bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300 text-xs font-semibold px-2 py-1 rounded whitespace-nowrap border border-blue-200 dark:border-blue-800">
                           Eleição: {eleicaoT2.cd}
                         </span>
                       </div>
-                      <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600 pl-4">
-                        <span className="bg-gray-200 text-gray-700 px-2.5 py-0.5 rounded-full font-medium text-xs">Turno {eleicaoT2.t}</span>
+                      <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600 dark:text-gray-400 pl-4">
+                        <span className="bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300 px-2.5 py-0.5 rounded-full font-medium text-xs">Turno {eleicaoT2.t}</span>
                         <span>•</span>
                         <span className="font-medium text-xs">{formatTipoEleicao(eleicaoT2.tp)}</span>
                         <span>•</span>
-                        <span className="bg-white px-2 py-0.5 rounded shadow-sm border border-gray-100 text-xs">
-                          Pleito: <strong className="text-gray-800">{eleicaoT2.pleitoCd}</strong> ({eleicaoT2.pleitoDt})
+                        <span className="bg-white dark:bg-slate-900 px-2 py-0.5 rounded shadow-sm border border-gray-100 dark:border-slate-800 text-xs">
+                          Pleito: <strong className="text-gray-800 dark:text-gray-200">{eleicaoT2.pleitoCd}</strong> ({eleicaoT2.pleitoDt})
                         </span>
                         {selectedEleicaoCd === eleicaoT2.cd ? (
                           <div className="w-full sm:w-auto flex-1 mt-2 sm:mt-0 relative" ref={dropdownRef}>
                             {isEA12Loading ? (
-                              <div className="text-sm text-blue-600 flex items-center gap-2 px-3 py-1 bg-white rounded border border-blue-100 h-8">
-                                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
+                              <div className="text-sm text-blue-600 dark:text-blue-400 flex items-center gap-2 px-3 py-1 bg-white dark:bg-slate-900 rounded border border-blue-100 dark:border-blue-900 h-8">
+                                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600 dark:border-blue-400"></div>
                                 Carregando...
                               </div>
                             ) : isEA12Error ? (
-                              <div className="text-xs text-red-600 px-3 py-1 bg-red-50 rounded border border-red-100 h-8 flex items-center">Erro ao carregar locais.</div>
+                              <div className="text-xs text-red-600 dark:text-red-400 px-3 py-1 bg-red-50 dark:bg-red-900/20 rounded border border-red-100 dark:border-red-900 h-8 flex items-center">Erro ao carregar locais.</div>
                             ) : ea12Data ? (
                               <>
                                 <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center w-full">
@@ -358,7 +361,7 @@ export function Validator() {
                                           className="w-4 h-3 object-contain rounded-sm shadow-sm"
                                         />
                                       ) : (
-                                        <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg className="w-4 h-4 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
                                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
                                         </svg>
@@ -377,27 +380,30 @@ export function Validator() {
                                         }
                                       }}
                                       placeholder="Selecione a abrangência..."
-                                      className="w-full border border-gray-300 rounded shadow-sm pl-8 pr-3 py-1 text-sm focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900 h-8 placeholder-gray-400"
+                                      className="w-full border border-gray-300 dark:border-slate-600 rounded shadow-sm pl-8 pr-3 py-1 text-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-slate-900 text-gray-900 dark:text-gray-100 h-8 placeholder-gray-400 dark:placeholder-gray-500"
                                     />
                                   </div>
                                   {selectedMun && (
-                                    <div className="flex items-center gap-1.5 shrink-0 bg-white px-2 py-0.5 rounded border border-gray-300 h-8 shadow-sm">
-                                      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">Zona</label>
+                                    <div 
+                                      className="flex items-center gap-1.5 shrink-0 px-2 py-0.5 rounded border shadow-sm h-8"
+                                      style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)' }}
+                                    >
+                                      <label className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-tighter">Zona</label>
                                       <select
                                         value={selectedZona}
                                         onChange={(e) => setSelectedZona(e.target.value)}
-                                        className="border-none bg-transparent text-sm focus:ring-0 focus:outline-none text-gray-700 font-medium pr-1 cursor-pointer"
+                                        className="border-none bg-transparent text-sm focus:ring-0 focus:outline-none text-gray-700 dark:text-gray-200 font-medium pr-1 cursor-pointer"
                                       >
-                                        <option value="Todas">Todas</option>
+                                        <option value="Todas" className="dark:bg-slate-900 dark:text-gray-200">Todas</option>
                                         {selectedMun.z.sort((a,b) => parseInt(a) - parseInt(b)).map(z => (
-                                          <option key={z} value={z}>{z}</option>
+                                          <option key={z} value={z} className="dark:bg-slate-900 dark:text-gray-200">{z}</option>
                                         ))}
                                       </select>
                                     </div>
                                   )}
                                 </div>
                                 {isDropdownOpen && (
-                                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
+                                  <div className="absolute z-10 w-full mt-1 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-md shadow-lg max-h-60 overflow-auto">
                                     {(() => {
                                       const filtered = flattenEA12Municipios(ea12Data!)
                                         .filter(mun => {
@@ -416,7 +422,7 @@ export function Validator() {
                                         return (
                                           <div key={`${mun.ufCd}-${mun.munCdTse}-${idx}`}>
                                             {showUfHeader && (
-                                              <div className="bg-gray-100 px-3 py-1 text-[10px] font-bold text-gray-500 uppercase tracking-wider sticky top-0 z-10 border-y border-gray-200 flex items-center gap-2">
+                                              <div className="bg-gray-100 dark:bg-slate-800 px-3 py-1 text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider sticky top-0 z-10 border-y border-gray-200 dark:border-slate-700 flex items-center gap-2">
                                                 <img
                                                   src={`/flags/${mun.ufCd.toLowerCase()}.svg`}
                                                   alt={mun.ufCd}
@@ -427,7 +433,7 @@ export function Validator() {
                                               </div>
                                             )}
                                             <div
-                                              className={`px-3 py-2 text-sm cursor-pointer hover:bg-blue-50 ${isSelected ? 'bg-blue-100 text-blue-900 font-medium' : 'text-gray-700'}`}
+                                              className={`px-3 py-2 text-sm cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/30 ${isSelected ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-900 dark:text-blue-100 font-medium' : 'text-gray-700 dark:text-gray-300'}`}
                                               onClick={() => {
                                                 setMunSearchText(label);
                                                 setSelectedMunCd(mun.munCdTse);
@@ -463,10 +469,10 @@ export function Validator() {
                     </div>
                   )}
 
-                  <div className="p-4 bg-white flex justify-between items-center text-sm">
-                    <span className="text-gray-600 bg-gray-50 px-3 py-1.5 rounded-md border border-gray-200 flex items-center gap-1">
-                      <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-                      Abrangência: <strong>{eleicao.abr.length}</strong> locais
+                  <div className="p-4 bg-white dark:bg-slate-800/20 flex justify-between items-center text-sm">
+                    <span className="text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-slate-800 px-3 py-1.5 rounded-md border border-gray-200 dark:border-slate-700 flex items-center gap-1">
+                      <svg className="w-4 h-4 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                      Abrangência: <strong className="text-gray-800 dark:text-gray-200">{eleicao.abr.length}</strong> locais
                     </span>
                   </div>
                 </div>

@@ -45,25 +45,25 @@ export function Home({ turno }: HomeProps) {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <h1 className="text-2xl font-bold text-gray-800 mb-4">Resultados Nacionais</h1>
+      <div className="bg-white dark:bg-slate-900 rounded-lg shadow-md p-6 dark:border dark:border-slate-800 transition-colors duration-300">
+        <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-4">Resultados Nacionais</h1>
         <ProgressBar percentage={data.vp} label="Totalização Nacional" />
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
           <div className="text-center">
-            <div className="text-2xl font-bold text-blue-600">{data.s.toLocaleString('pt-BR')}</div>
-            <div className="text-sm text-gray-500">Eleitores</div>
+            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{data.s.toLocaleString('pt-BR')}</div>
+            <div className="text-sm text-gray-500 dark:text-gray-400">Eleitores</div>
           </div>
           <div className="text-center">
-            <div className="text-2xl font-bold text-green-600">{data.v.toLocaleString('pt-BR')}</div>
-            <div className="text-sm text-gray-500">Votos Válidos</div>
+            <div className="text-2xl font-bold text-green-600 dark:text-green-400">{data.v.toLocaleString('pt-BR')}</div>
+            <div className="text-sm text-gray-500 dark:text-gray-400">Votos Válidos</div>
           </div>
           <div className="text-center">
-            <div className="text-2xl font-bold text-orange-600">{data.vn.toLocaleString('pt-BR')}</div>
-            <div className="text-sm text-gray-500">Votos Nulos</div>
+            <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">{data.vn.toLocaleString('pt-BR')}</div>
+            <div className="text-sm text-gray-500 dark:text-gray-400">Votos Nulos</div>
           </div>
           <div className="text-center">
-            <div className="text-2xl font-bold text-gray-600">{data.vbl.toLocaleString('pt-BR')}</div>
-            <div className="text-sm text-gray-500">Votos Brancos</div>
+            <div className="text-2xl font-bold text-gray-600 dark:text-gray-300">{data.vbl.toLocaleString('pt-BR')}</div>
+            <div className="text-sm text-gray-500 dark:text-gray-400">Votos Brancos</div>
           </div>
         </div>
       </div>

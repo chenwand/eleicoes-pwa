@@ -23,11 +23,11 @@ export function RegionCard({ regionData, onClick }: RegionCardProps) {
   return (
     <div 
       onClick={onClick}
-      className={`bg-white rounded-lg shadow-md p-4 hover:shadow-lg transition cursor-pointer ${
+      className={`bg-white dark:bg-slate-900 rounded-lg shadow-md p-4 hover:shadow-lg transition cursor-pointer dark:border dark:border-slate-800 transition-colors duration-300 ${
         onClick ? 'cursor-pointer' : ''
       }`}
     >
-      <h3 className="text-lg font-bold text-gray-800 mb-2">
+      <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-2">
         {regionData.regionName}
       </h3>
       
@@ -44,26 +44,26 @@ export function RegionCard({ regionData, onClick }: RegionCardProps) {
                 className="w-3 h-3 rounded-full"
                 style={{ backgroundColor: candidateColors[leader.candidateId % 8] || '#666' }}
               />
-              <span className="font-semibold text-gray-800">
+              <span className="font-semibold text-gray-800 dark:text-gray-200">
                 {leader.name}
               </span>
-              <span className="text-sm text-gray-500">
+              <span className="text-sm text-gray-500 dark:text-gray-400">
                 ({leader.party})
               </span>
             </div>
-            <div className="text-2xl font-bold text-blue-600">
+            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
               {leader.percentage.toFixed(1)}%
             </div>
-            <div className="text-sm text-gray-500">
+            <div className="text-sm text-gray-500 dark:text-gray-400">
               {leader.votes.toLocaleString('pt-BR')} votos
             </div>
           </>
         ) : (
-          <div className="text-gray-500">Dados não disponíveis</div>
+          <div className="text-gray-500 dark:text-gray-400">Dados não disponíveis</div>
         )}
       </div>
       
-      <div className="mt-3 text-sm text-gray-500">
+      <div className="mt-3 text-sm text-gray-500 dark:text-gray-400">
         Total: {regionData.totalVotes.toLocaleString('pt-BR')} votos
       </div>
     </div>

@@ -8,6 +8,8 @@ import { Timeline } from './pages/Timeline';
 import { Validator } from './pages/Validator';
 import type { Turno } from './types/election';
 
+import { ThemeProvider } from './context/ThemeContext';
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -21,21 +23,23 @@ function App() {
   const [turno, setTurno] = useState<Turno>(1);
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <div className="min-h-screen bg-gray-100">
-          <Header turno={turno} onTurnoChange={setTurno} />
-          <main className="container mx-auto px-4 py-6">
-            <Routes>
-              <Route path="/" element={<Validator />} />
-              <Route path="/resultados" element={<Home turno={turno} />} />
-              <Route path="/regioes" element={<ByRegion turno={turno} />} />
-              <Route path="/timeline" element={<Timeline turno={turno} />} />
-            </Routes>
-          </main>
-        </div>
-      </BrowserRouter>
-    </QueryClientProvider>
+    <ThemeProvider>
+      <QueryClientProvider client={queryClient}>
+        <BrowserRouter>
+          <div className="min-h-screen transition-colors duration-300" style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
+            <Header turno={turno} onTurnoChange={setTurno} />
+            <main className="container mx-auto px-4 py-6">
+              <Routes>
+                <Route path="/" element={<Validator />} />
+                <Route path="/resultados" element={<Home turno={turno} />} />
+                <Route path="/regioes" element={<ByRegion turno={turno} />} />
+                <Route path="/timeline" element={<Timeline turno={turno} />} />
+              </Routes>
+            </main>
+          </div>
+        </BrowserRouter>
+      </QueryClientProvider>
+    </ThemeProvider>
   );
 }
 

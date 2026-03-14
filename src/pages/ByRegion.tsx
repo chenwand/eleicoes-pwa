@@ -47,8 +47,8 @@ export function ByRegion({ turno }: ByRegionProps) {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <h1 className="text-2xl font-bold text-gray-800 mb-4">
+      <div className="bg-white dark:bg-slate-900 rounded-lg shadow-md p-6 dark:border dark:border-slate-800 transition-colors duration-300">
+        <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-4">
           Votação por Região - Presidente
         </h1>
         <ProgressBar percentage={brData.vp} label="Totalização Nacional" />
@@ -56,12 +56,12 @@ export function ByRegion({ turno }: ByRegionProps) {
 
       <div className="grid lg:grid-cols-2 gap-6">
         <div>
-          <h2 className="text-lg font-semibold mb-4 text-gray-700">Mapa do Brasil</h2>
+          <h2 className="text-lg font-semibold mb-4 text-gray-700 dark:text-gray-200">Mapa do Brasil</h2>
           <RegionMap regions={regions} onRegionClick={handleRegionClick} />
         </div>
 
         <div>
-          <h2 className="text-lg font-semibold mb-4 text-gray-700">Regiões</h2>
+          <h2 className="text-lg font-semibold mb-4 text-gray-700 dark:text-gray-200">Regiões</h2>
           <div className="grid sm:grid-cols-2 gap-4">
             {regions.map((region) => (
               <RegionCard
@@ -75,17 +75,17 @@ export function ByRegion({ turno }: ByRegionProps) {
       </div>
 
       {selectedRegion && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-y-auto">
-            <div className="p-4 border-b flex justify-between items-center">
-              <h2 className="text-xl font-bold text-gray-800">
+        <div className="fixed inset-0 bg-black/60 dark:bg-black/80 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
+          <div className="bg-white dark:bg-slate-900 rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-y-auto dark:border dark:border-slate-800 transition-colors duration-300">
+            <div className="p-4 border-b dark:border-slate-800 flex justify-between items-center bg-gray-50 dark:bg-slate-800/50">
+              <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">
                 {regions.find(r => r.region === selectedRegion)?.regionName}
               </h2>
               <button
                 onClick={() => setSelectedRegion(null)}
-                className="text-gray-500 hover:text-gray-700"
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 p-1 hover:bg-gray-200 dark:hover:bg-slate-700 rounded-full transition-colors"
               >
-                ✕
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
               </button>
             </div>
             <div className="p-4">

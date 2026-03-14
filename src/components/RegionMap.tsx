@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { useTheme } from '../context/ThemeContext';
 import type { RegionData } from '../types/election';
 
 interface RegionMapProps {
@@ -26,7 +27,9 @@ const candidateColors: Record<number, string> = {
 };
 
 export function RegionMap({ regions, onRegionClick }: RegionMapProps) {
+  const { theme } = useTheme();
   const mapRef = useRef<L.Map | null>(null);
+  const tileLayerRef = useRef<L.TileLayer | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -38,10 +41,6 @@ export function RegionMap({ regions, onRegionClick }: RegionMapProps) {
       zoomControl: false
     });
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap contributors'
-    }).addTo(map);
-
     mapRef.current = map;
 
     return () => {
@@ -51,6 +50,25 @@ export function RegionMap({ regions, onRegionClick }: RegionMapProps) {
       }
     };
   }, []);
+
+  // Update tile layer when theme changes
+  useEffect(() => {
+    if (!mapRef.current) return;
+
+    if (tileLayerRef.current) {
+      mapRef.current.removeLayer(tileLayerRef.current);
+    }
+
+    const tileUrl = theme === 'dark' 
+      ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+      : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+
+    const attribution = theme === 'dark'
+      ? '© OpenStreetMap contributors © CARTO'
+      : '© OpenStreetMap contributors';
+
+    tileLayerRef.current = L.tileLayer(tileUrl, { attribution }).addTo(mapRef.current);
+  }, [theme]);
 
   useEffect(() => {
     if (!mapRef.current) return;
@@ -71,21 +89,25 @@ export function RegionMap({ regions, onRegionClick }: RegionMapProps) {
       const circle = L.circleMarker(regionCoords[region.region] || [-14, -52], {
         radius,
         fillColor: color,
-        color: '#fff',
+        color: theme === 'dark' ? '#1e293b' : '#fff',
         weight: 2,
         opacity: 1,
         fillOpacity: 0.7
       });
 
-      circle.bindPopup(`
-        <div style="min-width: 150px;">
-          <h3 style="font-weight: bold; margin-bottom: 8px;">${region.regionName}</h3>
-          <p><strong>Líder:</strong> ${leader?.name || 'N/A'}</p>
-          <p><strong>Votos:</strong> ${region.totalVotes.toLocaleString('pt-BR')}</p>
-          <p><strong>Porcentagem:</strong> ${leader?.percentage.toFixed(1) || 0}%</p>
-          <p><strong>Totalizado:</strong> ${region.percentageTotalized.toFixed(1)}%</p>
+      const popupContent = `
+        <div class="dark-popup" style="min-width: 150px; color: ${theme === 'dark' ? '#f9fafb' : '#111827'};">
+          <h3 style="font-weight: bold; margin-bottom: 8px; border-bottom: 1px solid ${theme === 'dark' ? '#334155' : '#e2e8f0'}; padding-bottom: 4px;">${region.regionName}</h3>
+          <p style="margin: 4px 0;"><strong>Líder:</strong> ${leader?.name || 'N/A'}</p>
+          <p style="margin: 4px 0;"><strong>Votos:</strong> ${region.totalVotes.toLocaleString('pt-BR')}</p>
+          <p style="margin: 4px 0;"><strong>Porcentagem:</strong> ${leader?.percentage.toFixed(1) || 0}%</p>
+          <p style="margin: 4px 0;"><strong>Totalizado:</strong> ${region.percentageTotalized.toFixed(1)}%</p>
         </div>
-      `);
+      `;
+
+      circle.bindPopup(popupContent, {
+        className: theme === 'dark' ? 'leaflet-dark-popup' : ''
+      });
 
       if (onRegionClick) {
         circle.on('click', () => onRegionClick(region.region));
@@ -93,22 +115,22 @@ export function RegionMap({ regions, onRegionClick }: RegionMapProps) {
 
       circle.addTo(map);
     });
-  }, [regions, onRegionClick]);
+  }, [regions, onRegionClick, theme]);
 
   return (
-    <div className="bg-white rounded-lg shadow-md overflow-hidden">
-      <div ref={containerRef} style={{ height: '400px', width: '100%' }} />
-      <div className="p-4">
-        <div className="flex flex-wrap gap-2">
+    <div className="bg-white dark:bg-slate-900 rounded-lg shadow-md overflow-hidden dark:border dark:border-slate-800 transition-colors duration-300">
+      <div ref={containerRef} style={{ height: '400px', width: '100%', zIndex: 1 }} />
+      <div className="p-4 bg-gray-50 dark:bg-slate-800/30 border-t dark:border-slate-800">
+        <div className="flex flex-wrap gap-4">
           {regions.map((region) => {
             const leader = region.candidates[0];
             return (
               <div key={region.region} className="flex items-center gap-2">
                 <div 
-                  className="w-4 h-4 rounded-full"
+                  className="w-3 h-3 rounded-full"
                   style={{ backgroundColor: candidateColors[leader?.candidateId % 5] || '#999' }}
                 />
-                <span className="text-sm">{region.regionName}</span>
+                <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{region.regionName}</span>
               </div>
             );
           })}

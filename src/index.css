@@ -1,17 +1,58 @@
 @import "tailwindcss";
+@variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-blue-950: #0a192f;
+}
 
 :root {
   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
-  color-scheme: light dark;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  --bg-primary: #f3f4f6;
+  --bg-secondary: #ffffff;
+  --text-primary: #111827;
+  --text-secondary: #4b5563;
+  --border-color: #e5e7eb;
+  color-scheme: light;
+}
+
+.dark {
+  --bg-primary: #030712;
+  --bg-secondary: #0f172a;
+  --text-primary: #f9fafb;
+  --text-secondary: #9ca3af;
+  --border-color: #1e293b;
+  color-scheme: dark;
 }
 
 body {
   margin: 0;
   min-height: 100vh;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+@layer base {
+  input, select, textarea {
+    @apply dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100;
+  }
+}
+
+/* Leaflet Dark Mode Adjustments */
+.leaflet-dark-popup .leaflet-popup-content-wrapper,
+.leaflet-dark-popup .leaflet-popup-tip {
+  background-color: #0f172a !important;
+  color: #f9fafb !important;
+  border: 1px solid #1e293b;
+}
+
+.leaflet-container {
+  background: #030712 !important;
 }
