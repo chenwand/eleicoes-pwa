@@ -2,6 +2,8 @@ import { useState, useRef, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchEA11 } from '../services/ea11Service';
 import { fetchEA12, flattenEA12Municipios } from '../services/ea12Service';
+import { EA14Viewer } from '../components/EA14Viewer';
+import { useEnvironment } from '../context/EnvironmentContext';
 
 // Tipos de Eleição (Fonte: EA11 Documentação TSE)
 const TIPO_ELEICAO: Record<string, string> = {
@@ -19,11 +21,13 @@ function formatTipoEleicao(tpCode: string): string {
 }
 
 export function Validator() {
+  const { ambiente } = useEnvironment();
   const [selectedEleicaoCd, setSelectedEleicaoCd] = useState<string | null>(null);
   const [munSearchText, setMunSearchText] = useState('');
   const [selectedMunCd, setSelectedMunCd] = useState<string | null>(null);
   const [selectedZona, setSelectedZona] = useState('Todas');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [selectedEA14EleicaoCd, setSelectedEA14EleicaoCd] = useState<string | null>(null);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -41,15 +45,15 @@ export function Validator() {
     str.normalize('NFD').replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
   const { data: ea11Data, isLoading: isEA11Loading, isError: isEA11Error, error: error11 } = useQuery({
-    queryKey: ['ea11-config'],
-    queryFn: fetchEA11,
+    queryKey: ['ea11-config', ambiente],
+    queryFn: () => fetchEA11(ambiente),
   });
 
   const cicloString = ea11Data ? ea11Data.c : '';
 
   const { data: ea12Data, isLoading: isEA12Loading, isError: isEA12Error } = useQuery({
-    queryKey: ['ea12-config', cicloString, selectedEleicaoCd],
-    queryFn: () => fetchEA12(cicloString, selectedEleicaoCd!),
+    queryKey: ['ea12-config', cicloString, selectedEleicaoCd, ambiente],
+    queryFn: () => fetchEA12(cicloString, selectedEleicaoCd!, ambiente),
     enabled: !!selectedEleicaoCd && !!cicloString,
   });
 
@@ -148,9 +152,10 @@ export function Validator() {
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
                 </button>
               )}
-              Validador de Recursos TSE (EA11)
+              Validador de Arquivos de Resultados (JSON)
             </h1>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              Arquivo de configuração de eleições (EA11): <span className="font-semibold text-blue-600 dark:text-blue-400">ele-c.json</span> |
               Ciclo: <span className="font-semibold text-blue-600 dark:text-blue-400">{ea11Data.c}</span> |
               Gerado em: {ea11Data.dg} às {ea11Data.hg}
             </p>
@@ -209,8 +214,8 @@ export function Validator() {
                                 <div className="relative flex-1 w-full">
                                   <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none gap-1.5">
                                     {selectedMun ? (
-                                      <img 
-                                        src={`/flags/${selectedMun.ufCd.toLowerCase()}.svg`} 
+                                      <img
+                                        src={`/flags/${selectedMun.ufCd.toLowerCase()}.svg`}
                                         alt={selectedMun.ufCd}
                                         className="w-4 h-3 object-contain rounded-sm shadow-sm"
                                       />
@@ -225,6 +230,13 @@ export function Validator() {
                                     type="text"
                                     value={munSearchText}
                                     onFocus={() => setIsDropdownOpen(true)}
+                                    onClick={() => {
+                                      if (selectedMunCd) {
+                                        setMunSearchText('');
+                                        setSelectedMunCd(null);
+                                        setSelectedZona('Todas');
+                                      }
+                                    }}
                                     onChange={(e) => {
                                       const val = e.target.value;
                                       setMunSearchText(val);
@@ -238,7 +250,7 @@ export function Validator() {
                                   />
                                 </div>
                                 {selectedMun && (
-                                  <div 
+                                  <div
                                     className="flex items-center gap-1.5 shrink-0 px-2 py-0.5 rounded border shadow-sm h-8"
                                     style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)' }}
                                   >
@@ -249,7 +261,7 @@ export function Validator() {
                                       className="border-none bg-transparent text-sm focus:ring-0 focus:outline-none text-gray-700 dark:text-gray-200 font-medium pr-1 cursor-pointer"
                                     >
                                       <option value="Todas" className="dark:bg-slate-900 dark:text-gray-200">Todas</option>
-                                      {selectedMun.z.sort((a,b) => parseInt(a) - parseInt(b)).map(z => (
+                                      {selectedMun.z.sort((a, b) => parseInt(a) - parseInt(b)).map(z => (
                                         <option key={z} value={z} className="dark:bg-slate-900 dark:text-gray-200">{z}</option>
                                       ))}
                                     </select>
@@ -307,17 +319,29 @@ export function Validator() {
                           ) : null}
                         </div>
                       ) : (
-                        <button
-                          onClick={() => {
-                            setSelectedEleicaoCd(eleicao.cd);
-                            setMunSearchText('');
-                            setSelectedMunCd(null);
-                            setSelectedZona('Todas');
-                          }}
-                          className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-1 px-4 rounded transition-all text-xs h-8 flex items-center shadow-sm whitespace-nowrap"
-                        >
-                          Selecionar eleição
-                        </button>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => {
+                              setSelectedEleicaoCd(eleicao.cd);
+                              setMunSearchText('');
+                              setSelectedMunCd(null);
+                              setSelectedZona('Todas');
+                            }}
+                            className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-1 px-4 rounded transition-all text-xs h-8 flex items-center shadow-sm whitespace-nowrap"
+                          >
+                            <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                            Arquivo Unificado (EA20)
+                          </button>
+                          {['1', '3', '6'].includes(eleicao.tp) && (
+                            <button
+                              onClick={() => setSelectedEA14EleicaoCd(eleicao.cd)}
+                              className="bg-green-600 hover:bg-green-700 text-white font-medium py-1 px-4 rounded transition-all text-xs h-8 flex items-center shadow-sm whitespace-nowrap"
+                            >
+                              <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                              Arquivo de Acompanhamento BR (EA14)
+                            </button>
+                          )}
+                        </div>
                       )}
                     </div>
                   </div>
@@ -355,8 +379,8 @@ export function Validator() {
                                   <div className="relative flex-1 w-full">
                                     <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none gap-1.5">
                                       {selectedMun ? (
-                                        <img 
-                                          src={`/flags/${selectedMun.ufCd.toLowerCase()}.svg`} 
+                                        <img
+                                          src={`/flags/${selectedMun.ufCd.toLowerCase()}.svg`}
                                           alt={selectedMun.ufCd}
                                           className="w-4 h-3 object-contain rounded-sm shadow-sm"
                                         />
@@ -371,6 +395,13 @@ export function Validator() {
                                       type="text"
                                       value={munSearchText}
                                       onFocus={() => setIsDropdownOpen(true)}
+                                      onClick={() => {
+                                        if (selectedMunCd) {
+                                          setMunSearchText('');
+                                          setSelectedMunCd(null);
+                                          setSelectedZona('Todas');
+                                        }
+                                      }}
                                       onChange={(e) => {
                                         const val = e.target.value;
                                         setMunSearchText(val);
@@ -384,7 +415,7 @@ export function Validator() {
                                     />
                                   </div>
                                   {selectedMun && (
-                                    <div 
+                                    <div
                                       className="flex items-center gap-1.5 shrink-0 px-2 py-0.5 rounded border shadow-sm h-8"
                                       style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)' }}
                                     >
@@ -395,7 +426,7 @@ export function Validator() {
                                         className="border-none bg-transparent text-sm focus:ring-0 focus:outline-none text-gray-700 dark:text-gray-200 font-medium pr-1 cursor-pointer"
                                       >
                                         <option value="Todas" className="dark:bg-slate-900 dark:text-gray-200">Todas</option>
-                                        {selectedMun.z.sort((a,b) => parseInt(a) - parseInt(b)).map(z => (
+                                        {selectedMun.z.sort((a, b) => parseInt(a) - parseInt(b)).map(z => (
                                           <option key={z} value={z} className="dark:bg-slate-900 dark:text-gray-200">{z}</option>
                                         ))}
                                       </select>
@@ -453,33 +484,51 @@ export function Validator() {
                             ) : null}
                           </div>
                         ) : (
-                          <button
-                            onClick={() => {
-                              setSelectedEleicaoCd(eleicaoT2.cd);
-                              setMunSearchText('');
-                              setSelectedMunCd(null);
-                              setSelectedZona('Todas');
-                            }}
-                            className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-1 px-4 rounded transition-all text-xs h-8 flex items-center shadow-sm whitespace-nowrap"
-                          >
-                            Selecionar eleição
-                          </button>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => {
+                                setSelectedEleicaoCd(eleicaoT2.cd);
+                                setMunSearchText('');
+                                setSelectedMunCd(null);
+                                setSelectedZona('Todas');
+                              }}
+                              className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-1 px-4 rounded transition-all text-xs h-8 flex items-center shadow-sm whitespace-nowrap"
+                            >
+                              <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                              Arquivo unificado (EA20)
+                            </button>
+                            {['1', '3', '6'].includes(eleicaoT2.tp) && (
+                              <button
+                                onClick={() => setSelectedEA14EleicaoCd(eleicaoT2.cd)}
+                                className="bg-green-600 hover:bg-green-700 text-white font-medium py-1 px-4 rounded transition-all text-xs h-8 flex items-center shadow-sm whitespace-nowrap"
+                              >
+                                <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                                Arquivo de Acompanhamento BR (EA14)
+                              </button>
+                            )}
+                          </div>
                         )}
                       </div>
                     </div>
                   )}
 
                   <div className="p-4 bg-white dark:bg-slate-800/20 flex justify-between items-center text-sm">
-                    <span className="text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-slate-800 px-3 py-1.5 rounded-md border border-gray-200 dark:border-slate-700 flex items-center gap-1">
-                      <svg className="w-4 h-4 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-                      Abrangência: <strong className="text-gray-800 dark:text-gray-200">{eleicao.abr.length}</strong> locais
-                    </span>
+
                   </div>
                 </div>
               );
             })}
         </div>
       </div>
+
+      {selectedEA14EleicaoCd && (
+        <EA14Viewer
+          ciclo={cicloString}
+          eleicaoCd={selectedEA14EleicaoCd}
+          eleicaoNome={allElections.find(e => e.cd === selectedEA14EleicaoCd)?.nm.replace(/&#186;/g, 'º') || `Eleição ${selectedEA14EleicaoCd}`}
+          onClose={() => setSelectedEA14EleicaoCd(null)}
+        />
+      )}
     </div>
 
   );

@@ -1,14 +1,11 @@
 import { Link } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
-import type { Turno } from '../types/election';
+import { useEnvironment } from '../context/EnvironmentContext';
 
-interface HeaderProps {
-  turno: Turno;
-  onTurnoChange: (turno: Turno) => void;
-}
 
-export function Header({ turno, onTurnoChange }: HeaderProps) {
+export function Header() {
   const { theme, toggleTheme } = useTheme();
+  const { ambiente, setAmbiente } = useEnvironment();
 
   return (
     <header className="bg-blue-700 dark:bg-blue-900 text-white shadow-lg transition-colors duration-300">
@@ -16,41 +13,44 @@ export function Header({ turno, onTurnoChange }: HeaderProps) {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div className="flex items-center gap-4">
             <Link to="/" className="text-2xl font-bold">
-              Eleições 2026
+              DIV
             </Link>
-            <span className="bg-blue-800 dark:bg-blue-950 px-3 py-1 rounded text-sm">
-              {turno}º Turno
-            </span>
           </div>
-          
+
           <nav className="flex gap-2">
-            <Link 
-              to="/" 
-              className="px-4 py-2 rounded hover:bg-blue-600 dark:hover:bg-blue-800 transition"
-            >
-              Consultar Pleito
-            </Link>
-            <Link 
-              to="/resultados" 
-              className="px-4 py-2 rounded hover:bg-blue-600 dark:hover:bg-blue-800 transition"
-            >
-              Resultados Prévios
-            </Link>
-            <Link 
-              to="/regioes" 
+            <Link
+              to="/regioes"
               className="px-4 py-2 rounded hover:bg-blue-600 dark:hover:bg-blue-800 transition"
             >
               Por Região
             </Link>
-            <Link 
-              to="/timeline" 
+            <Link
+              to="/timeline"
               className="px-4 py-2 rounded hover:bg-blue-600 dark:hover:bg-blue-800 transition"
             >
               Evolução
             </Link>
           </nav>
-          
-          <div className="flex items-center gap-4">
+
+          <div className="flex items-center gap-3">
+            {/* Environment toggle */}
+            <div className="flex items-center bg-blue-800/50 dark:bg-blue-950/50 rounded-full p-0.5 text-sm font-medium shadow-inner">
+              <button
+                onClick={() => setAmbiente('oficial')}
+                className={`px-3 py-1 rounded-full transition-all ${ambiente === 'oficial' ? 'bg-white text-blue-800 shadow font-semibold' : 'text-blue-200 hover:text-white'}`}
+                title="Usar dados oficiais do TSE"
+              >
+                Oficial
+              </button>
+              <button
+                onClick={() => setAmbiente('simulado')}
+                className={`px-3 py-1 rounded-full transition-all ${ambiente === 'simulado' ? 'bg-amber-400 text-amber-900 shadow font-semibold' : 'text-blue-200 hover:text-white'}`}
+                title="Usar dados do ambiente simulado do TSE"
+              >
+                Simulado
+              </button>
+            </div>
+
             <button
               onClick={toggleTheme}
               className="p-2 rounded-full hover:bg-blue-600 dark:hover:bg-blue-800 transition-colors"
@@ -66,20 +66,11 @@ export function Header({ turno, onTurnoChange }: HeaderProps) {
                 </svg>
               )}
             </button>
-            <div className="flex items-center gap-2">
-              <span className="text-sm">Turno:</span>
-              <select
-                value={turno}
-                onChange={(e) => onTurnoChange(Number(e.target.value) as Turno)}
-                className="bg-blue-800 dark:bg-blue-950 text-white px-3 py-1 rounded border-none cursor-pointer"
-              >
-                <option value={1}>1º Turno</option>
-                <option value={2}>2º Turno</option>
-              </select>
-            </div>
+
           </div>
         </div>
       </div>
     </header>
   );
 }
+

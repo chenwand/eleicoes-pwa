@@ -101,10 +101,10 @@ export function VoteChart({ candidates, type = 'bar' }: VoteChartProps) {
             axisLine={{ stroke: gridColor }}
           />
           <Tooltip 
-            formatter={(value: number | string, _name: string, props: any) => [
+            formatter={(((value: number | string, _name: string, props: any) => [
               `${Number(value).toLocaleString('pt-BR')} votos (${props.payload.percentage.toFixed(2)}%)`,
               props.payload.fullName || _name
-            ]}
+            ]) as any)}
             contentStyle={{ 
               borderRadius: '8px', 
               backgroundColor: tooltipBg,

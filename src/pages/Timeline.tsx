@@ -106,14 +106,14 @@ export function Timeline({ turno }: TimelineProps) {
                 axisLine={{ stroke: gridColor }}
               />
               <Tooltip 
-                formatter={(value: number | string, name: string) => [`${Number(value).toFixed(2)}%`, name]}
+                formatter={((value: number | string, name: string) => [`${Number(value).toFixed(2)}%`, name]) as any}
                 contentStyle={{ 
                   borderRadius: '8px', 
                   backgroundColor: tooltipBg,
                   borderColor: tooltipBorder,
                   color: tooltipText,
                   boxShadow: '0 4px 12px rgba(0,0,0,0.2)' 
-                }}
+                } as any}
                 itemStyle={{ color: tooltipText }}
               />
               <Legend />

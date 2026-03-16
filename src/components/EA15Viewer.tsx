@@ -1,0 +1,352 @@
+import { useQuery } from '@tanstack/react-query';
+import { fetchEA15 } from '../services/ea15Service';
+import { fetchEA12, flattenEA12Municipios } from '../services/ea12Service';
+import { useMemo, useState } from 'react';
+import { useEnvironment } from '../context/EnvironmentContext';
+import { validateEA15, getEA15ErrorsForAbr } from '../services/ea15Validator';
+
+const renderHighlightedJson = (jsonObj: any) => {
+  const json = JSON.stringify(jsonObj, null, 2).replace(/[&<>]/g, (c) => {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c] || c;
+  });
+  const highlighted = json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, (match) => {
+    let cls = 'text-blue-400';
+    if (/^"/.test(match)) {
+      cls = /:$/.test(match) ? 'text-purple-400 font-semibold' : 'text-green-400 break-all whitespace-pre-wrap';
+    } else if (/true|false/.test(match)) {
+      cls = 'text-orange-400 font-medium';
+    } else if (/null/.test(match)) {
+      cls = 'text-red-400 font-medium';
+    }
+    return `<span class="${cls}">${match}</span>`;
+  });
+  return <pre className="text-xs sm:text-sm text-gray-300 font-mono" dangerouslySetInnerHTML={{ __html: highlighted }} />;
+};
+
+interface EA15ViewerProps {
+  ciclo: string;
+  eleicaoCd: string;
+  uf: string;
+  onBack: () => void;
+}
+
+export function EA15Viewer({ ciclo, eleicaoCd, uf, onBack }: EA15ViewerProps) {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showRawJson, setShowRawJson] = useState(false);
+  const [expandedMun, setExpandedMun] = useState<string | null>(null);
+  const { ambiente } = useEnvironment();
+
+  // Fetch EA15 Data
+  const { data: ea15Data, isLoading: isEA15Loading, isError: isEA15Error, error: ea15Error } = useQuery({
+    queryKey: ['ea15-data', ciclo, eleicaoCd, uf, ambiente],
+    queryFn: () => fetchEA15(ciclo, eleicaoCd, uf, ambiente),
+    enabled: !!eleicaoCd && !!ciclo && !!uf,
+    staleTime: 30000,
+  });
+
+  // Fetch EA12 to resolve municipality codes to names
+  const { data: ea12Data, isLoading: isEA12Loading } = useQuery({
+    queryKey: ['ea12-data', ciclo, eleicaoCd, ambiente],
+    queryFn: () => fetchEA12(ciclo, eleicaoCd, ambiente),
+    enabled: !!eleicaoCd && !!ciclo,
+    staleTime: Infinity,
+  });
+
+  // Normalize string for searching
+  const normalize = (str: string) => str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+
+  // Create a dictionary for optimized municipality name lookups
+  const munDict = useMemo(() => {
+    if (!ea12Data) return new Map<string, string>();
+    const flat = flattenEA12Municipios(ea12Data);
+    const map = new Map<string, string>();
+    flat.forEach(m => map.set(m.munCdTse, m.munNome));
+    return map;
+  }, [ea12Data]);
+
+  // Run semantic validation on the whole EA15 dataset (must be before filteredMuns)
+  const validationResults = useMemo(() => {
+    if (!ea15Data) return [];
+    return validateEA15(ea15Data);
+  }, [ea15Data]);
+
+  const getErrorsForMun = (cdabr: string) => getEA15ErrorsForAbr(validationResults, cdabr);
+
+  // Filter and sort municipalities
+  const filteredMuns = useMemo(() => {
+    if (!ea15Data || !ea15Data.abr) return [];
+
+    const ufObj = ea15Data.abr.find(a => a.cdabr === uf.toLowerCase());
+    if (!ufObj) return [];
+
+    // UFs sometimes send the state tracking data inside the abr array along with municipalities
+    const munsOnly = ea15Data.abr.filter(a => a.tpabr === 'mun' || (a.cdabr !== uf.toLowerCase() && a.cdabr !== 'br'));
+
+    return munsOnly
+      .filter(mun => {
+        if (!searchTerm) return true;
+        const name = munDict.get(mun.cdabr) || '';
+        const search = normalize(searchTerm);
+        return normalize(name).includes(search) || mun.cdabr.includes(search);
+      })
+      .sort((a, b) => {
+        // Errored municipalities come first, then by % descending, then alphabetical
+        const aErrors = getEA15ErrorsForAbr(validationResults, a.cdabr).length;
+        const bErrors = getEA15ErrorsForAbr(validationResults, b.cdabr).length;
+        if (aErrors !== bErrors) return bErrors - aErrors;
+
+        const pctA = parseFloat(a.s.pst.replace(',', '.'));
+        const pctB = parseFloat(b.s.pst.replace(',', '.'));
+        if (pctA !== pctB) return pctB - pctA;
+
+        const nameA = munDict.get(a.cdabr) || a.cdabr;
+        const nameB = munDict.get(b.cdabr) || b.cdabr;
+        return nameA.localeCompare(nameB);
+      });
+  }, [ea15Data, searchTerm, munDict, uf, validationResults]);
+
+  // Try to extract General UF stats from the JSON (usually it's the item matching the UF code or the first item if none matches)
+  const ufStats = useMemo(() => {
+    if (!ea15Data?.abr) return null;
+    return ea15Data.abr.find(a => a.cdabr === uf.toLowerCase() || a.tpabr === 'uf') || null;
+  }, [ea15Data, uf]);
+
+
+  if (isEA15Loading || isEA12Loading) {
+    return (
+      <div className="flex flex-col items-center justify-center p-8 space-y-4">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 dark:border-blue-400"></div>
+        <p className="text-gray-600 dark:text-gray-400 text-sm">Validando acompanhamento UF...</p>
+      </div>
+    );
+  }
+
+  if (isEA15Error) {
+    return (
+      <div className="p-4">
+        <div className="flex items-center gap-3 mb-4">
+          <button onClick={onBack} className="p-1.5 hover:bg-gray-200 dark:hover:bg-slate-700 rounded-full transition-colors">
+            <svg className="w-5 h-5 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+          </button>
+          <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200">Voltar</h3>
+        </div>
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/30 rounded-lg p-6 text-center">
+          <h3 className="text-lg font-bold text-red-700 dark:text-red-400 mb-2">Erro ao carregar (EA15)</h3>
+          <p className="text-red-600 dark:text-red-300 text-sm">
+            {ea15Error instanceof Error ? ea15Error.message : 'Falha ao buscar acompanhamento dessa UF.'}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col h-full bg-white dark:bg-slate-900 animate-slide-in-right relative rounded-md shadow-sm">
+      <div className="sticky top-0 z-20 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-gray-200 dark:border-slate-800 p-4">
+        <div className="flex items-center justify-between gap-3 mb-4">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onBack}
+              className="p-1.5 bg-gray-100 hover:bg-gray-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-full transition-colors flex items-center justify-center shadow-sm"
+              title="Voltar para Acompanhamento BR"
+            >
+              <svg className="w-5 h-5 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+            </button>
+            <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
+              <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+              <span>Acompanhamento UF (EA15)</span>
+              <span className="uppercase text-gray-500 dark:text-gray-400 text-base font-semibold">· {uf}</span>
+            </h2>
+          </div>
+          <button
+            onClick={() => setShowRawJson(!showRawJson)}
+            className="shrink-0 px-3 py-1.5 bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-300 rounded text-sm font-medium transition-colors"
+          >
+            {showRawJson ? 'Painel Visual' : 'Ver JSON'}
+          </button>
+        </div>
+
+        {ufStats && (() => {
+          const ufNome = ea12Data?.abr?.find((a: any) => a.cd.toLowerCase() === uf.toLowerCase())?.ds || uf.toUpperCase();
+          const isDone = ufStats.and === 'f';
+          const munsFinalizadas = parseInt(ufStats.munf || '0');
+          return (
+            <div className={`mb-4 border-l-4 rounded p-4 shadow-sm ${isDone ? 'bg-green-50 dark:bg-green-900/10 border-green-500' : 'bg-blue-50 dark:bg-blue-900/20 border-blue-500'}`}>
+              <div className="flex justify-between items-center mb-2">
+                <h3 className="font-bold text-gray-800 dark:text-gray-200 uppercase flex items-center gap-2">
+                  <img src={`/flags/${uf.toLowerCase()}.svg`} alt={uf} className="w-5 h-4 object-contain rounded-sm shadow-sm" onError={(e) => (e.currentTarget.style.display = 'none')} />
+                  {ufNome}
+                </h3>
+                <span className={`text-xs font-bold px-2 py-1 rounded-full ${isDone ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300'}`}>
+                  {isDone ? 'Finalizado' : 'Em andamento'}
+                </span>
+              </div>
+              <div className="mt-3">
+                <div className="flex justify-between text-sm mb-1">
+                  <span className="text-gray-600 dark:text-gray-400">Seções Totalizadas</span>
+                  <span className="font-semibold text-gray-800 dark:text-gray-200">{ufStats.s.pst}%</span>
+                </div>
+                <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2.5">
+                  <div className={`h-2.5 rounded-full ${isDone ? 'bg-green-500' : 'bg-blue-600'}`} style={{ width: `${parseFloat(ufStats.s.pst.replace(',', '.'))}%` }}></div>
+                </div>
+                <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  <span>{munsFinalizadas.toLocaleString('pt-BR')} municípios finalizados</span>
+                  <span>{parseInt(ufStats.s.st).toLocaleString('pt-BR')} de {parseInt(ufStats.s.ts).toLocaleString('pt-BR')} seções</span>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
+        <div className="relative">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+          </div>
+          <input
+            type="text"
+            placeholder="Buscar município por nome ou código..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-900 dark:text-gray-100 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block pl-10 p-2.5 transition-colors"
+          />
+        </div>
+      </div>
+
+      <div className="flex-1 p-4 overflow-y-auto">
+        {showRawJson ? (
+          <div className="bg-[#1e1e1e] rounded-lg p-4 overflow-x-auto shadow-inner border border-gray-700">
+            {renderHighlightedJson(ea15Data)}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+            {filteredMuns.map(mun => {
+              const pct = parseFloat(mun.s.pst.replace(',', '.'));
+              const isDone = mun.and === 'f';
+              const isPartial = mun.and === 'p';
+              const munErrors = getErrorsForMun(mun.cdabr);
+              const hasErrors = munErrors.length > 0;
+              const munName = munDict.get(mun.cdabr) || `Cod: ${mun.cdabr}`;
+
+              const borderBg = hasErrors
+                ? 'border-red-300 dark:border-red-800 bg-red-50/50 dark:bg-red-900/10'
+                : isDone
+                  ? 'border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800/40'
+                  : isPartial
+                    ? 'border-yellow-300 dark:border-yellow-700/50 bg-yellow-50/50 dark:bg-yellow-900/10'
+                    : 'border-blue-200 dark:border-blue-900/50 bg-blue-50/30 dark:bg-blue-900/10';
+
+              const pctColor = hasErrors
+                ? 'text-red-600 dark:text-red-400'
+                : isDone
+                  ? 'text-green-600 dark:text-green-400'
+                  : isPartial
+                    ? 'text-yellow-600 dark:text-yellow-400'
+                    : 'text-blue-600 dark:text-blue-400';
+
+              const barColor = hasErrors
+                ? 'bg-red-500'
+                : isDone
+                  ? 'bg-green-500'
+                  : isPartial
+                    ? 'bg-yellow-400 dark:bg-yellow-500'
+                    : 'bg-blue-500';
+
+              return (
+                <div
+                  key={mun.cdabr}
+                  onClick={() => setExpandedMun(expandedMun === mun.cdabr ? null : mun.cdabr)}
+                  className={`border rounded p-3 text-sm flex flex-col justify-between cursor-pointer hover:shadow-md transition-all ${borderBg}`}
+                >
+                  <div>
+                    <div className="flex justify-between items-start mb-2 gap-2">
+                      <div className="font-semibold text-gray-800 dark:text-gray-200 leading-tight">
+                        {munName}
+                      </div>
+                      <span className={`font-mono font-bold text-xs shrink-0 ${pctColor}`}>
+                        {mun.s.pst}%
+                      </span>
+                    </div>
+
+                    <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-1.5 mb-2">
+                      <div className={`h-1.5 rounded-full ${barColor}`} style={{ width: `${pct}%` }}></div>
+                    </div>
+
+                    <div className="flex justify-between items-center text-xs text-gray-500 dark:text-gray-400">
+                      <span className="font-mono bg-gray-100 dark:bg-slate-800 px-1.5 py-0.5 rounded border border-gray-200 dark:border-slate-700">
+                        Cód: {mun.cdabr}
+                      </span>
+                      <span>
+                        {parseInt(mun.s.st).toLocaleString('pt-BR')} / {parseInt(mun.s.ts).toLocaleString('pt-BR')} seções
+                      </span>
+                    </div>
+
+                    {hasErrors && (
+                      <div className="mt-2 bg-red-100 dark:bg-red-900/30 border border-red-200 dark:border-red-800/50 rounded p-1.5 text-xs text-red-700 dark:text-red-300" onClick={(e) => e.stopPropagation()}>
+                        <strong className="flex items-center gap-1 mb-1">
+                          <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                          Inconsistências:
+                        </strong>
+                        <ul className="list-disc pl-4 space-y-0.5">
+                          {munErrors.map((err, i) => <li key={i}>{err}</li>)}
+                        </ul>
+                      </div>
+                    )}
+
+                    {expandedMun === mun.cdabr && (
+                      <div className="mt-3 pt-3 border-t border-gray-200 dark:border-slate-700 space-y-1.5 text-xs text-gray-600 dark:text-gray-400" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex justify-between">
+                          <span>Atualizado:</span>
+                          <span className="font-mono">{mun.dt} {mun.ht}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Andamento:</span>
+                          <span className={`font-semibold ${isDone ? 'text-green-600 dark:text-green-400' : isPartial ? 'text-yellow-600 dark:text-yellow-400' : 'text-blue-600 dark:text-blue-400'}`}>
+                            {isDone ? 'Finalizado' : isPartial ? 'Parcial' : 'Não iniciado'}
+                          </span>
+                        </div>
+                        <div className="border-t border-gray-100 dark:border-slate-700 pt-1.5 mt-1">
+                          <div className="font-semibold mb-1 text-gray-700 dark:text-gray-300">Eleitores</div>
+                          <div className="flex justify-between">
+                            <span>Total:</span>
+                            <span className="font-medium">{parseInt(mun.e.te).toLocaleString('pt-BR')}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Comparecimento:</span>
+                            <span className="font-medium text-blue-600 dark:text-blue-400">{parseInt(mun.e.c).toLocaleString('pt-BR')} ({mun.e.pc}%)</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Abstenção:</span>
+                            <span className="font-medium text-gray-500">{parseInt(mun.e.a).toLocaleString('pt-BR')} ({mun.e.pa}%)</span>
+                          </div>
+                        </div>
+                        <div className="border-t border-gray-100 dark:border-slate-700 pt-1.5">
+                          <div className="font-semibold mb-1 text-gray-700 dark:text-gray-300">Seções</div>
+                          <div className="flex justify-between">
+                            <span>Totalizadas:</span>
+                            <span className="font-medium text-green-600 dark:text-green-400">{parseInt(mun.s.st).toLocaleString('pt-BR')} de {parseInt(mun.s.ts).toLocaleString('pt-BR')}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Não totalizadas:</span>
+                            <span className="font-medium text-gray-500">{parseInt(mun.s.snt).toLocaleString('pt-BR')}</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {filteredMuns.length === 0 && !showRawJson && (
+          <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+            <svg className="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            <p className="text-sm font-medium">Nenhum município encontrado</p>
+            {searchTerm && <p className="text-xs mt-1">Tente buscar por outro termo.</p>}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

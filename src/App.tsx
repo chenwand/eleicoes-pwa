@@ -9,6 +9,7 @@ import { Validator } from './pages/Validator';
 import type { Turno } from './types/election';
 
 import { ThemeProvider } from './context/ThemeContext';
+import { EnvironmentProvider } from './context/EnvironmentContext';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -19,28 +20,28 @@ const queryClient = new QueryClient({
   },
 });
 
-function App() {
-  const [turno, setTurno] = useState<Turno>(1);
+export default function App() {
+  const [turno] = useState<Turno>(1);
 
   return (
-    <ThemeProvider>
-      <QueryClientProvider client={queryClient}>
-        <BrowserRouter>
-          <div className="min-h-screen transition-colors duration-300" style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
-            <Header turno={turno} onTurnoChange={setTurno} />
-            <main className="container mx-auto px-4 py-6">
-              <Routes>
-                <Route path="/" element={<Validator />} />
-                <Route path="/resultados" element={<Home turno={turno} />} />
-                <Route path="/regioes" element={<ByRegion turno={turno} />} />
-                <Route path="/timeline" element={<Timeline turno={turno} />} />
-              </Routes>
-            </main>
-          </div>
-        </BrowserRouter>
-      </QueryClientProvider>
-    </ThemeProvider>
+    <EnvironmentProvider>
+      <ThemeProvider>
+        <QueryClientProvider client={queryClient}>
+          <BrowserRouter>
+            <div className="min-h-screen transition-colors duration-300" style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
+              <Header />
+              <main className="container mx-auto px-4 py-6">
+                <Routes>
+                  <Route path="/" element={<Validator />} />
+                  <Route path="/resultados" element={<Home turno={turno} />} />
+                  <Route path="/regioes" element={<ByRegion turno={turno} />} />
+                  <Route path="/timeline" element={<Timeline turno={turno} />} />
+                </Routes>
+              </main>
+            </div>
+          </BrowserRouter>
+        </QueryClientProvider>
+      </ThemeProvider>
+    </EnvironmentProvider>
   );
 }
-
-export default App;
