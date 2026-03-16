@@ -3,6 +3,50 @@
 
 @theme {
   --color-blue-950: #0a192f;
+
+  @keyframes slide-in-right {
+    from {
+      transform: translateX(100%);
+    }
+    to {
+      transform: translateX(0);
+    }
+  }
+
+  --animate-slide-in-right: slide-in-right 0.3s ease-out;
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  --animate-fade-in: fade-in 0.2s ease-out;
+
+  @keyframes slide-out-right {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(100%);
+    }
+  }
+
+  --animate-slide-out-right: slide-out-right 0.3s ease-in forwards;
+
+  @keyframes fade-out {
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0;
+    }
+  }
+
+  --animate-fade-out: fade-out 0.3s ease-in forwards;
 }
 
 :root {

@@ -36,7 +36,15 @@ export function EA15Viewer({ ciclo, eleicaoCd, uf, onBack }: EA15ViewerProps) {
   const [expandedMun, setExpandedMun] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<'all' | 'f' | 'p' | 'nr' | 'fav'>('all');
   const [sortMode, setSortMode] = useState<'default' | 'recent' | 'eleitores' | 'comparecimento' | 'abstencao' | 'pst'>('default');
+  const [isClosing, setIsClosing] = useState(false);
   const { ambiente } = useEnvironment();
+
+  const handleBack = () => {
+    setIsClosing(true);
+    setTimeout(() => {
+      onBack();
+    }, 300); // Match slide-out duration
+  };
 
   // Favorites — persisted per election + UF
   const favKey = `ea15-fav-${eleicaoCd}-${uf.toLowerCase()}`;
@@ -205,12 +213,12 @@ export function EA15Viewer({ ciclo, eleicaoCd, uf, onBack }: EA15ViewerProps) {
   }
 
   return (
-    <div className="flex flex-col h-full bg-white dark:bg-slate-900 animate-slide-in-right relative rounded-md shadow-sm">
+    <div className={`flex flex-col h-full bg-white dark:bg-slate-900 relative rounded-md shadow-sm ${isClosing ? 'animate-slide-out-right' : 'animate-slide-in-right'}`}>
       <div className="sticky top-0 z-20 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-gray-200 dark:border-slate-800 p-4">
         <div className="flex items-center justify-between gap-3 mb-4">
           <div className="flex items-center gap-2">
             <button
-              onClick={onBack}
+              onClick={handleBack}
               className="p-1.5 bg-gray-100 hover:bg-gray-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-full transition-colors flex items-center justify-center shadow-sm"
               title="Voltar para Acompanhamento BR"
             >

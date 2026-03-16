@@ -12,7 +12,8 @@ export function validateEA15(data: EA14Response): EA15ValidationResult[] {
   const parsePct = (val: string) => parseFloat(val.replace(',', '.')) || 0;
 
   // Identify which record is the UF summary (not a municipality)
-  const ufEntry = data.abr.find(a => a.tpabr === 'uf' || (a.tpabr !== 'mun' && a.cdabr !== 'br'));
+  // Municipalities have cdabr as 5-digit numbers; UF has 2-letter state code or 'br'
+  const ufEntry = data.abr.find(a => a.tpabr === 'uf' || (a.cdabr !== 'br' && /^[a-zA-Z]{2}$/.test(a.cdabr)));
   let finishedMunsCount = 0;
 
   for (const abr of data.abr) {
@@ -116,7 +117,7 @@ export function validateEA15(data: EA14Response): EA15ValidationResult[] {
   // Final cross-check: ufEntry.munf should match actual count of and='f' municipalities
   if (ufEntry) {
     const declaredMunf = (ufEntry as any)._declaredMunf || 0;
-    if (declaredMunf !== finishedMunsCount) {
+    if ((declaredMunf) !== finishedMunsCount) {
       const errMsg = `Campo munf (${declaredMunf} municípios finalizados declarados) diverge do número real de municípios com and='f' encontrados (${finishedMunsCount}).`;
       const existing = results.find(r => r.cdabr === ufEntry.cdabr);
       if (existing) {

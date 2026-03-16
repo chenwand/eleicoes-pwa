@@ -20,6 +20,35 @@ function formatTipoEleicao(tpCode: string): string {
   return TIPO_ELEICAO[tpCode] || `Desconhecido (${tpCode})`;
 }
 
+const renderHighlightedJson = (jsonObj: any) => {
+  const json = JSON.stringify(jsonObj, null, 2).replace(/[&<>]/g, (c) => {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c] || c;
+  });
+
+  const highlighted = json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
+    let cls = 'text-blue-400'; // number
+    if (/^"/.test(match)) {
+      if (/:$/.test(match)) {
+        cls = 'text-purple-400 font-semibold'; // key
+      } else {
+        cls = 'text-green-400 break-all whitespace-pre-wrap'; // string
+      }
+    } else if (/true|false/.test(match)) {
+      cls = 'text-orange-400 font-medium'; // boolean
+    } else if (/null/.test(match)) {
+      cls = 'text-red-400 font-medium'; // null
+    }
+    return `<span class="${cls}">${match}</span>`;
+  });
+
+  return (
+    <pre
+      className="text-xs sm:text-sm text-gray-300 font-mono"
+      dangerouslySetInnerHTML={{ __html: highlighted }}
+    />
+  );
+};
+
 export function Validator() {
   const { ambiente } = useEnvironment();
   const [selectedEleicaoCd, setSelectedEleicaoCd] = useState<string | null>(null);
@@ -28,6 +57,7 @@ export function Validator() {
   const [selectedZona, setSelectedZona] = useState('Todas');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [selectedEA14EleicaoCd, setSelectedEA14EleicaoCd] = useState<string | null>(null);
+  const [showRawJson, setShowRawJson] = useState(false);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -137,9 +167,9 @@ export function Validator() {
     <div className={`mx-auto space-y-6 transition-all duration-300 ${selectedEleicaoCd ? 'max-w-[1600px] px-4' : 'max-w-5xl'}`}>
       <div className="bg-white dark:bg-slate-900 rounded-lg shadow-md p-6 dark:border dark:border-slate-800 transition-colors duration-300">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-3">
-              {selectedEleicaoCd && (
+          <div className="flex-1">
+            <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-3">
+              {selectedEleicaoCd && !showRawJson && (
                 <button
                   onClick={() => {
                     setSelectedEleicaoCd(null);
@@ -152,21 +182,47 @@ export function Validator() {
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
                 </button>
               )}
-              Validador de Arquivos de Resultados (JSON)
+              <svg className="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+              Arquivo de configuração de eleições (EA11)
             </h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-              Arquivo de configuração de eleições (EA11): <span className="font-semibold text-blue-600 dark:text-blue-400">ele-c.json</span> |
-              Ciclo: <span className="font-semibold text-blue-600 dark:text-blue-400">{ea11Data.c}</span> |
-              Gerado em: {ea11Data.dg} às {ea11Data.hg}
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 flex flex-wrap items-center gap-x-2">
+              Ciclo: <span className="font-semibold text-blue-600 dark:text-blue-400">{ea11Data.c}</span>
+              <span className="text-gray-300 dark:text-gray-700">|</span>
+              Arquivo gerado em:{' '}
+              <a
+                href={`https://resultados.tse.jus.br/${ambiente}/comum/config/ele-c.json`}
+                target="_blank"
+                rel="noreferrer"
+                className="font-mono hover:text-blue-500 dark:hover:text-blue-400 underline underline-offset-2 transition-colors ml-1"
+                title="Abrir / baixar JSON EA11 (ele-c.json)"
+              >
+                {ea11Data.dg} {ea11Data.hg} ↓
+              </a>
             </p>
           </div>
-          <span className="bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 text-xs font-medium px-2.5 py-0.5 rounded-full border border-green-400 dark:border-green-800">
-            Ambiente Oficial
-          </span>
+          <div className="flex flex-col items-end gap-2">
+            <span className="bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 text-xs font-medium px-2.5 py-0.5 rounded-full border border-green-400 dark:border-green-800">
+              Ambiente Oficial
+            </span>
+            {!selectedEleicaoCd && (
+              <button
+                onClick={() => setShowRawJson(!showRawJson)}
+                className="px-3 py-1.5 bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-300 rounded text-sm font-medium transition-colors"
+                title="Alternar visualização do JSON"
+              >
+                {showRawJson ? 'Painel Visual' : 'Ver JSON'}
+              </button>
+            )}
+          </div>
         </div>
 
-        <div className="space-y-6">
-          {topLevelElections
+        {showRawJson ? (
+          <div className="bg-[#1e1e1e] rounded-lg p-4 overflow-x-auto shadow-inner border border-gray-700">
+            {renderHighlightedJson(ea11Data)}
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {topLevelElections
             .filter((eleicao) => {
               if (selectedEleicaoCd === null) return true;
               if (selectedEleicaoCd === eleicao.cd) return true;
@@ -518,7 +574,8 @@ export function Validator() {
                 </div>
               );
             })}
-        </div>
+          </div>
+        )}
       </div>
 
       {selectedEA14EleicaoCd && (

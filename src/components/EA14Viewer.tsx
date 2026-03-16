@@ -46,6 +46,14 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose }: EA14Viewe
   const [showRawJson, setShowRawJson] = useState(false);
   const [selectedEA15Uf, setSelectedEA15Uf] = useState<string | null>(null);
   const [sortMode, setSortMode] = useState<'default' | 'recent' | 'eleitores' | 'comparecimento' | 'abstencao' | 'pst'>('default');
+  const [isClosing, setIsClosing] = useState(false);
+
+  const handleClose = () => {
+    setIsClosing(true);
+    setTimeout(() => {
+      onClose();
+    }, 300); // Match slide-out duration
+  };
 
   const { ambiente } = useEnvironment();
 
@@ -67,7 +75,7 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose }: EA14Viewe
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (panelRef.current && !panelRef.current.contains(event.target as Node)) {
-        onClose();
+        handleClose();
       }
     }
 
@@ -82,7 +90,7 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose }: EA14Viewe
   // Handle escape key
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') handleClose();
     }
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
@@ -90,10 +98,10 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose }: EA14Viewe
 
   return (
     <>
-      <div className="fixed inset-0 bg-black/40 z-40 transition-opacity backdrop-blur-sm" />
+      <div className={`fixed inset-0 bg-black/40 z-40 backdrop-blur-sm ${isClosing ? 'animate-fade-out' : 'animate-fade-in'}`} />
       <div
         ref={panelRef}
-        className="fixed inset-y-0 right-0 z-50 w-full sm:w-[500px] md:w-1/2 lg:w-7/12 xl:w-8/12 bg-white dark:bg-slate-900 shadow-2xl overflow-y-auto transform transition-transform duration-300 ease-in-out border-l border-gray-200 dark:border-slate-800 flex flex-col"
+        className={`fixed inset-y-0 right-0 z-50 w-full sm:w-[500px] md:w-1/2 lg:w-7/12 xl:w-8/12 bg-white dark:bg-slate-900 shadow-2xl overflow-y-auto border-l border-gray-200 dark:border-slate-800 flex flex-col ${isClosing ? 'animate-slide-out-right' : 'animate-slide-in-right'}`}
       >
         <div className="sticky top-0 z-10 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-gray-200 dark:border-slate-800 p-4">
           <div className="flex justify-between items-center mb-4">
@@ -117,7 +125,7 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose }: EA14Viewe
                 </button>
               )}
               <button
-                onClick={onClose}
+                onClick={handleClose}
                 className="p-2 bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-full transition-colors"
                 title="Fechar"
               >

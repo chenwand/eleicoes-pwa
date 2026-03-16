@@ -13,7 +13,7 @@ export function Header() {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div className="flex items-center gap-4">
             <Link to="/" className="text-2xl font-bold">
-              DIV
+              Validador de Arquivos de Resultados (JSON)
             </Link>
           </div>
 
