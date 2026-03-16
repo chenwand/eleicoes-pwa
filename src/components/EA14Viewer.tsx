@@ -45,6 +45,7 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose }: EA14Viewe
   const [expandedUf, setExpandedUf] = useState<string | null>(null);
   const [showRawJson, setShowRawJson] = useState(false);
   const [selectedEA15Uf, setSelectedEA15Uf] = useState<string | null>(null);
+  const [sortMode, setSortMode] = useState<'default' | 'recent' | 'eleitores' | 'comparecimento' | 'abstencao' | 'pst'>('default');
 
   const { ambiente } = useEnvironment();
 
@@ -94,36 +95,53 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose }: EA14Viewe
         ref={panelRef}
         className="fixed inset-y-0 right-0 z-50 w-full sm:w-[500px] md:w-1/2 lg:w-7/12 xl:w-8/12 bg-white dark:bg-slate-900 shadow-2xl overflow-y-auto transform transition-transform duration-300 ease-in-out border-l border-gray-200 dark:border-slate-800 flex flex-col"
       >
-        <div className="sticky top-0 z-10 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-gray-200 dark:border-slate-800 p-4 flex justify-between items-center">
-          <div>
-            <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
-              <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-              Acompanhamento BR (EA14)
-            </h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              {eleicaoNome}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            {!selectedEA15Uf && (
+        <div className="sticky top-0 z-10 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-gray-200 dark:border-slate-800 p-4">
+          <div className="flex justify-between items-center mb-4">
+            <div>
+              <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
+                <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                Acompanhamento BR (EA14)
+              </h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                {eleicaoNome}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              {!selectedEA15Uf && (
+                <button
+                  onClick={() => setShowRawJson(!showRawJson)}
+                  className="px-3 py-1.5 bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-300 rounded text-sm font-medium transition-colors"
+                  title="Alternar visualização do JSON"
+                >
+                  {showRawJson ? 'Painel Visual' : 'Ver JSON'}
+                </button>
+              )}
               <button
-                onClick={() => setShowRawJson(!showRawJson)}
-                className="px-3 py-1.5 bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-300 rounded text-sm font-medium transition-colors"
-                title="Alternar visualização do JSON"
+                onClick={onClose}
+                className="p-2 bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-full transition-colors"
+                title="Fechar"
               >
-                {showRawJson ? 'Painel Visual' : 'Ver JSON'}
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
               </button>
-            )}
-            <button
-              onClick={onClose}
-              className="p-2 bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-full transition-colors"
-              title="Fechar"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
-              </svg>
-            </button>
+            </div>
           </div>
+
+          {!selectedEA15Uf && data && (
+            <div className="text-xs text-gray-400 dark:text-gray-500 text-right -mt-2">
+              Arquivo gerado em:{' '}
+              <a
+                href={`https://resultados.tse.jus.br/${ambiente}/${ciclo}/${eleicaoCd}/dados/br/br-e${eleicaoCd.padStart(6, '0')}-ab.json`}
+                target="_blank"
+                rel="noreferrer"
+                className="font-mono hover:text-blue-500 dark:hover:text-blue-400 underline underline-offset-2 transition-colors"
+                title="Abrir / baixar JSON EA14"
+              >
+                {data.dg} {data.hg} ↓
+              </a>
+            </div>
+          )}
         </div>
 
         {selectedEA15Uf ? (
@@ -151,10 +169,6 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose }: EA14Viewe
               </div>
             ) : data && data.abr ? (
               <div className="space-y-6">
-                <div className="text-xs text-right text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-slate-800/50 p-2 rounded flex flex-col sm:flex-row justify-between items-end sm:items-center gap-2">
-                  <span>Fonte: <a href={`https://resultados.tse.jus.br/${ambiente}/${ciclo}/${eleicaoCd}/dados/br/br-e${eleicaoCd.padStart(6, '0')}-ab.json`} target="_blank" rel="noreferrer" className="font-semibold text-blue-600 dark:text-blue-400 hover:underline">JSON Oficial TSE</a></span>
-                  <span>Dados atualizados em: <strong>{data.dg} {data.hg}</strong></span>
-                </div>
 
                 {showRawJson ? (
                   <div className="bg-[#1e1e1e] rounded-lg p-4 overflow-x-auto shadow-inner border border-gray-700">
@@ -210,15 +224,64 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose }: EA14Viewe
                       )
                     })}
 
-                    <h3 className="font-medium text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-slate-700 pb-2 mb-4">
-                      Por Unidade da Federação
-                    </h3>
+                    <div className="flex justify-between items-center border-b border-gray-200 dark:border-slate-700 pb-2 mb-4">
+                      <h3 className="font-medium text-gray-700 dark:text-gray-300">
+                        Por Unidade da Federação
+                      </h3>
+                      <select
+                        value={sortMode}
+                        onChange={(e) => setSortMode(e.target.value as typeof sortMode)}
+                        className="text-xs bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-gray-300 rounded-lg px-2 py-1.5 transition-colors focus:ring-1 focus:ring-blue-500 outline-none"
+                      >
+                        <option value="default">Ordenar: Padrão</option>
+                        <option value="recent">↓ Mais recentes</option>
+                        <option value="pst">↓ % Seções totalizadas</option>
+                        <option value="eleitores">↓ Eleitores</option>
+                        <option value="comparecimento">↓ % Comparecimento</option>
+                        <option value="abstencao">↓ % Abstenção</option>
+                      </select>
+                    </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                       {data.abr
                         .filter((a: any) => a.cdabr !== 'br')
-                        .sort((a: any, b: any) => {
-                          // Sort by percentage descending, then alphabetical
+                        .sort((aValue: any, bValue: any) => {
+                          const a = aValue;
+                          const b = bValue;
+                          
+                          // Sort by most recently updated
+                          if (sortMode === 'recent') {
+                            const toSortable = (dt: string, ht: string) => {
+                              if (!dt) return '';
+                              const [d, m, y] = dt.split('/');
+                              return `${y}/${m}/${d} ${ht || ''}`;
+                            };
+                            const tsA = toSortable(a.dt, a.ht);
+                            const tsB = toSortable(b.dt, b.ht);
+                            return tsB.localeCompare(tsA);
+                          }
+
+                          // Default behaviors for other sorts (errors first)
+                          const aErrors = getErrorsForAbr(a.cdabr).length;
+                          const bErrors = getErrorsForAbr(b.cdabr).length;
+                          if (aErrors !== bErrors) return bErrors - aErrors;
+
+                          if (sortMode === 'pst') {
+                            const pctA = parseFloat(a.s.pst.replace(',', '.'));
+                            const pctB = parseFloat(b.s.pst.replace(',', '.'));
+                            return pctB - pctA;
+                          }
+                          if (sortMode === 'eleitores') {
+                            return parseInt(b.e.te) - parseInt(a.e.te);
+                          }
+                          if (sortMode === 'comparecimento') {
+                            return parseFloat(b.e.pc.replace(',', '.')) - parseFloat(a.e.pc.replace(',', '.'));
+                          }
+                          if (sortMode === 'abstencao') {
+                            return parseFloat(b.e.pa.replace(',', '.')) - parseFloat(a.e.pa.replace(',', '.'));
+                          }
+
+                          // Default: % seções descending, then alphabetical
                           const pctA = parseFloat(a.s.pst.replace(',', '.'));
                           const pctB = parseFloat(b.s.pst.replace(',', '.'));
                           if (pctA !== pctB) return pctB - pctA;
@@ -227,25 +290,50 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose }: EA14Viewe
                         .map((uf: any) => {
                           const pct = parseFloat(uf.s.pst.replace(',', '.'));
                           const isDone = uf.and === 'f';
+                          const isPartial = uf.and === 'p';
                           const ufErrors = getErrorsForAbr(uf.cdabr);
                           const hasErrors = ufErrors.length > 0;
                           const isExpanded = expandedUf === uf.cdabr;
+
+                          const borderBg = hasErrors
+                            ? 'border-red-300 dark:border-red-800 bg-red-50/50 dark:bg-red-900/10'
+                            : isDone
+                              ? 'border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800/40'
+                              : isPartial
+                                ? 'border-yellow-300 dark:border-yellow-700/50 bg-yellow-50/50 dark:bg-yellow-900/10'
+                                : 'border-blue-200 dark:border-blue-900/50 bg-blue-50/30 dark:bg-blue-900/10';
+
+                          const pctColor = hasErrors
+                            ? 'text-red-600 dark:text-red-400'
+                            : isDone
+                              ? 'text-green-600 dark:text-green-400'
+                              : isPartial
+                                ? 'text-yellow-600 dark:text-yellow-400'
+                                : 'text-blue-600 dark:text-blue-400';
+
+                          const barColor = hasErrors
+                            ? 'bg-red-500'
+                            : isDone
+                              ? 'bg-green-500'
+                              : isPartial
+                                ? 'bg-yellow-400 dark:bg-yellow-500'
+                                : 'bg-blue-500';
 
                           return (
                             <div
                               key={uf.cdabr}
                               onClick={() => setExpandedUf(isExpanded ? null : uf.cdabr)}
-                              className={`border transition-all cursor-pointer hover:shadow-md ${hasErrors ? 'border-red-300 dark:border-red-800 bg-red-50/50 dark:bg-red-900/10' : 'border-gray-100 dark:border-slate-800 bg-gray-50 dark:bg-slate-800/40'} rounded p-3 text-sm`}
+                              className={`border transition-all cursor-pointer hover:shadow-md ${borderBg} rounded p-3 text-sm`}
                             >
                               <div className="flex justify-between items-center mb-2">
                                 <div className="flex items-center gap-2 font-mono font-bold uppercase text-gray-700 dark:text-gray-300">
                                   <img src={`/flags/${uf.cdabr.toLowerCase()}.svg`} alt={uf.cdabr} className="w-4 h-3 object-contain rounded-sm" onError={(e) => (e.currentTarget.style.display = 'none')} />
                                   {uf.cdabr}
                                 </div>
-                                <span className={`font-semibold ${hasErrors ? 'text-red-700 dark:text-red-400' : 'text-gray-800 dark:text-gray-200'}`}>{uf.s.pst}%</span>
+                                <span className={`font-semibold ${pctColor}`}>{uf.s.pst}%</span>
                               </div>
                               <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-1.5 mb-1">
-                                <div className={`h-1.5 rounded-full ${hasErrors ? 'bg-red-500' : isDone ? 'bg-green-500' : 'bg-yellow-400 dark:bg-yellow-500'}`} style={{ width: `${pct}%` }}></div>
+                                <div className={`h-1.5 rounded-full ${barColor}`} style={{ width: `${pct}%` }}></div>
                               </div>
                               <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400">
                                 <span>Eleitores: {parseInt(uf.e.te).toLocaleString('pt-BR')}</span>

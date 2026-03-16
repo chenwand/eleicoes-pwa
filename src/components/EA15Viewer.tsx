@@ -34,7 +34,28 @@ export function EA15Viewer({ ciclo, eleicaoCd, uf, onBack }: EA15ViewerProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [showRawJson, setShowRawJson] = useState(false);
   const [expandedMun, setExpandedMun] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<'all' | 'f' | 'p' | 'nr' | 'fav'>('all');
+  const [sortMode, setSortMode] = useState<'default' | 'recent' | 'eleitores' | 'comparecimento' | 'abstencao' | 'pst'>('default');
   const { ambiente } = useEnvironment();
+
+  // Favorites — persisted per election + UF
+  const favKey = `ea15-fav-${eleicaoCd}-${uf.toLowerCase()}`;
+  const [favorites, setFavorites] = useState<Set<string>>(() => {
+    try {
+      const stored = localStorage.getItem(favKey);
+      return stored ? new Set<string>(JSON.parse(stored)) : new Set<string>();
+    } catch { return new Set<string>(); }
+  });
+
+  const toggleFavorite = (cdabr: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setFavorites(prev => {
+      const next = new Set(prev);
+      if (next.has(cdabr)) next.delete(cdabr); else next.add(cdabr);
+      localStorage.setItem(favKey, JSON.stringify([...next]));
+      return next;
+    });
+  };
 
   // Fetch EA15 Data
   const { data: ea15Data, isLoading: isEA15Loading, isError: isEA15Error, error: ea15Error } = useQuery({
@@ -55,13 +76,17 @@ export function EA15Viewer({ ciclo, eleicaoCd, uf, onBack }: EA15ViewerProps) {
   // Normalize string for searching
   const normalize = (str: string) => str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
-  // Create a dictionary for optimized municipality name lookups
-  const munDict = useMemo(() => {
-    if (!ea12Data) return new Map<string, string>();
+  // Create a dictionary for optimized municipality name lookups and a set of capitals
+  const { munDict, capitalSet } = useMemo(() => {
+    if (!ea12Data) return { munDict: new Map<string, string>(), capitalSet: new Set<string>() };
     const flat = flattenEA12Municipios(ea12Data);
-    const map = new Map<string, string>();
-    flat.forEach(m => map.set(m.munCdTse, m.munNome));
-    return map;
+    const munDict = new Map<string, string>();
+    const capitalSet = new Set<string>();
+    flat.forEach(m => {
+      munDict.set(m.munCdTse, m.munNome);
+      if (m.isCapital) capitalSet.add(m.munCdTse);
+    });
+    return { munDict, capitalSet };
   }, [ea12Data]);
 
   // Run semantic validation on the whole EA15 dataset (must be before filteredMuns)
@@ -84,13 +109,39 @@ export function EA15Viewer({ ciclo, eleicaoCd, uf, onBack }: EA15ViewerProps) {
 
     return munsOnly
       .filter(mun => {
+        // Status filter
+        if (statusFilter === 'fav' && !favorites.has(mun.cdabr)) return false;
+        if (statusFilter === 'f' && mun.and !== 'f') return false;
+        if (statusFilter === 'p' && mun.and !== 'p') return false;
+        if (statusFilter === 'nr' && (mun.and === 'f' || mun.and === 'p')) return false;
+        // Text search
         if (!searchTerm) return true;
         const name = munDict.get(mun.cdabr) || '';
         const search = normalize(searchTerm);
         return normalize(name).includes(search) || mun.cdabr.includes(search);
       })
       .sort((a, b) => {
-        // Errored municipalities come first, then by % descending, then alphabetical
+        // Sort by most recently updated
+        if (sortMode === 'recent') {
+          const toSortable = (dt: string, ht: string) => {
+            if (!dt) return '';
+            const [d, m, y] = dt.split('/');
+            return `${y}/${m}/${d} ${ht || ''}`;
+          };
+          const tsA = toSortable(a.dt, a.ht);
+          const tsB = toSortable(b.dt, b.ht);
+          return tsB.localeCompare(tsA);
+        }
+        // Numeric metric sorts — favorites still pinned first
+        const aFav = favorites.has(a.cdabr) ? 0 : 1;
+        const bFav = favorites.has(b.cdabr) ? 0 : 1;
+        if (aFav !== bFav) return aFav - bFav;
+
+        if (sortMode === 'eleitores')       return parseInt(b.e.te) - parseInt(a.e.te);
+        if (sortMode === 'comparecimento')  return parseFloat(b.e.pc.replace(',', '.')) - parseFloat(a.e.pc.replace(',', '.'));
+        if (sortMode === 'abstencao')       return parseFloat(b.e.pa.replace(',', '.')) - parseFloat(a.e.pa.replace(',', '.'));
+        if (sortMode === 'pst')             return parseFloat(b.s.pst.replace(',', '.')) - parseFloat(a.s.pst.replace(',', '.'));
+
         const aErrors = getEA15ErrorsForAbr(validationResults, a.cdabr).length;
         const bErrors = getEA15ErrorsForAbr(validationResults, b.cdabr).length;
         if (aErrors !== bErrors) return bErrors - aErrors;
@@ -103,7 +154,20 @@ export function EA15Viewer({ ciclo, eleicaoCd, uf, onBack }: EA15ViewerProps) {
         const nameB = munDict.get(b.cdabr) || b.cdabr;
         return nameA.localeCompare(nameB);
       });
-  }, [ea15Data, searchTerm, munDict, uf, validationResults]);
+  }, [ea15Data, searchTerm, munDict, uf, validationResults, statusFilter, sortMode, favorites]);
+
+  // Counts for filter pill labels
+  const munCounts = useMemo(() => {
+    if (!ea15Data?.abr) return { all: 0, f: 0, p: 0, nr: 0, fav: 0 };
+    const muns = ea15Data.abr.filter(a => a.tpabr === 'mun' || (a.cdabr !== uf.toLowerCase() && a.cdabr !== 'br'));
+    return {
+      all: muns.length,
+      f: muns.filter(m => m.and === 'f').length,
+      p: muns.filter(m => m.and === 'p').length,
+      nr: muns.filter(m => m.and !== 'f' && m.and !== 'p').length,
+      fav: muns.filter(m => favorites.has(m.cdabr)).length,
+    };
+  }, [ea15Data, uf, favorites]);
 
   // Try to extract General UF stats from the JSON (usually it's the item matching the UF code or the first item if none matches)
   const ufStats = useMemo(() => {
@@ -166,7 +230,27 @@ export function EA15Viewer({ ciclo, eleicaoCd, uf, onBack }: EA15ViewerProps) {
           </button>
         </div>
 
-        {ufStats && (() => {
+        {ea15Data && (() => {
+          const ufLower = uf.toLowerCase();
+          const paddedCd = eleicaoCd.padStart(6, '0');
+          const jsonUrl = `https://resultados.tse.jus.br/${ambiente}/${ciclo}/${eleicaoCd}/dados/${ufLower}/${ufLower}-e${paddedCd}-ab.json`;
+          return (
+            <div className="text-xs text-gray-400 dark:text-gray-500 text-right -mt-2 mb-3">
+              Arquivo gerado em:{' '}
+              <a
+                href={jsonUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="font-mono hover:text-blue-500 dark:hover:text-blue-400 underline underline-offset-2 transition-colors"
+                title="Abrir / baixar JSON EA15"
+              >
+                {ea15Data.dg} {ea15Data.hg} ↓
+              </a>
+            </div>
+          );
+        })()}
+
+        {!showRawJson && ufStats && (() => {
           const ufNome = ea12Data?.abr?.find((a: any) => a.cd.toLowerCase() === uf.toLowerCase())?.ds || uf.toUpperCase();
           const isDone = ufStats.and === 'f';
           const munsFinalizadas = parseInt(ufStats.munf || '0');
@@ -198,18 +282,65 @@ export function EA15Viewer({ ciclo, eleicaoCd, uf, onBack }: EA15ViewerProps) {
           );
         })()}
 
-        <div className="relative">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+        {!showRawJson && <div className="space-y-2">
+          {/* Search */}
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+            </div>
+            <input
+              type="text"
+              placeholder="Buscar município por nome ou código..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-900 dark:text-gray-100 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block pl-10 p-2.5 transition-colors"
+            />
           </div>
-          <input
-            type="text"
-            placeholder="Buscar município por nome ou código..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-900 dark:text-gray-100 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block pl-10 p-2.5 transition-colors"
-          />
-        </div>
+
+          {/* Filter pills + sort */}
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap gap-1 flex-1">
+              {([
+                { key: 'all', label: `Todos (${munCounts.all})` },
+                { key: 'fav', label: `♥ Favoritos (${munCounts.fav})` },
+                { key: 'f',   label: `✓ Finalizados (${munCounts.f})` },
+                { key: 'p',   label: `⟳ Parciais (${munCounts.p})` },
+                { key: 'nr',  label: `○ Não recebidos (${munCounts.nr})` },
+              ] as const).map(({ key, label }) => {
+                const active = statusFilter === key;
+                const colorMap: Record<string, string> = {
+                  all:  active ? 'bg-blue-600 text-white'   : 'bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-700',
+                  fav:  active ? 'bg-pink-500 text-white'   : 'bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-700',
+                  f:    active ? 'bg-green-600 text-white'  : 'bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-700',
+                  p:    active ? 'bg-yellow-500 text-white' : 'bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-700',
+                  nr:   active ? 'bg-gray-500 text-white'   : 'bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-700',
+                };
+                return (
+                  <button
+                    key={key}
+                    onClick={() => { setStatusFilter(key); setExpandedMun(null); }}
+                    className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${colorMap[key]}`}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+
+            <select
+              value={sortMode}
+              onChange={(e) => setSortMode(e.target.value as typeof sortMode)}
+              className="text-xs bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-gray-300 rounded-lg px-2 py-1.5 transition-colors"
+            >
+              <option value="default">Ordenar: Padrão</option>
+              <option value="recent">↓ Mais recentes</option>
+              <option value="pst">↓ % Seções totalizadas</option>
+              <option value="eleitores">↓ Eleitores</option>
+              <option value="comparecimento">↓ % Comparecimento</option>
+              <option value="abstencao">↓ % Abstenção</option>
+            </select>
+          </div>
+        </div>}
       </div>
 
       <div className="flex-1 p-4 overflow-y-auto">
@@ -226,6 +357,8 @@ export function EA15Viewer({ ciclo, eleicaoCd, uf, onBack }: EA15ViewerProps) {
               const munErrors = getErrorsForMun(mun.cdabr);
               const hasErrors = munErrors.length > 0;
               const munName = munDict.get(mun.cdabr) || `Cod: ${mun.cdabr}`;
+              const isCapital = capitalSet.has(mun.cdabr);
+              const isFav = favorites.has(mun.cdabr);
 
               const borderBg = hasErrors
                 ? 'border-red-300 dark:border-red-800 bg-red-50/50 dark:bg-red-900/10'
@@ -259,12 +392,28 @@ export function EA15Viewer({ ciclo, eleicaoCd, uf, onBack }: EA15ViewerProps) {
                 >
                   <div>
                     <div className="flex justify-between items-start mb-2 gap-2">
-                      <div className="font-semibold text-gray-800 dark:text-gray-200 leading-tight">
+                      <div className="font-semibold text-gray-800 dark:text-gray-200 leading-tight flex items-center gap-1.5 flex-wrap">
+                        {isCapital && (
+                          <span className="inline-flex items-center gap-0.5 text-xs font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 border border-amber-300 dark:border-amber-700 shrink-0">
+                            ⭐ Capital
+                          </span>
+                        )}
                         {munName}
                       </div>
-                      <span className={`font-mono font-bold text-xs shrink-0 ${pctColor}`}>
-                        {mun.s.pst}%
-                      </span>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          onClick={(e) => toggleFavorite(mun.cdabr, e)}
+                          title={isFav ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
+                          className={`p-0.5 rounded transition-colors ${isFav ? 'text-pink-500 hover:text-pink-600' : 'text-gray-300 dark:text-gray-600 hover:text-pink-400'}`}
+                        >
+                          <svg className="w-4 h-4" fill={isFav ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                          </svg>
+                        </button>
+                        <span className={`font-mono font-bold text-xs ${pctColor}`}>
+                          {mun.s.pst}%
+                        </span>
+                      </div>
                     </div>
 
                     <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-1.5 mb-2">
@@ -272,12 +421,8 @@ export function EA15Viewer({ ciclo, eleicaoCd, uf, onBack }: EA15ViewerProps) {
                     </div>
 
                     <div className="flex justify-between items-center text-xs text-gray-500 dark:text-gray-400">
-                      <span className="font-mono bg-gray-100 dark:bg-slate-800 px-1.5 py-0.5 rounded border border-gray-200 dark:border-slate-700">
-                        Cód: {mun.cdabr}
-                      </span>
-                      <span>
-                        {parseInt(mun.s.st).toLocaleString('pt-BR')} / {parseInt(mun.s.ts).toLocaleString('pt-BR')} seções
-                      </span>
+                      <span>Eleitores: <strong className="text-gray-700 dark:text-gray-300">{parseInt(mun.e.te).toLocaleString('pt-BR')}</strong></span>
+                      <span>Comp: <strong className="text-blue-600 dark:text-blue-400">{mun.e.pc}%</strong></span>
                     </div>
 
                     {hasErrors && (
@@ -294,6 +439,10 @@ export function EA15Viewer({ ciclo, eleicaoCd, uf, onBack }: EA15ViewerProps) {
 
                     {expandedMun === mun.cdabr && (
                       <div className="mt-3 pt-3 border-t border-gray-200 dark:border-slate-700 space-y-1.5 text-xs text-gray-600 dark:text-gray-400" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex justify-between">
+                          <span>Código:</span>
+                          <span className="font-mono">{mun.cdabr}</span>
+                        </div>
                         <div className="flex justify-between">
                           <span>Atualizado:</span>
                           <span className="font-mono">{mun.dt} {mun.ht}</span>
