@@ -108,8 +108,36 @@ function CandCard({
         </tr>
         {expanded && (
           <tr>
-            <td colSpan={3} className="bg-gray-50 dark:bg-slate-900/50 px-4 pb-3 pt-2">
-              <CandDetail cand={cand} agr={agr} ambiente={ambiente} ciclo={ciclo} eleicaoCd={eleicaoCd} uf={uf} fotoError={fotoError} setFotoError={setFotoError} />
+            <td colSpan={3} className="bg-gray-50 dark:bg-slate-900/50 p-2">
+              <div className={`border rounded-lg p-3 shadow-sm transition-all ${borderBg}`}>
+                <div className="flex justify-between items-start gap-2 mb-2">
+                  <div className="flex flex-col gap-0.5">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-mono text-xs text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-slate-700 px-1.5 py-0.5 rounded">{cand.n}</span>
+                      <span className="font-bold text-gray-800 dark:text-gray-100">{cand.nmu}</span>
+                      {dvtBadge(cand.dvt)}
+                      {isEleito && <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300 font-bold">✓ Eleito</span>}
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                      {agr.par.find(p => p.cand.some(c => c.sqcand === cand.sqcand))?.sg} · <span className="truncate">{agr.nm}</span>
+                    </div>
+                    {cand.vs && cand.vs.length > 0 && (
+                      <div className="text-xs text-gray-400 dark:text-gray-500">
+                        Vice: <span className="font-medium text-gray-600 dark:text-gray-300">{cand.vs[0].nmu}</span>
+                        {cand.vs[0].sgp ? ` (${cand.vs[0].sgp})` : ''}
+                      </div>
+                    )}
+                  </div>
+                  <div className="text-right shrink-0">
+                    <div className={`text-lg font-bold font-mono ${pctColor}`}>{cand.pvap}%</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">{parseInt(cand.vap).toLocaleString('pt-BR')} votos</div>
+                  </div>
+                </div>
+                <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-1.5 mb-3">
+                  <div className={`h-1.5 rounded-full ${barColor} transition-all`} style={{ width: `${Math.min(pct, 100)}%` }} />
+                </div>
+                <CandDetail cand={cand} agr={agr} ambiente={ambiente} ciclo={ciclo} eleicaoCd={eleicaoCd} uf={uf} fotoError={fotoError} setFotoError={setFotoError} />
+              </div>
             </td>
           </tr>
         )}
@@ -133,7 +161,7 @@ function CandCard({
           <div className="text-xs text-gray-500 dark:text-gray-400">
             {agr.par.find(p => p.cand.some(c => c.sqcand === cand.sqcand))?.sg} · <span className="truncate">{agr.nm}</span>
           </div>
-          {cand.vs.length > 0 && (
+          {cand.vs && cand.vs.length > 0 && (
             <div className="text-xs text-gray-400 dark:text-gray-500">
               Vice: <span className="font-medium text-gray-600 dark:text-gray-300">{cand.vs[0].nmu}</span>
               {cand.vs[0].sgp ? ` (${cand.vs[0].sgp})` : ''}
@@ -183,9 +211,9 @@ function CandDetail({ cand, agr, ambiente, ciclo, eleicaoCd, uf, fotoError, setF
         {cand.dt && <div><span className="font-medium text-gray-700 dark:text-gray-300">Nascimento:</span> {cand.dt}</div>}
         {partido && <div><span className="font-medium text-gray-700 dark:text-gray-300">Partido:</span> {partido.nm} ({partido.sg})</div>}
         <div><span className="font-medium text-gray-700 dark:text-gray-300">Sequencial:</span> {cand.sqcand}</div>
-        <div><span className="font-medium text-gray-700 dark:text-gray-300">Destino do voto:</span> <span className={DVT_COLORS[cand.dvt] || ''}>{cand.dvt}</span></div>
+        <div><span className="font-medium text-gray-700 dark:text-gray-300">Destino do voto:</span> <span className={(cand.dvt && DVT_COLORS[cand.dvt]) || ''}>{cand.dvt}</span></div>
         <div><span className="font-medium text-gray-700 dark:text-gray-300">Status:</span> {cand.st}</div>
-        {cand.vs.length > 0 && (
+        {cand.vs && cand.vs.length > 0 && (
           <div><span className="font-medium text-gray-700 dark:text-gray-300">Vice(s):</span>{' '}
             {cand.vs.map((v: any) => `${v.nmu} (${v.sgp})`).join(', ')}
           </div>
@@ -224,15 +252,12 @@ export function EA20Viewer({ ciclo, eleicaoCd, uf, cdMun, munNome, cargosDisponi
       setLocalData(ea20Data);
       setIsModified(false);
       setIsEditing(false);
+    } else if (isLoading) {
+      setLocalData(null);
+      setIsModified(false);
+      setIsEditing(false);
     }
-  }, [ea20Data]);
-
-  // On cargo change, reset local data so we don't show stale data
-  useEffect(() => {
-    setLocalData(null);
-    setIsModified(false);
-    setIsEditing(false);
-  }, [selectedCargoIdx, selectedZona]);
+  }, [ea20Data, isLoading]);
 
   const validationResults = useMemo(() => {
     if (!localData) return [];

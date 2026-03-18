@@ -28,7 +28,7 @@ export function Header() {
               to="/timeline"
               className="px-4 py-2 rounded hover:bg-blue-600 dark:hover:bg-blue-800 transition"
             >
-              Evolução
+              Download
             </Link>
           </nav>
 
