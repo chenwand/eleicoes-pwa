@@ -59,15 +59,15 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose, relatedElei
     }, 300); // Match slide-out duration
   };
 
-  const { ambiente } = useEnvironment();
+  const { ambiente, host } = useEnvironment();
   const [localData, setLocalData] = useState<any>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isModified, setIsModified] = useState(false);
   const [editValue, setEditValue] = useState("");
 
   const { data, isLoading, isError, error, refetch: refetchEA14, isFetching: isEA14Fetching } = useQuery({
-    queryKey: ['ea14-data', ciclo, eleicaoCd, ambiente],
-    queryFn: () => fetchEA14(ciclo, eleicaoCd, ambiente),
+    queryKey: ['ea14-data', ciclo, eleicaoCd, ambiente, host],
+    queryFn: () => fetchEA14(ciclo, eleicaoCd, ambiente, host),
     enabled: !!eleicaoCd && !!ciclo,
   });
 
@@ -178,12 +178,15 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose, relatedElei
             </div>
           </div>
 
-          {!selectedEA15Uf && localData && (
-            <div className="flex flex-col items-end -mt-2">
+          {!selectedEA15Uf && localData && (() => {
+          const paddedCd = eleicaoCd.padStart(6, '0');
+          const jsonUrl = `${host}/${ambiente}/${ciclo}/${eleicaoCd}/dados/br/br-e${paddedCd}-ab.json`;
+          return (
+            <div className="flex flex-col items-end -mt-2 mb-3">
               <div className="text-xs text-gray-400 dark:text-gray-500 text-right">
                 Arquivo gerado em:{' '}
                 <a
-                  href={`https://resultados.tse.jus.br/${ambiente}/${ciclo}/${eleicaoCd}/dados/br/br-e${eleicaoCd.padStart(6, '0')}-ab.json`}
+                  href={jsonUrl}
                   target="_blank"
                   rel="noreferrer"
                   className="font-mono hover:text-blue-500 dark:hover:text-blue-400 underline underline-offset-2 transition-colors"
@@ -199,7 +202,8 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose, relatedElei
                 </div>
               )}
             </div>
-          )}
+          );
+          })()}
         </div>
 
         {selectedEA15Uf && localData ? (() => {

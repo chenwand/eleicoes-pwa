@@ -1,13 +1,17 @@
 import { Link } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import { useEnvironment } from '../context/EnvironmentContext';
+import { SettingsModal } from './SettingsModal';
+import { useState } from 'react';
 
 
 export function Header() {
   const { theme, toggleTheme } = useTheme();
-  const { ambiente, setAmbiente } = useEnvironment();
+  const { ambiente } = useEnvironment();
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   return (
+    <>
     <header className="bg-blue-700 dark:bg-blue-900 text-white shadow-lg transition-colors duration-300">
       <div className="container mx-auto px-4 py-4">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -33,23 +37,25 @@ export function Header() {
           </nav>
 
           <div className="flex items-center gap-3">
-            {/* Environment toggle */}
-            <div className="flex items-center bg-blue-800/50 dark:bg-blue-950/50 rounded-full p-0.5 text-sm font-medium shadow-inner">
-              <button
-                onClick={() => setAmbiente('oficial')}
-                className={`px-3 py-1 rounded-full transition-all ${ambiente === 'oficial' ? 'bg-white text-blue-800 shadow font-semibold' : 'text-blue-200 hover:text-white'}`}
-                title="Usar dados oficiais do TSE"
-              >
-                Oficial
-              </button>
-              <button
-                onClick={() => setAmbiente('simulado')}
-                className={`px-3 py-1 rounded-full transition-all ${ambiente === 'simulado' ? 'bg-amber-400 text-amber-900 shadow font-semibold' : 'text-blue-200 hover:text-white'}`}
-                title="Usar dados do ambiente simulado do TSE"
-              >
-                Simulado
-              </button>
+            {/* Quick Environment Status */}
+            <div className={`px-3 py-1 rounded-full text-xs font-bold shadow-sm transition-all border ${
+              ambiente === 'oficial' 
+                ? 'bg-blue-600 border-blue-400 text-white' 
+                : 'bg-amber-400 border-amber-300 text-amber-900'
+            }`}>
+              <span className="capitalize">{ambiente}</span>
             </div>
+
+            <button
+              onClick={() => setIsSettingsOpen(true)}
+              className="p-2 rounded-full hover:bg-blue-600 dark:hover:bg-blue-800 transition-colors"
+              title="Configurações do Sistema"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </button>
 
             <button
               onClick={toggleTheme}
@@ -71,6 +77,8 @@ export function Header() {
         </div>
       </div>
     </header>
+    <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
+  </>
   );
 }
 

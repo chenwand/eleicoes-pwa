@@ -45,7 +45,7 @@ export function EA15Viewer({ ciclo, eleicaoCd, uf, onBack, relatedEleicaoCd, rel
   const [statusFilter, setStatusFilter] = useState<'all' | 'f' | 'p' | 'nr' | 'fav'>('all');
   const [sortMode, setSortMode] = useState<'default' | 'recent' | 'eleitores' | 'comparecimento' | 'abstencao' | 'pst'>('default');
   const [isClosing, setIsClosing] = useState(false);
-  const { ambiente } = useEnvironment();
+  const { ambiente, host } = useEnvironment();
   const [localData, setLocalData] = useState<any>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isModified, setIsModified] = useState(false);
@@ -80,8 +80,8 @@ export function EA15Viewer({ ciclo, eleicaoCd, uf, onBack, relatedEleicaoCd, rel
 
   // Fetch EA15 Data
   const { data: ea15Data, isLoading: isEA15Loading, isError: isEA15Error, error: ea15Error, refetch: refetchEA15, isFetching: isEA15Fetching } = useQuery({
-    queryKey: ['ea15-data', ciclo, eleicaoCd, uf, ambiente],
-    queryFn: () => fetchEA15(ciclo, eleicaoCd, uf, ambiente),
+    queryKey: ['ea15-data', ciclo, eleicaoCd, uf, ambiente, host],
+    queryFn: () => fetchEA15(ciclo, eleicaoCd, uf, ambiente, host),
     enabled: !!eleicaoCd && !!ciclo && !!uf,
     staleTime: 30000,
   });
@@ -95,8 +95,8 @@ export function EA15Viewer({ ciclo, eleicaoCd, uf, onBack, relatedEleicaoCd, rel
 
   // Fetch EA12 to resolve municipality codes to names
   const { data: ea12Data, isLoading: isEA12Loading } = useQuery({
-    queryKey: ['ea12-data', ciclo, eleicaoCd, ambiente],
-    queryFn: () => fetchEA12(ciclo, eleicaoCd, ambiente),
+    queryKey: ['ea12-data', ciclo, eleicaoCd, ambiente, host],
+    queryFn: () => fetchEA12(ciclo, eleicaoCd, ambiente, host),
     enabled: !!eleicaoCd && !!ciclo,
     staleTime: Infinity,
   });
@@ -308,7 +308,7 @@ export function EA15Viewer({ ciclo, eleicaoCd, uf, onBack, relatedEleicaoCd, rel
         {localData && (() => {
           const ufLower = uf.toLowerCase();
           const paddedCd = eleicaoCd.padStart(6, '0');
-          const jsonUrl = `https://resultados.tse.jus.br/${ambiente}/${ciclo}/${eleicaoCd}/dados/${ufLower}/${ufLower}-e${paddedCd}-ab.json`;
+          const jsonUrl = `${host}/${ambiente}/${ciclo}/${eleicaoCd}/dados/${ufLower}/${ufLower}-e${paddedCd}-ab.json`;
           return (
             <div className="flex flex-col items-end -mt-2 mb-3">
               <div className="text-xs text-gray-400 dark:text-gray-500 text-right">

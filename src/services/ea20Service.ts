@@ -18,12 +18,13 @@ export function buildEA20Url(
   uf: string,
   cdMun: string,
   cdCargo: string,
-  zona?: string
+  zona?: string,
+  host: string = 'https://resultados.tse.jus.br'
 ): string {
   const paddedEle = eleicaoCd.padStart(6, '0');
   const paddedCargo = cdCargo.padStart(4, '0');
   const ufLower = uf.toLowerCase();
-  const base = `https://resultados.tse.jus.br/${ambiente}/${ciclo}/${eleicaoCd}/dados/${ufLower}`;
+  const base = `${host}/${ambiente}/${ciclo}/${eleicaoCd}/dados/${ufLower}`;
   const munPart = `${ufLower}${cdMun}`;
   const zonaPart = zona ? `-z${zona}` : '';
   return `${base}/${munPart}${zonaPart}-c${paddedCargo}-e${paddedEle}-u.json`;
@@ -34,9 +35,10 @@ export function buildCandidatoFotoUrl(
   ciclo: string,
   eleicaoCd: string,
   uf: string,
-  sqcand: string
+  sqcand: string,
+  host: string = 'https://resultados.tse.jus.br'
 ): string {
-  return `https://resultados.tse.jus.br/${ambiente}/${ciclo}/${eleicaoCd}/fotos/${uf.toLowerCase()}/${sqcand}.jpeg`;
+  return `${host}/${ambiente}/${ciclo}/${eleicaoCd}/fotos/${uf.toLowerCase()}/${sqcand}.jpeg`;
 }
 
 export async function fetchEA20(
@@ -46,9 +48,10 @@ export async function fetchEA20(
   uf: string,
   cdMun: string,
   cdCargo: string,
-  zona?: string
+  zona?: string,
+  host: string = 'https://resultados.tse.jus.br'
 ): Promise<EA20Response> {
-  const url = buildEA20Url(ambiente, ciclo, eleicaoCd, uf, cdMun, cdCargo, zona);
+  const url = buildEA20Url(ambiente, ciclo, eleicaoCd, uf, cdMun, cdCargo, zona, host);
   console.log(`[EA20 Request] ${url}`);
   const response = await fetch(url);
   if (!response.ok) {

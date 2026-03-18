@@ -51,7 +51,7 @@ const renderHighlightedJson = (jsonObj: any) => {
 };
 
 export function Validator() {
-  const { ambiente } = useEnvironment();
+  const { ambiente, host } = useEnvironment();
   const [eleicaoSearchTerm, setEleicaoSearchTerm] = useState('');
   const [eleicaoStatusFilter, setEleicaoStatusFilter] = useState<'all' | 'fav'>('all');
   const [eleicaoSortMode, setEleicaoSortMode] = useState<'default' | 'data' | 'tipo' | 'nome'>('default');
@@ -109,8 +109,8 @@ export function Validator() {
     str.normalize('NFD').replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
   const { data: ea11Data, isLoading: isEA11Loading, isError: isEA11Error, error: error11, refetch: refetchEA11, isFetching: isEA11Fetching } = useQuery({
-    queryKey: ['ea11-config', ambiente],
-    queryFn: () => fetchEA11(ambiente),
+    queryKey: ['ea11-config', ambiente, host],
+    queryFn: () => fetchEA11(ambiente, host),
   });
 
   useEffect(() => {
@@ -123,8 +123,8 @@ export function Validator() {
   const cicloString = localEA11Data ? localEA11Data.c : '';
 
   const { data: ea12Data, isLoading: isEA12Loading, isError: isEA12Error } = useQuery({
-    queryKey: ['ea12-config', cicloString, selectedEleicaoCd, ambiente],
-    queryFn: () => fetchEA12(cicloString, selectedEleicaoCd!, ambiente),
+    queryKey: ['ea12-config', cicloString, selectedEleicaoCd, ambiente, host],
+    queryFn: () => fetchEA12(cicloString, selectedEleicaoCd!, ambiente, host),
     enabled: !!selectedEleicaoCd && !!cicloString,
   });
 

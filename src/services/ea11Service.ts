@@ -1,7 +1,7 @@
 import type { EA11Response } from '../types/ea11';
 
-export async function fetchEA11(ambiente: string = 'oficial'): Promise<EA11Response> {
-  const url = `https://resultados.tse.jus.br/${ambiente}/comum/config/ele-c.json`;
+export async function fetchEA11(ambiente: string = 'oficial', host: string = 'https://resultados.tse.jus.br'): Promise<EA11Response> {
+  const url = `${host}/${ambiente}/comum/config/ele-c.json`;
   console.log(`[EA11 Request] ${url}`);
   const response = await fetch(url, {
     headers: {

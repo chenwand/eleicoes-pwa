@@ -384,7 +384,7 @@ interface EA20ViewerProps {
 // ── Candidate card component ──────────────────────────────────────────────────
 
 function CandCard({
-  cand, agr, totalVotos, ambiente, ciclo, eleicaoCd, uf, isProportional, isFavorite, onToggleFavorite
+  cand, agr, totalVotos, ambiente, ciclo, eleicaoCd, uf, isProportional, isFavorite, onToggleFavorite, host
 }: {
   cand: EA20Candidato;
   agr: EA20Agrupamento;
@@ -396,6 +396,7 @@ function CandCard({
   isProportional: boolean;
   isFavorite: boolean;
   onToggleFavorite: () => void;
+  host: string;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [fotoError, setFotoError] = useState(false);
@@ -477,7 +478,7 @@ function CandCard({
                 <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-1.5 mb-3">
                   <div className={`h-1.5 rounded-full ${barColor} transition-all`} style={{ width: `${Math.min(pct, 100)}%` }} />
                 </div>
-                <CandDetail cand={cand} agr={agr} ambiente={ambiente} ciclo={ciclo} eleicaoCd={eleicaoCd} uf={uf} fotoError={fotoError} setFotoError={setFotoError} />
+                <CandDetail cand={cand} agr={agr} ambiente={ambiente} ciclo={ciclo} eleicaoCd={eleicaoCd} uf={uf} fotoError={fotoError} setFotoError={setFotoError} host={host} />
               </div>
             </td>
           </tr>
@@ -533,15 +534,15 @@ function CandCard({
 
       {expanded && (
         <div className="mt-3 pt-3 border-t border-gray-200 dark:border-slate-700">
-          <CandDetail cand={cand} agr={agr} ambiente={ambiente} ciclo={ciclo} eleicaoCd={eleicaoCd} uf={uf} fotoError={fotoError} setFotoError={setFotoError} />
+          <CandDetail cand={cand} agr={agr} ambiente={ambiente} ciclo={ciclo} eleicaoCd={eleicaoCd} uf={uf} fotoError={fotoError} setFotoError={setFotoError} host={host} />
         </div>
       )}
     </div>
   );
 }
 
-function CandDetail({ cand, agr, ambiente, ciclo, eleicaoCd, uf, fotoError, setFotoError }: any) {
-  const fotoUrl = buildCandidatoFotoUrl(ambiente, ciclo, eleicaoCd, uf, cand.sqcand);
+function CandDetail({ cand, agr, ambiente, ciclo, eleicaoCd, uf, fotoError, setFotoError, host }: any) {
+  const fotoUrl = buildCandidatoFotoUrl(ambiente, ciclo, eleicaoCd, uf, cand.sqcand, host);
   const partido = agr.par.find((p: any) => p.cand.some((c: any) => c.sqcand === cand.sqcand));
   return (
     <div className="flex gap-3">
@@ -573,7 +574,7 @@ function CandDetail({ cand, agr, ambiente, ciclo, eleicaoCd, uf, fotoError, setF
 // ── Main component ────────────────────────────────────────────────────────────
 
 export function EA20Viewer({ ciclo, eleicaoCd, uf, cdMun, munNome, cargosDisponiveis, initialZona, onBack }: EA20ViewerProps) {
-  const { ambiente } = useEnvironment();
+  const { ambiente, host } = useEnvironment();
   const [isClosing, setIsClosing] = useState(false);
   const [selectedCargoIdx, setSelectedCargoIdx] = useState(0);
   const [showZonaSelector, setShowZonaSelector] = useState(false);
@@ -609,8 +610,8 @@ export function EA20Viewer({ ciclo, eleicaoCd, uf, cdMun, munNome, cargosDisponi
   };
 
   const { data: ea12Data } = useQuery({
-    queryKey: ['ea12-data', ciclo, eleicaoCd, ambiente],
-    queryFn: () => fetchEA12(ciclo, eleicaoCd, ambiente),
+    queryKey: ['ea12-data', ciclo, eleicaoCd, ambiente, host],
+    queryFn: () => fetchEA12(ciclo, eleicaoCd, ambiente, host),
     enabled: !!eleicaoCd && !!ciclo,
     staleTime: Infinity,
   });
@@ -625,8 +626,8 @@ export function EA20Viewer({ ciclo, eleicaoCd, uf, cdMun, munNome, cargosDisponi
   const selectedCargo = cargosDisponiveis[selectedCargoIdx];
 
   const { data: ea20Data, isLoading, isError, error, refetch, isFetching } = useQuery({
-    queryKey: ['ea20', ciclo, eleicaoCd, uf, cdMun, selectedCargo?.cd, selectedZona, ambiente],
-    queryFn: () => fetchEA20(ambiente, ciclo, eleicaoCd, uf, cdMun, selectedCargo.cd, selectedZona),
+    queryKey: ['ea20', ciclo, eleicaoCd, uf, cdMun, selectedCargo?.cd, selectedZona, ambiente, host],
+    queryFn: () => fetchEA20(ambiente, ciclo, eleicaoCd, uf, cdMun, selectedCargo.cd, selectedZona, host),
     enabled: !!selectedCargo && !!cdMun,
     staleTime: 30000,
   });
@@ -1074,7 +1075,7 @@ export function EA20Viewer({ ciclo, eleicaoCd, uf, cdMun, munNome, cargosDisponi
                         // ── Majority: cards sorted by votes ───────────────────
                         <div className="space-y-3">
                           {filteredAndSortedCandidates.map(({ cand, agr }) => (
-                            <CandCard key={cand.sqcand} cand={cand} agr={agr} totalVotos={totalVotos} ambiente={ambiente} ciclo={ciclo} eleicaoCd={eleicaoCd} uf={uf} isProportional={false} isFavorite={favorites.has(cand.sqcand)} onToggleFavorite={() => toggleFavorite(cand.sqcand)} />
+                             <CandCard key={cand.sqcand} cand={cand} agr={agr} totalVotos={totalVotos} ambiente={ambiente} ciclo={ciclo} eleicaoCd={eleicaoCd} uf={uf} isProportional={false} isFavorite={favorites.has(cand.sqcand)} onToggleFavorite={() => toggleFavorite(cand.sqcand)} host={host} />
                           ))}
                         </div>
                       ) : (
@@ -1090,7 +1091,7 @@ export function EA20Viewer({ ciclo, eleicaoCd, uf, cdMun, munNome, cargosDisponi
                             </thead>
                             <tbody>
                               {filteredAndSortedCandidates.map(({ cand, agr }) => (
-                                <CandCard key={cand.sqcand} cand={cand} agr={agr} totalVotos={totalVotos} ambiente={ambiente} ciclo={ciclo} eleicaoCd={eleicaoCd} uf={uf} isProportional={true} isFavorite={favorites.has(cand.sqcand)} onToggleFavorite={() => toggleFavorite(cand.sqcand)} />
+                                 <CandCard key={cand.sqcand} cand={cand} agr={agr} totalVotos={totalVotos} ambiente={ambiente} ciclo={ciclo} eleicaoCd={eleicaoCd} uf={uf} isProportional={true} isFavorite={favorites.has(cand.sqcand)} onToggleFavorite={() => toggleFavorite(cand.sqcand)} host={host} />
                               ))}
                             </tbody>
                           </table>

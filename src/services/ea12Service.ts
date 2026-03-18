@@ -5,9 +5,9 @@ function formatCodigoEleicao(cd: string): string {
   return cd.padStart(6, '0');
 }
 
-export async function fetchEA12(ciclo: string, cdEleicao: string, ambiente: string = 'oficial'): Promise<EA12Response> {
+export async function fetchEA12(ciclo: string, cdEleicao: string, ambiente: string = 'oficial', host: string = 'https://resultados.tse.jus.br'): Promise<EA12Response> {
   const paddedCd = formatCodigoEleicao(cdEleicao);
-  const url = `https://resultados.tse.jus.br/${ambiente}/${ciclo}/${cdEleicao}/config/mun-e${paddedCd}-cm.json`;
+  const url = `${host}/${ambiente}/${ciclo}/${cdEleicao}/config/mun-e${paddedCd}-cm.json`;
   
   console.log(`[EA12 Request] ${url}`);
   const response = await fetch(url, {

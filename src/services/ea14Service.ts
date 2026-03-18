@@ -1,11 +1,11 @@
 import type { EA14Response } from '../types/ea14';
 
-export async function fetchEA14(ciclo: string, eleicaoCd: string, ambiente: string = 'oficial'): Promise<EA14Response> {
+export async function fetchEA14(ciclo: string, eleicaoCd: string, ambiente: string = 'oficial', host: string = 'https://resultados.tse.jus.br'): Promise<EA14Response> {
   // Ajuste do código da eleição com preenchimento de zeros para bater com o padrão de arquivos
   const eleicaoFormatted = eleicaoCd.padStart(6, '0');
 
   // URL base oficial de onde obtemos os JSON do TSE
-  const url = `https://resultados.tse.jus.br/${ambiente}/${ciclo}/${eleicaoCd}/dados/br/br-e${eleicaoFormatted}-ab.json`;
+  const url = `${host}/${ambiente}/${ciclo}/${eleicaoCd}/dados/br/br-e${eleicaoFormatted}-ab.json`;
 
   console.log(`[EA14 Request] ${url}`);
   const response = await fetch(url);
