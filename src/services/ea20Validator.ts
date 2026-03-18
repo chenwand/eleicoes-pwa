@@ -129,8 +129,8 @@ export function validateEA20(data: EA20Response): EA20ValidationResult[] {
     // If there are multiple cargos (like Councilor too), we need to be careful.
     // Usually EA20 is per cargo or has a shared total.
     if (data.carg.length === 1) {
-      if (totalCargoTvan !== vnom) {
-        cargoErrors.push(`Votos Nominais: total do cargo (${totalCargoTvan}) ≠ total do arquivo (${vnom}).`);
+      if (totalCargoTvan !== vvc - vl) {
+        cargoErrors.push(`Votos Nominais: total do cargo (${totalCargoTvan}) ≠ total do arquivo (${vvc - vl}).`);
       }
       if (totalCargoTval !== vl) {
         cargoErrors.push(`Votos Legenda: total do cargo (${totalCargoTval}) ≠ total do arquivo (${vl}).`);

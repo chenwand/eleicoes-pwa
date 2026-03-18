@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { fetchEA11 } from '../services/ea11Service';
 import { fetchEA12, flattenEA12Municipios } from '../services/ea12Service';
 import { EA14Viewer } from '../components/EA14Viewer';
+import { EA20Viewer } from '../components/EA20Viewer';
 import { useEnvironment } from '../context/EnvironmentContext';
 
 // Tipos de Eleição (Fonte: EA11 Documentação TSE)
@@ -54,7 +55,7 @@ export function Validator() {
   const [eleicaoSearchTerm, setEleicaoSearchTerm] = useState('');
   const [eleicaoStatusFilter, setEleicaoStatusFilter] = useState<'all' | 'fav'>('all');
   const [eleicaoSortMode, setEleicaoSortMode] = useState<'default' | 'data' | 'tipo' | 'nome'>('default');
-  
+
   const [favorites, setFavorites] = useState<Set<string>>(() => {
     try {
       const stored = localStorage.getItem('ea11-fav');
@@ -66,7 +67,7 @@ export function Validator() {
     e.stopPropagation();
     setFavorites(prev => {
       const next = new Set(prev);
-      if (next.has(cd)) next.delete(cd); 
+      if (next.has(cd)) next.delete(cd);
       else next.add(cd);
       localStorage.setItem('ea11-fav', JSON.stringify([...next]));
       return next;
@@ -79,6 +80,13 @@ export function Validator() {
   const [selectedZona, setSelectedZona] = useState('Todas');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [selectedEA14EleicaoCd, setSelectedEA14EleicaoCd] = useState<string | null>(null);
+  const [selectedEA20Data, setSelectedEA20Data] = useState<{
+    eleicaoCd: string;
+    uf: string;
+    munCd: string;
+    munNome: string;
+    zona?: string;
+  } | null>(null);
   const [showRawJson, setShowRawJson] = useState(false);
   const [localEA11Data, setLocalEA11Data] = useState<any>(null);
   const [isEA11Editing, setIsEA11Editing] = useState(false);
@@ -185,7 +193,7 @@ export function Validator() {
 
       if (!eleicaoSearchTerm) return true;
       const search = normalizeString(eleicaoSearchTerm);
-      
+
       const eT2 = e.cdt2 ? allElections.find((t: any) => t.cd === e.cdt2) : null;
       const match1 = normalizeString(e.nm).includes(search) || e.cd.includes(search) || normalizeString(formatTipoEleicao(e.tp)).includes(search);
       const match2 = eT2 ? (normalizeString(eT2.nm).includes(search) || eT2.cd.includes(search) || normalizeString(formatTipoEleicao(eT2.tp)).includes(search)) : false;
@@ -519,21 +527,41 @@ export function Validator() {
                                     />
                                   </div>
                                   {selectedMun && (
-                                    <div
-                                      className="flex items-center gap-1.5 shrink-0 px-2 py-0.5 rounded border shadow-sm h-8"
-                                      style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)' }}
-                                    >
-                                      <label className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-tighter">Zona</label>
-                                      <select
-                                        value={selectedZona}
-                                        onChange={(e) => setSelectedZona(e.target.value)}
-                                        className="border-none bg-transparent text-sm focus:ring-0 focus:outline-none text-gray-700 dark:text-gray-200 font-medium pr-1 cursor-pointer"
+                                    <div className="flex items-center gap-2">
+                                      <div
+                                        className="flex items-center gap-1.5 shrink-0 px-2 py-0.5 rounded border shadow-sm h-8"
+                                        style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)' }}
                                       >
-                                        <option value="Todas" className="dark:bg-slate-900 dark:text-gray-200">Todas</option>
-                                        {selectedMun.z.sort((a, b) => parseInt(a) - parseInt(b)).map(z => (
-                                          <option key={z} value={z} className="dark:bg-slate-900 dark:text-gray-200">{z}</option>
-                                        ))}
-                                      </select>
+                                        <label className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-tighter">Zona</label>
+                                        <select
+                                          value={selectedZona}
+                                          onChange={(e) => setSelectedZona(e.target.value)}
+                                          className="border-none bg-transparent text-sm focus:ring-0 focus:outline-none text-gray-700 dark:text-gray-200 font-medium pr-1 cursor-pointer"
+                                        >
+                                          <option value="Todas" className="dark:bg-slate-900 dark:text-gray-200">Todas</option>
+                                          {selectedMun.z.sort((a, b) => parseInt(a) - parseInt(b)).map(z => (
+                                            <option key={z} value={z} className="dark:bg-slate-900 dark:text-gray-200">{z}</option>
+                                          ))}
+                                        </select>
+                                      </div>
+                                      <button
+                                        onClick={() => {
+                                          if (selectedEleicaoCd && selectedMunCd && selectedMun) {
+                                            setSelectedEA20Data({
+                                              eleicaoCd: selectedEleicaoCd,
+                                              uf: selectedMun.ufCd,
+                                              munCd: selectedMunCd,
+                                              munNome: selectedMun.munNome,
+                                              zona: selectedZona === 'Todas' ? undefined : selectedZona
+                                            });
+                                          }
+                                        }}
+                                        className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-1 px-3 rounded transition-all text-[10px] h-8 flex items-center shadow-sm whitespace-nowrap"
+                                        title="Abrir painel EA20 diretamente"
+                                      >
+                                        <svg className="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 9l3 3m0 0l-3 3m3-3H8m13 0a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                        Unificado EA20
+                                      </button>
                                     </div>
                                   )}
                                 </div>
@@ -599,7 +627,7 @@ export function Validator() {
                               className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-1 px-4 rounded transition-all text-xs h-8 flex items-center shadow-sm whitespace-nowrap"
                             >
                               <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                              Arquivo Unificado (EA20)
+                              Configuração de municípios (EA12)
                             </button>
                             {['1', '3', '6'].includes(eleicao.tp) && (
                               <button
@@ -607,7 +635,7 @@ export function Validator() {
                                 className="bg-green-600 hover:bg-green-700 text-white font-medium py-1 px-4 rounded transition-all text-xs h-8 flex items-center shadow-sm whitespace-nowrap"
                               >
                                 <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                                Arquivo de Acompanhamento BR (EA14)
+                                Acompanhamento BR (EA14)
                               </button>
                             )}
                           </div>
@@ -684,21 +712,41 @@ export function Validator() {
                                       />
                                     </div>
                                     {selectedMun && (
-                                      <div
-                                        className="flex items-center gap-1.5 shrink-0 px-2 py-0.5 rounded border shadow-sm h-8"
-                                        style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)' }}
-                                      >
-                                        <label className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-tighter">Zona</label>
-                                        <select
-                                          value={selectedZona}
-                                          onChange={(e) => setSelectedZona(e.target.value)}
-                                          className="border-none bg-transparent text-sm focus:ring-0 focus:outline-none text-gray-700 dark:text-gray-200 font-medium pr-1 cursor-pointer"
+                                      <div className="flex items-center gap-2">
+                                        <div
+                                          className="flex items-center gap-1.5 shrink-0 px-2 py-0.5 rounded border shadow-sm h-8"
+                                          style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)' }}
                                         >
-                                          <option value="Todas" className="dark:bg-slate-900 dark:text-gray-200">Todas</option>
-                                          {selectedMun.z.sort((a, b) => parseInt(a) - parseInt(b)).map(z => (
-                                            <option key={z} value={z} className="dark:bg-slate-900 dark:text-gray-200">{z}</option>
-                                          ))}
-                                        </select>
+                                          <label className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-tighter">Zona</label>
+                                          <select
+                                            value={selectedZona}
+                                            onChange={(e) => setSelectedZona(e.target.value)}
+                                            className="border-none bg-transparent text-sm focus:ring-0 focus:outline-none text-gray-700 dark:text-gray-200 font-medium pr-1 cursor-pointer"
+                                          >
+                                            <option value="Todas" className="dark:bg-slate-900 dark:text-gray-200">Todas</option>
+                                            {selectedMun.z.sort((a, b) => parseInt(a) - parseInt(b)).map(z => (
+                                              <option key={z} value={z} className="dark:bg-slate-900 dark:text-gray-200">{z}</option>
+                                            ))}
+                                          </select>
+                                        </div>
+                                        <button
+                                          onClick={() => {
+                                            if (selectedEleicaoCd && selectedMunCd && selectedMun) {
+                                              setSelectedEA20Data({
+                                                eleicaoCd: selectedEleicaoCd,
+                                                uf: selectedMun.ufCd,
+                                                munCd: selectedMunCd,
+                                                munNome: selectedMun.munNome,
+                                                zona: selectedZona === 'Todas' ? undefined : selectedZona
+                                              });
+                                            }
+                                          }}
+                                          className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-1 px-3 rounded transition-all text-[10px] h-8 flex items-center shadow-sm whitespace-nowrap"
+                                          title="Abrir painel EA20 diretamente"
+                                        >
+                                          <svg className="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 9l3 3m0 0l-3 3m3-3H8m13 0a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                          Unificado EA20
+                                        </button>
                                       </div>
                                     )}
                                   </div>
@@ -764,7 +812,7 @@ export function Validator() {
                                 className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-1 px-4 rounded transition-all text-xs h-8 flex items-center shadow-sm whitespace-nowrap"
                               >
                                 <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                                Arquivo unificado (EA20)
+                                Configuração de municípios (EA12)
                               </button>
                               {['1', '3', '6'].includes(eleicaoT2.tp) && (
                                 <button
@@ -772,7 +820,7 @@ export function Validator() {
                                   className="bg-green-600 hover:bg-green-700 text-white font-medium py-1 px-4 rounded transition-all text-xs h-8 flex items-center shadow-sm whitespace-nowrap"
                                 >
                                   <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                                  Arquivo de Acompanhamento BR (EA14)
+                                  Acompanhamento BR (EA14)
                                 </button>
                               )}
                             </div>
@@ -794,7 +842,7 @@ export function Validator() {
       {selectedEA14EleicaoCd && (() => {
         const currentElectionFromAll = allElections.find((e: any) => e.cd === selectedEA14EleicaoCd);
         const isT2ForEA14 = currentElectionFromAll?.t === '2';
-        const relatedEA14Eleicao = isT2ForEA14 
+        const relatedEA14Eleicao = isT2ForEA14
           ? allElections.find((e: any) => e.cdt2 === selectedEA14EleicaoCd)
           : allElections.find((e: any) => e.cd === currentElectionFromAll?.cdt2);
 
@@ -812,6 +860,26 @@ export function Validator() {
             onChangeEleicao={(cd) => setSelectedEA14EleicaoCd(cd)}
             onClose={() => setSelectedEA14EleicaoCd(null)}
             cargosDisponiveis={cargosMapped}
+          />
+        );
+      })()}
+
+      {selectedEA20Data && (() => {
+        const currentElectionFromAll = allElections.find((e: any) => e.cd === selectedEA20Data.eleicaoCd);
+        const cargosEa11 = currentElectionFromAll?.abr?.flatMap((a: any) => a.cp || []) || [];
+        const uniqueCargos = Array.from(new Map(cargosEa11.map((cg: any) => [cg.cd, cg])).values());
+        const cargosMapped = uniqueCargos.map((cg: any) => ({ cd: cg.cd, nm: cg.ds }));
+
+        return (
+          <EA20Viewer
+            ciclo={cicloString}
+            eleicaoCd={selectedEA20Data.eleicaoCd}
+            uf={selectedEA20Data.uf}
+            cdMun={selectedEA20Data.munCd}
+            munNome={selectedEA20Data.munNome}
+            cargosDisponiveis={cargosMapped}
+            initialZona={selectedEA20Data.zona}
+            onBack={() => setSelectedEA20Data(null)}
           />
         );
       })()}
