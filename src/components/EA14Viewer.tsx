@@ -265,6 +265,7 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose, relatedElei
                                   setLocalData(parsed);
                                   setIsModified(true);
                                   setIsEditing(false);
+                                  setShowRawJson(false);
                                 } catch (e) {
                                   alert("JSON inválido! Por favor corrija antes de salvar.");
                                 }

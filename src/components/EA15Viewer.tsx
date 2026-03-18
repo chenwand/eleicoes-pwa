@@ -530,6 +530,7 @@ export function EA15Viewer({ ciclo, eleicaoCd, uf, onBack, relatedEleicaoCd, rel
                           setLocalData(parsed);
                           setIsModified(true);
                           setIsEditing(false);
+                          setShowRawJson(false);
                         } catch (e) {
                           alert("JSON inválido! Por favor corrija antes de salvar.");
                         }

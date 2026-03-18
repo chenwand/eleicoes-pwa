@@ -880,7 +880,7 @@ export function EA20Viewer({ ciclo, eleicaoCd, uf, cdMun, munNome, cargosDisponi
                       </button>
                     ) : (
                       <>
-                        <button onClick={() => { try { setLocalData(JSON.parse(editValue)); setIsModified(true); setIsEditing(false); } catch { alert('JSON inválido!'); } }}
+                        <button onClick={() => { try { setLocalData(JSON.parse(editValue)); setIsModified(true); setIsEditing(false); setShowRawJson(false); } catch { alert('JSON inválido!'); } }}
                           className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded transition-colors">Salvar</button>
                         <button onClick={() => setIsEditing(false)}
                           className="px-3 py-1 bg-gray-500 hover:bg-gray-600 text-white text-xs font-bold rounded transition-colors">Cancelar</button>

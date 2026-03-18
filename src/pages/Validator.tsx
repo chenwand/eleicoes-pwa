@@ -330,6 +330,7 @@ export function Validator() {
                           setLocalEA11Data(parsed);
                           setIsEA11Modified(true);
                           setIsEA11Editing(false);
+                          setShowRawJson(false);
                         } catch (e) {
                           alert("JSON inválido! Por favor corrija antes de salvar.");
                         }
