@@ -29,8 +29,9 @@ export interface EA20Partido {
   sg: string;         // sigla
   nm: string;         // nome
   nfed: string;       // nome federação
-  tvtn: string;       // total votos nominais
-  tvan: string;       // total votos de agrupamento
+  tvtn: string;       // total votos (pós-totalização, não usar p/ validação)
+  tvan: string;       // total votos nominais (soma de cand.vap)
+  tval: string;       // total votos legenda
   cand: EA20Candidato[];
 }
 
@@ -39,8 +40,9 @@ export interface EA20Agrupamento {
   nm: string;         // nome
   tp: string;         // tipo
   com: string;        // composição (partidos)
-  tvtn: string;       // total votos nominais
-  tvan: string;       // total votos agrupamento
+  tvtn: string;       // total votos (pós-totalização, não usar p/ validação)
+  tvan: string;       // total votos nominais (soma de par.tvan)
+  tval: string;       // total votos legenda (soma de par.tval)
   par: EA20Partido[];
 }
 

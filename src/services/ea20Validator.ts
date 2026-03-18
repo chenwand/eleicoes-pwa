@@ -1,4 +1,4 @@
-import type { EA20Response, EA20Candidato } from '../types/ea20';
+import type { EA20Response } from '../types/ea20';
 
 export interface EA20ValidationResult {
   cargo: string;  // nome ou código do cargo
@@ -74,32 +74,83 @@ export function validateEA20(data: EA20Response): EA20ValidationResult[] {
     const cargoErrors: string[] = [];
     const cargoLabel = `${carg.nmn} (cd=${carg.cd})`;
 
-    // Sum all candidate votes across all alliances/parties
-    const allCandidates: EA20Candidato[] = carg.agr.flatMap(agr =>
-      agr.par.flatMap(par => par.cand)
-    );
+    let totalCargoTvan = 0;
+    let totalCargoTval = 0;
 
-    const totalCandVotes = allCandidates.reduce((sum, cand) => sum + parseNum(cand.vap), 0);
+    for (const agr of carg.agr) {
+      const isIsolated = agr.tp === 'i';
+      let agrTvan = parseNum(agr.tvan);
+      let agrTval = parseNum(agr.tval);
 
-    // Sum group-level totals
-    const totalAgrVotes = carg.agr.reduce((sum, agr) => sum + parseNum(agr.tvtn), 0);
+      let sumParTvan = 0;
+      let sumParTval = 0;
 
-    if (totalAgrVotes > 0 && Math.abs(totalCandVotes - totalAgrVotes) > 2) {
-      cargoErrors.push(
-        `Soma dos votos dos candidatos (${totalCandVotes}) diverge do total declarado nas coligações (${totalAgrVotes}).`
-      );
+      for (const par of agr.par) {
+        const parTvan = parseNum(par.tvan);
+        const parTval = parseNum(par.tval);
+        sumParTvan += parTvan;
+        sumParTval += parTval;
+
+        // par.tvan should match sum of candidate vap
+        const sumCandVap = par.cand.reduce((sum, cand) => sum + parseNum(cand.vap), 0);
+        if (parTvan !== sumCandVap) {
+          cargoErrors.push(
+            `Partido ${par.sg}: tvan(${parTvan}) ≠ soma vap dos candidatos (${sumCandVap}).`
+          );
+        }
+      }
+
+      // In isolated parties, use the party totals as grouping totals if agr totals are missing
+      if (isIsolated && agrTvan === 0 && agrTval === 0) {
+        agrTvan = sumParTvan;
+        agrTval = sumParTval;
+      }
+
+      totalCargoTvan += agrTvan;
+      totalCargoTval += agrTval;
+
+      // agr.tvan should match sum of par.tvan (only if not isolated or if we want to confirm they matched)
+      if (!isIsolated && agrTvan !== sumParTvan) {
+        cargoErrors.push(
+          `Agrupamento ${agr.nm || agr.n}: tvan(${agrTvan}) ≠ soma tvan dos partidos (${sumParTvan}).`
+        );
+      }
+
+      // agr.tval should match sum of par.tval
+      if (!isIsolated && agrTval !== sumParTval) {
+        cargoErrors.push(
+          `Agrupamento ${agr.nm || agr.n}: tval(${agrTval}) ≠ soma tval dos partidos (${sumParTval}).`
+        );
+      }
     }
 
-    // Check percentages for each candidate
-    for (const cand of allCandidates) {
-      const vap = parseNum(cand.vap);
-      const pvap = parsePct(cand.pvap);
-      if (totalAgrVotes > 0) {
-        const expectedPvap = (vap / totalAgrVotes) * 100;
-        if (Math.abs(expectedPvap - pvap) > 0.2) {
-          cargoErrors.push(
-            `Candidato ${cand.nmu}: pvap(${cand.pvap}%) ≠ calculado (${expectedPvap.toFixed(2)}%).`
-          );
+    // Global cargo check against vnom and vl (only if this is the only cargo or we sum them)
+    // Actually vnom and vl are for the whole file. If there's only one cargo (like Mayor), it should match.
+    // If there are multiple cargos (like Councilor too), we need to be careful.
+    // Usually EA20 is per cargo or has a shared total.
+    if (data.carg.length === 1) {
+      if (totalCargoTvan !== vnom) {
+        cargoErrors.push(`Votos Nominais: total do cargo (${totalCargoTvan}) ≠ total do arquivo (${vnom}).`);
+      }
+      if (totalCargoTval !== vl) {
+        cargoErrors.push(`Votos Legenda: total do cargo (${totalCargoTval}) ≠ total do arquivo (${vl}).`);
+      }
+    }
+
+    // Check percentages for candidates (pvap = vap / vvc)
+    if (vvc > 0) {
+      for (const agr of carg.agr) {
+        for (const par of agr.par) {
+          for (const cand of par.cand) {
+            const vap = parseNum(cand.vap);
+            const pvap = parsePct(cand.pvap);
+            const expectedPvap = (vap / vvc) * 100;
+            if (Math.abs(expectedPvap - pvap) > 0.2) {
+              cargoErrors.push(
+                `Candidato ${cand.nmu}: pvap(${cand.pvap}%) ≠ calculado sobre total vvc (${expectedPvap.toFixed(2)}%).`
+              );
+            }
+          }
         }
       }
     }

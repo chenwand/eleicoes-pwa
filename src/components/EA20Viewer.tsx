@@ -8,10 +8,10 @@ import type { EA20Cargo, EA20Candidato, EA20Agrupamento } from '../types/ea20';
 // ── helpers ──────────────────────────────────────────────────────────────────
 
 const DVT_COLORS: Record<string, string> = {
-  'Válido':     '',
-  'Anulado':    'text-orange-600 dark:text-orange-400',
+  'Válido': '',
+  'Anulado': 'text-orange-600 dark:text-orange-400',
   'Sub-Judice': 'text-purple-600 dark:text-purple-400',
-  'Nulo':       'text-red-500 dark:text-red-400',
+  'Nulo': 'text-red-500 dark:text-red-400',
 };
 
 function dvtBadge(dvt: string) {
@@ -332,20 +332,20 @@ export function EA20Viewer({ ciclo, eleicaoCd, uf, cdMun, munNome, cargosDisponi
   const parties = useMemo(() => {
     const list = cargoData?.agr.flatMap(a => a.par.map(p => ({ sg: p.sg, nm: p.nm }))) || [];
     // Unique by sg
-    return Array.from(new Map(list.map(p => [p.sg, p])).values()).sort((a,b) => a.sg.localeCompare(b.sg));
+    return Array.from(new Map(list.map(p => [p.sg, p])).values()).sort((a, b) => a.sg.localeCompare(b.sg));
   }, [cargoData]);
 
   const filteredAndSortedCandidates = useMemo(() => {
     if (!cargoData) return [];
 
-    let list = cargoData.agr.flatMap(agr => 
+    let list = cargoData.agr.flatMap(agr =>
       agr.par.flatMap(par => par.cand.map(cand => ({ cand, agr, partido: par })))
     );
 
     // 1. Search (Name, Number, Party)
     if (searchTerm) {
       const lowSearch = searchTerm.toLowerCase();
-      list = list.filter(item => 
+      list = list.filter(item =>
         item.cand.nm.toLowerCase().includes(lowSearch) ||
         item.cand.nmu.toLowerCase().includes(lowSearch) ||
         item.cand.n.includes(searchTerm) ||
@@ -578,143 +578,54 @@ export function EA20Viewer({ ciclo, eleicaoCd, uf, cdMun, munNome, cargosDisponi
             ) : (
               // ── Visual Panel ─────────────────────────────────────────────
               <div className="space-y-4">
-                {/* Search Bar */}
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                  </div>
-                  <input
-                    type="text"
-                    placeholder="Buscar candidato por nome, partido ou número..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-900 dark:text-gray-100 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block pl-10 p-2.5 transition-colors"
-                  />
-                  {searchTerm && (
-                    <button onClick={() => setSearchTerm('')} className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
-                    </button>
-                  )}
-                </div>
-
-                {/* Filters Row */}
-                <div className="flex flex-wrap items-center gap-2">
-                  <div className="flex flex-wrap gap-1 flex-1">
-                    {([
-                      { key: 'all', label: `Todos (${filterCounts.all})`, color: 'blue' },
-                      { key: 'fav', label: `♥ Favoritos (${filterCounts.fav})`, color: 'pink' },
-                      { key: 'eleitos', label: `✓ Eleitos (${filterCounts.eleitos})`, color: 'green' },
-                      { key: 'valido', label: `Válido`, color: 'indigo' },
-                      { key: 'legenda', label: `Legenda (${filterCounts.legenda})`, color: 'cyan', hide: isMajority },
-                      { key: 'anulado', label: `Anulado (${filterCounts.anulado})`, color: 'orange' },
-                      { key: 'subjudice', label: `Sub-Judice (${filterCounts.subjudice})`, color: 'purple' },
-                    ] as { key: string; label: string; color: string; hide?: boolean }[]).filter(f => !f.hide).map(({ key, label, color }) => {
-                      const active = statusFilter === key;
-                      const activeCls = {
-                        blue: 'bg-blue-600 text-white',
-                        pink: 'bg-pink-500 text-white',
-                        green: 'bg-green-600 text-white',
-                        indigo: 'bg-indigo-600 text-white',
-                        cyan: 'bg-cyan-600 text-white',
-                        orange: 'bg-orange-600 text-white',
-                        purple: 'bg-purple-600 text-white',
-                      }[color];
-                      return (
-                        <button
-                          key={key}
-                          onClick={() => setStatusFilter(key as any)}
-                          className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase transition-colors ${active ? activeCls : 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-slate-700'}`}
-                        >
-                          {label}
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  <select
-                    value={sortMode}
-                    onChange={(e) => setSortMode(e.target.value as any)}
-                    className="text-xs bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-gray-300 rounded-lg px-2 py-1.5 transition-colors focus:ring-1 focus:ring-blue-500"
-                  >
-                    <option value="votos">Ordenar: Votos (↓)</option>
-                    <option value="nome">Ordenar: Nome (ABC)</option>
-                    <option value="partido">Ordenar: Partido</option>
-                    <option value="eleito">Ordenar: Situação</option>
-                    <option value="idade">Ordenar: Mais Idosos</option>
-                  </select>
-                </div>
-
-                {/* Party filter for proportional */}
-                {!isMajority && parties.length > 0 && (
-                  <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
-                    <span className="text-[10px] font-bold text-gray-400 uppercase shrink-0">Partido:</span>
-                    <button
-                      onClick={() => setPartyFilter('all')}
-                      className={`px-2 py-0.5 rounded text-[10px] font-medium shrink-0 ${partyFilter === 'all' ? 'bg-slate-700 text-white' : 'bg-gray-100 dark:bg-slate-800 text-gray-500 dark:text-gray-400'}`}
-                    >
-                      Todos
-                    </button>
-                    {parties.map(p => (
-                      <button
-                        key={p.sg}
-                        onClick={() => setPartyFilter(p.sg)}
-                        className={`px-2 py-0.5 rounded text-[10px] font-medium shrink-0 ${partyFilter === p.sg ? 'bg-slate-700 text-white' : 'bg-gray-100 dark:bg-slate-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200'}`}
-                        title={p.nm}
-                      >
-                        {p.sg}
-                      </button>
-                    ))}
-                  </div>
-                )}
-
                 <div className="space-y-6 pt-2">
 
-                {/* Validation errors */}
-                {validationResults.length > 0 && (
-                  <div className="space-y-2">
-                    {validationResults.map((r, i) => (
-                      <div key={i} className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 text-xs text-red-700 dark:text-red-300">
-                        <strong className="flex items-center gap-1 mb-1">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                          Inconsistências — {r.cargo}:
-                        </strong>
-                        <ul className="list-disc pl-5 space-y-0.5">{r.errors.map((e, j) => <li key={j}>{e}</li>)}</ul>
+                  {/* Validation errors */}
+                  {validationResults.length > 0 && (
+                    <div className="space-y-2">
+                      {validationResults.map((r, i) => (
+                        <div key={i} className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 text-xs text-red-700 dark:text-red-300">
+                          <strong className="flex items-center gap-1 mb-1">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                            Inconsistências — {r.cargo}:
+                          </strong>
+                          <ul className="list-disc pl-5 space-y-0.5">{r.errors.map((e, j) => <li key={j}>{e}</li>)}</ul>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Section + Elector summary */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="bg-gray-50 dark:bg-slate-800/60 rounded-lg p-3 border border-gray-200 dark:border-slate-700">
+                      <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wide">Seções</div>
+                      <div className="flex justify-between text-sm mb-1">
+                        <span className="text-gray-600 dark:text-gray-400">Totalizadas</span>
+                        <span className="font-semibold text-gray-800 dark:text-gray-200">{localData.s.pst}%</span>
                       </div>
-                    ))}
+                      <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2 mb-1">
+                        <div className="h-2 rounded-full bg-blue-600 transition-all" style={{ width: `${parsePct(localData.s.pst)}%` }} />
+                      </div>
+                      <div className="text-xs text-gray-400 dark:text-gray-500">{parseNum(localData.s.st).toLocaleString('pt-BR')} de {parseNum(localData.s.ts).toLocaleString('pt-BR')}</div>
+                    </div>
+                    <div className="bg-gray-50 dark:bg-slate-800/60 rounded-lg p-3 border border-gray-200 dark:border-slate-700">
+                      <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wide">Eleitores</div>
+                      <div className="flex justify-between text-sm mb-1">
+                        <span className="text-gray-600 dark:text-gray-400">Comparecimento</span>
+                        <span className="font-semibold text-gray-800 dark:text-gray-200">{localData.e.pc}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2 mb-1">
+                        <div className="h-2 rounded-full bg-green-500 transition-all" style={{ width: `${parsePct(localData.e.pc)}%` }} />
+                      </div>
+                      <div className="text-xs text-gray-400 dark:text-gray-500">
+                        {parseNum(localData.e.c).toLocaleString('pt-BR')} comparecimentos · {parseNum(localData.e.a).toLocaleString('pt-BR')} abstenções
+                      </div>
+                    </div>
                   </div>
-                )}
 
-                {/* Section + Elector summary */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* Votes breakdown */}
                   <div className="bg-gray-50 dark:bg-slate-800/60 rounded-lg p-3 border border-gray-200 dark:border-slate-700">
-                    <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wide">Seções</div>
-                    <div className="flex justify-between text-sm mb-1">
-                      <span className="text-gray-600 dark:text-gray-400">Totalizadas</span>
-                      <span className="font-semibold text-gray-800 dark:text-gray-200">{localData.s.pst}%</span>
-                    </div>
-                    <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2 mb-1">
-                      <div className="h-2 rounded-full bg-blue-600 transition-all" style={{ width: `${parsePct(localData.s.pst)}%` }} />
-                    </div>
-                    <div className="text-xs text-gray-400 dark:text-gray-500">{parseNum(localData.s.st).toLocaleString('pt-BR')} de {parseNum(localData.s.ts).toLocaleString('pt-BR')}</div>
-                  </div>
-                  <div className="bg-gray-50 dark:bg-slate-800/60 rounded-lg p-3 border border-gray-200 dark:border-slate-700">
-                    <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wide">Eleitores</div>
-                    <div className="flex justify-between text-sm mb-1">
-                      <span className="text-gray-600 dark:text-gray-400">Comparecimento</span>
-                      <span className="font-semibold text-gray-800 dark:text-gray-200">{localData.e.pc}%</span>
-                    </div>
-                    <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2 mb-1">
-                      <div className="h-2 rounded-full bg-green-500 transition-all" style={{ width: `${parsePct(localData.e.pc)}%` }} />
-                    </div>
-                    <div className="text-xs text-gray-400 dark:text-gray-500">
-                      {parseNum(localData.e.c).toLocaleString('pt-BR')} comparecimentos · {parseNum(localData.e.a).toLocaleString('pt-BR')} abstenções
-                    </div>
-                  </div>
-                </div>
-
-                {/* Votes breakdown */}
-                <div className="bg-gray-50 dark:bg-slate-800/60 rounded-lg p-3 border border-gray-200 dark:border-slate-700">
-                  <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wide">Distribuição de Votos</div>
+                    <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wide">Distribuição de Votos</div>
                     <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2 text-center">
                       {[
                         { label: 'Total (tv)', val: localData.v.tv, pct: '100', color: 'text-gray-800 dark:text-gray-100 font-bold' },
@@ -737,53 +648,142 @@ export function EA20Viewer({ ciclo, eleicaoCd, uf, cdMun, munNome, cargosDisponi
                         </div>
                       ))}
                     </div>
-                </div>
+                  </div>
 
-                {/* Candidates */}
-                {cargoData && (
-                  <div>
-                    <h3 className="font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
-                      {cargoData.nmn}
-                      <span className="text-xs bg-gray-200 dark:bg-slate-700 text-gray-600 dark:text-gray-300 px-2 py-0.5 rounded-full">{cargoData.nv} vaga{parseInt(cargoData.nv) > 1 ? 's' : ''}</span>
-                    </h3>
-
-                    {filteredAndSortedCandidates.length === 0 ? (
-                      <div className="p-8 text-center bg-gray-50 dark:bg-slate-800/40 rounded-lg border border-dashed border-gray-200 dark:border-slate-700">
-                        <p className="text-gray-500 dark:text-gray-400">Nenhum candidato encontrado com os filtros atuais.</p>
-                        <button onClick={() => { setSearchTerm(''); setStatusFilter('all'); setPartyFilter('all'); }} className="mt-2 text-sm text-blue-600 dark:text-blue-400 hover:underline">Limpar filtros</button>
-                      </div>
-                    ) : isMajority ? (
-                      // ── Majority: cards sorted by votes ───────────────────
-                      <div className="space-y-3">
-                        {filteredAndSortedCandidates.map(({ cand, agr }) => (
-                          <CandCard key={cand.sqcand} cand={cand} agr={agr} totalVotos={totalVotos} ambiente={ambiente} ciclo={ciclo} eleicaoCd={eleicaoCd} uf={uf} isProportional={false} isFavorite={favorites.has(cand.sqcand)} onToggleFavorite={() => toggleFavorite(cand.sqcand)} />
-                        ))}
-                      </div>
-                    ) : (
-                      // ── Proportional: table ───────────────────────────────
-                      <div className="bg-white dark:bg-slate-800/40 border border-gray-200 dark:border-slate-700 rounded-lg overflow-hidden">
-                        <table className="w-full text-sm">
-                          <thead>
-                            <tr className="bg-gray-50 dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700">
-                              <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 w-10">Nº</th>
-                              <th className="text-left py-2 px-2 text-xs font-semibold text-gray-500 dark:text-gray-400">Candidato</th>
-                              <th className="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400">Votos</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {filteredAndSortedCandidates.map(({ cand, agr }) => (
-                              <CandCard key={cand.sqcand} cand={cand} agr={agr} totalVotos={totalVotos} ambiente={ambiente} ciclo={ciclo} eleicaoCd={eleicaoCd} uf={uf} isProportional={true} isFavorite={favorites.has(cand.sqcand)} onToggleFavorite={() => toggleFavorite(cand.sqcand)} />
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
+                  {/* Search Bar */}
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    </div>
+                    <input
+                      type="text"
+                      placeholder="Buscar candidato por nome, partido ou número..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-900 dark:text-gray-100 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block pl-10 p-2.5 transition-colors"
+                    />
+                    {searchTerm && (
+                      <button onClick={() => setSearchTerm('')} className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                      </button>
                     )}
                   </div>
-                )}
+
+                  {/* Filters Row */}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex flex-wrap gap-1 flex-1">
+                      {([
+                        { key: 'all', label: `Todos (${filterCounts.all})`, color: 'blue' },
+                        { key: 'fav', label: `♥ Favoritos (${filterCounts.fav})`, color: 'pink' },
+                        { key: 'eleitos', label: `✓ Eleitos (${filterCounts.eleitos})`, color: 'green' },
+                        { key: 'valido', label: `Válido`, color: 'indigo' },
+                        { key: 'legenda', label: `Legenda (${filterCounts.legenda})`, color: 'cyan', hide: isMajority },
+                        { key: 'anulado', label: `Anulado (${filterCounts.anulado})`, color: 'orange' },
+                        { key: 'subjudice', label: `Sub-Judice (${filterCounts.subjudice})`, color: 'purple' },
+                      ] as { key: string; label: string; color: string; hide?: boolean }[]).filter(f => !f.hide).map(({ key, label, color }) => {
+                        const active = statusFilter === key;
+                        const activeCls = {
+                          blue: 'bg-blue-600 text-white',
+                          pink: 'bg-pink-500 text-white',
+                          green: 'bg-green-600 text-white',
+                          indigo: 'bg-indigo-600 text-white',
+                          cyan: 'bg-cyan-600 text-white',
+                          orange: 'bg-orange-600 text-white',
+                          purple: 'bg-purple-600 text-white',
+                        }[color];
+                        return (
+                          <button
+                            key={key}
+                            onClick={() => setStatusFilter(key as any)}
+                            className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase transition-colors ${active ? activeCls : 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-slate-700'}`}
+                          >
+                            {label}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <select
+                      value={sortMode}
+                      onChange={(e) => setSortMode(e.target.value as any)}
+                      className="text-xs bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-gray-300 rounded-lg px-2 py-1.5 transition-colors focus:ring-1 focus:ring-blue-500"
+                    >
+                      <option value="votos">Ordenar: Votos (↓)</option>
+                      <option value="nome">Ordenar: Nome (ABC)</option>
+                      <option value="partido">Ordenar: Partido</option>
+                      <option value="eleito">Ordenar: Situação</option>
+                      <option value="idade">Ordenar: Mais Idosos</option>
+                    </select>
+                  </div>
+
+                  {/* Party filter for proportional */}
+                  {!isMajority && parties.length > 0 && (
+                    <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
+                      <span className="text-[10px] font-bold text-gray-400 uppercase shrink-0">Partido:</span>
+                      <button
+                        onClick={() => setPartyFilter('all')}
+                        className={`px-2 py-0.5 rounded text-[10px] font-medium shrink-0 ${partyFilter === 'all' ? 'bg-slate-700 text-white' : 'bg-gray-100 dark:bg-slate-800 text-gray-500 dark:text-gray-400'}`}
+                      >
+                        Todos
+                      </button>
+                      {parties.map(p => (
+                        <button
+                          key={p.sg}
+                          onClick={() => setPartyFilter(p.sg)}
+                          className={`px-2 py-0.5 rounded text-[10px] font-medium shrink-0 ${partyFilter === p.sg ? 'bg-slate-700 text-white' : 'bg-gray-100 dark:bg-slate-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200'}`}
+                          title={p.nm}
+                        >
+                          {p.sg}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Candidates */}
+                  {cargoData && (
+                    <div>
+                      <h3 className="font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                        {cargoData.nmn}
+                        <span className="text-xs bg-gray-200 dark:bg-slate-700 text-gray-600 dark:text-gray-300 px-2 py-0.5 rounded-full">{cargoData.nv} vaga{parseInt(cargoData.nv) > 1 ? 's' : ''}</span>
+                      </h3>
+
+                      {filteredAndSortedCandidates.length === 0 ? (
+                        <div className="p-8 text-center bg-gray-50 dark:bg-slate-800/40 rounded-lg border border-dashed border-gray-200 dark:border-slate-700">
+                          <p className="text-gray-500 dark:text-gray-400">Nenhum candidato encontrado com os filtros atuais.</p>
+                          <button onClick={() => { setSearchTerm(''); setStatusFilter('all'); setPartyFilter('all'); }} className="mt-2 text-sm text-blue-600 dark:text-blue-400 hover:underline">Limpar filtros</button>
+                        </div>
+                      ) : isMajority ? (
+                        // ── Majority: cards sorted by votes ───────────────────
+                        <div className="space-y-3">
+                          {filteredAndSortedCandidates.map(({ cand, agr }) => (
+                            <CandCard key={cand.sqcand} cand={cand} agr={agr} totalVotos={totalVotos} ambiente={ambiente} ciclo={ciclo} eleicaoCd={eleicaoCd} uf={uf} isProportional={false} isFavorite={favorites.has(cand.sqcand)} onToggleFavorite={() => toggleFavorite(cand.sqcand)} />
+                          ))}
+                        </div>
+                      ) : (
+                        // ── Proportional: table ───────────────────────────────
+                        <div className="bg-white dark:bg-slate-800/40 border border-gray-200 dark:border-slate-700 rounded-lg overflow-hidden">
+                          <table className="w-full text-sm">
+                            <thead>
+                              <tr className="bg-gray-50 dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700">
+                                <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 w-10">Nº</th>
+                                <th className="text-left py-2 px-2 text-xs font-semibold text-gray-500 dark:text-gray-400">Candidato</th>
+                                <th className="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400">Votos</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {filteredAndSortedCandidates.map(({ cand, agr }) => (
+                                <CandCard key={cand.sqcand} cand={cand} agr={agr} totalVotos={totalVotos} ambiente={ambiente} ciclo={ciclo} eleicaoCd={eleicaoCd} uf={uf} isProportional={true} isFavorite={favorites.has(cand.sqcand)} onToggleFavorite={() => toggleFavorite(cand.sqcand)} />
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          )
-        )}
+            )
+          )}
         </div>
       </div>
     </>
