@@ -59,6 +59,10 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose, relatedElei
   };
 
   const { ambiente } = useEnvironment();
+  const [localData, setLocalData] = useState<any>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [isModified, setIsModified] = useState(false);
+  const [editValue, setEditValue] = useState("");
 
   const { data, isLoading, isError, error, refetch: refetchEA14, isFetching: isEA14Fetching } = useQuery({
     queryKey: ['ea14-data', ciclo, eleicaoCd, ambiente],
@@ -66,10 +70,17 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose, relatedElei
     enabled: !!eleicaoCd && !!ciclo,
   });
 
-  const validationResults = useMemo(() => {
-    if (!data) return [];
-    return validateEA14(data);
+  useEffect(() => {
+    if (data) {
+      setLocalData(data);
+      setIsModified(false);
+    }
   }, [data]);
+
+  const validationResults = useMemo(() => {
+    if (!localData) return [];
+    return validateEA14(localData);
+  }, [localData]);
 
   const getErrorsForAbr = (cdabr: string) => {
     return validationResults.find(r => r.cdabr === cdabr)?.errors || [];
@@ -158,24 +169,32 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose, relatedElei
             </div>
           </div>
 
-          {!selectedEA15Uf && data && (
-            <div className="text-xs text-gray-400 dark:text-gray-500 text-right -mt-2">
-              Arquivo gerado em:{' '}
-              <a
-                href={`https://resultados.tse.jus.br/${ambiente}/${ciclo}/${eleicaoCd}/dados/br/br-e${eleicaoCd.padStart(6, '0')}-ab.json`}
-                target="_blank"
-                rel="noreferrer"
-                className="font-mono hover:text-blue-500 dark:hover:text-blue-400 underline underline-offset-2 transition-colors"
-                title="Abrir / baixar JSON EA14"
-              >
-                {data.dg} {data.hg} ↓
-              </a>
+          {!selectedEA15Uf && localData && (
+            <div className="flex flex-col items-end -mt-2">
+              <div className="text-xs text-gray-400 dark:text-gray-500 text-right">
+                Arquivo gerado em:{' '}
+                <a
+                  href={`https://resultados.tse.jus.br/${ambiente}/${ciclo}/${eleicaoCd}/dados/br/br-e${eleicaoCd.padStart(6, '0')}-ab.json`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="font-mono hover:text-blue-500 dark:hover:text-blue-400 underline underline-offset-2 transition-colors"
+                  title="Abrir / baixar JSON EA14"
+                >
+                  {localData.dg} {localData.hg} ↓
+                </a>
+              </div>
+              {isModified && (
+                <div className="mt-1 px-2 py-0.5 bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 text-[10px] font-bold rounded border border-amber-200 dark:border-amber-800 flex items-center gap-1 animate-pulse">
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                  Dados editados localmente
+                </div>
+              )}
             </div>
           )}
         </div>
 
-        {selectedEA15Uf && data ? (() => {
-          const ufEntry = data.abr.find((a: any) => a.cdabr === selectedEA15Uf.toLowerCase());
+        {selectedEA15Uf && localData ? (() => {
+          const ufEntry = localData.abr.find((a: any) => a.cdabr === selectedEA15Uf.toLowerCase());
           return (
             <div className="flex-1 bg-gray-50 dark:bg-slate-900/50">
               <EA15Viewer
@@ -205,22 +224,88 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose, relatedElei
                   {error instanceof Error ? error.message : 'Falha na comunicação com o TSE.'}
                 </p>
               </div>
-            ) : data && data.abr ? (
+            ) : localData && localData.abr ? (
               <div className="space-y-6">
 
                 {showRawJson ? (
-                  <div className="bg-[#1e1e1e] rounded-lg p-4 overflow-x-auto shadow-inner border border-gray-700">
-                    {renderHighlightedJson(data)}
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center bg-gray-50 dark:bg-slate-800/50 p-3 rounded-lg border border-gray-200 dark:border-slate-700">
+                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>
+                        Conteúdo do Arquivo JSON
+                      </span>
+                      <div className="flex gap-2">
+                        {!isEditing ? (
+                          <button
+                            onClick={() => {
+                              setEditValue(JSON.stringify(localData, null, 2));
+                              setIsEditing(true);
+                            }}
+                            className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded transition-colors flex items-center gap-1.5"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                            Editar
+                          </button>
+                        ) : (
+                          <>
+                            <button
+                              onClick={() => {
+                                try {
+                                  const parsed = JSON.parse(editValue);
+                                  setLocalData(parsed);
+                                  setIsModified(true);
+                                  setIsEditing(false);
+                                } catch (e) {
+                                  alert("JSON inválido! Por favor corrija antes de salvar.");
+                                }
+                              }}
+                              className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded transition-colors flex items-center gap-1.5"
+                            >
+                              Salvar
+                            </button>
+                            <button
+                              onClick={() => setIsEditing(false)}
+                              className="px-3 py-1 bg-gray-500 hover:bg-gray-600 text-white text-xs font-bold rounded transition-colors"
+                            >
+                              Cancelar
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    {isEditing ? (
+                      <textarea
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        className="w-full h-[500px] p-4 font-mono text-sm bg-gray-900 text-gray-100 rounded-lg border border-gray-700 focus:ring-2 focus:ring-blue-500 outline-none resize-none shadow-inner"
+                        spellCheck={false}
+                      />
+                    ) : (
+                      <div
+                        onClick={() => {
+                          setEditValue(JSON.stringify(localData, null, 2));
+                          setIsEditing(true);
+                        }}
+                        className="bg-[#1e1e1e] rounded-lg p-4 overflow-x-auto shadow-inner border border-gray-700 cursor-pointer hover:border-blue-500/50 transition-colors group relative"
+                        title="Clique para editar"
+                      >
+                        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-blue-600/80 text-white text-[10px] px-1.5 py-0.5 rounded pointer-events-none">
+                          Clique para editar
+                        </div>
+                        {renderHighlightedJson(localData)}
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="space-y-3">
                     {/* Find the BR entry to put it at the top if it exists */}
-                    {data.abr.filter((a: any) => a.cdabr === 'br').map((br: any) => {
+                    {localData.abr.filter((a: any) => a.cdabr === 'br').map((br: any) => {
                       const brErrors = getErrorsForAbr('br');
                       const hasErrors = brErrors.length > 0;
-                      const ufsFinalizadas = data.abr.filter((a: any) => a.cdabr !== 'br' && a.and === 'f').length;
-                      const ufsParciais = data.abr.filter((a: any) => a.cdabr !== 'br' && a.and === 'p').length;
-                      const totalUfs = data.abr.filter((a: any) => a.cdabr !== 'br').length;
+                      const ufsFinalizadas = localData.abr.filter((a: any) => a.cdabr !== 'br' && a.and === 'f').length;
+                      const ufsParciais = localData.abr.filter((a: any) => a.cdabr !== 'br' && a.and === 'p').length;
+                      const totalUfs = localData.abr.filter((a: any) => a.cdabr !== 'br').length;
                       const ufsNaoIniciadas = totalUfs - ufsFinalizadas - ufsParciais;
                       const maxUfs = Math.max(ufsFinalizadas, ufsParciais, ufsNaoIniciadas);
 
@@ -335,7 +420,7 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose, relatedElei
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-                      {data.abr
+                      {localData.abr
                         .filter((a: any) => a.cdabr !== 'br')
                         .sort((aValue: any, bValue: any) => {
                           const a = aValue;

@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { fetchEA15 } from '../services/ea15Service';
 import { fetchEA12, flattenEA12Municipios } from '../services/ea12Service';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useEnvironment } from '../context/EnvironmentContext';
 import { validateEA15, getEA15ErrorsForAbr } from '../services/ea15Validator';
 
@@ -43,6 +43,10 @@ export function EA15Viewer({ ciclo, eleicaoCd, uf, onBack, relatedEleicaoCd, rel
   const [sortMode, setSortMode] = useState<'default' | 'recent' | 'eleitores' | 'comparecimento' | 'abstencao' | 'pst'>('default');
   const [isClosing, setIsClosing] = useState(false);
   const { ambiente } = useEnvironment();
+  const [localData, setLocalData] = useState<any>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [isModified, setIsModified] = useState(false);
+  const [editValue, setEditValue] = useState("");
 
   const handleBack = () => {
     setIsClosing(true);
@@ -78,6 +82,13 @@ export function EA15Viewer({ ciclo, eleicaoCd, uf, onBack, relatedEleicaoCd, rel
     staleTime: 30000,
   });
 
+  useEffect(() => {
+    if (ea15Data) {
+      setLocalData(ea15Data);
+      setIsModified(false);
+    }
+  }, [ea15Data]);
+
   // Fetch EA12 to resolve municipality codes to names
   const { data: ea12Data, isLoading: isEA12Loading } = useQuery({
     queryKey: ['ea12-data', ciclo, eleicaoCd, ambiente],
@@ -104,24 +115,24 @@ export function EA15Viewer({ ciclo, eleicaoCd, uf, onBack, relatedEleicaoCd, rel
 
   // Run semantic validation on the whole EA15 dataset (must be before filteredMuns)
   const validationResults = useMemo(() => {
-    if (!ea15Data) return [];
-    return validateEA15(ea15Data);
-  }, [ea15Data]);
+    if (!localData) return [];
+    return validateEA15(localData);
+  }, [localData]);
 
   const getErrorsForMun = (cdabr: string) => getEA15ErrorsForAbr(validationResults, cdabr);
 
   // Filter and sort municipalities
   const filteredMuns = useMemo(() => {
-    if (!ea15Data || !ea15Data.abr) return [];
+    if (!localData || !localData.abr) return [];
 
-    const ufObj = ea15Data.abr.find(a => a.cdabr === uf.toLowerCase());
+    const ufObj = localData.abr.find((a: any) => a.cdabr === uf.toLowerCase());
     if (!ufObj) return [];
 
     // UFs sometimes send the state tracking data inside the abr array along with municipalities
-    const munsOnly = ea15Data.abr.filter(a => a.tpabr === 'mun' || (a.cdabr !== uf.toLowerCase() && a.cdabr !== 'br'));
+    const munsOnly = localData.abr.filter((a: any) => a.tpabr === 'mun' || (a.cdabr !== uf.toLowerCase() && a.cdabr !== 'br'));
 
     return munsOnly
-      .filter(mun => {
+      .filter((mun: any) => {
         // Status filter
         if (statusFilter === 'fav' && !favorites.has(mun.cdabr)) return false;
         if (statusFilter === 'f' && mun.and !== 'f') return false;
@@ -133,7 +144,7 @@ export function EA15Viewer({ ciclo, eleicaoCd, uf, onBack, relatedEleicaoCd, rel
         const search = normalize(searchTerm);
         return normalize(name).includes(search) || mun.cdabr.includes(search);
       })
-      .sort((a, b) => {
+      .sort((a: any, b: any) => {
         // Sort by most recently updated
         if (sortMode === 'recent') {
           const toSortable = (dt: string, ht: string) => {
@@ -167,30 +178,30 @@ export function EA15Viewer({ ciclo, eleicaoCd, uf, onBack, relatedEleicaoCd, rel
         const nameB = munDict.get(b.cdabr) || b.cdabr;
         return nameA.localeCompare(nameB);
       });
-  }, [ea15Data, searchTerm, munDict, uf, validationResults, statusFilter, sortMode, favorites]);
+  }, [localData, searchTerm, munDict, uf, validationResults, statusFilter, sortMode, favorites]);
 
   // Counts for filter pill labels
   const munCounts = useMemo(() => {
-    if (!ea15Data?.abr) return { all: 0, f: 0, p: 0, nr: 0, fav: 0 };
-    const muns = ea15Data.abr.filter(a => a.tpabr === 'mun' || (a.cdabr !== uf.toLowerCase() && a.cdabr !== 'br'));
+    if (!localData?.abr) return { all: 0, f: 0, p: 0, nr: 0, fav: 0 };
+    const muns = localData.abr.filter((a: any) => a.tpabr === 'mun' || (a.cdabr !== uf.toLowerCase() && a.cdabr !== 'br'));
     return {
       all: muns.length,
-      f: muns.filter(m => m.and === 'f').length,
-      p: muns.filter(m => m.and === 'p').length,
-      nr: muns.filter(m => m.and !== 'f' && m.and !== 'p').length,
-      fav: muns.filter(m => favorites.has(m.cdabr)).length,
+      f: muns.filter((m: any) => m.and === 'f').length,
+      p: muns.filter((m: any) => m.and === 'p').length,
+      nr: muns.filter((m: any) => m.and !== 'f' && m.and !== 'p').length,
+      fav: muns.filter((m: any) => favorites.has(m.cdabr)).length,
     };
-  }, [ea15Data, uf, favorites]);
+  }, [localData, uf, favorites]);
 
   // Try to extract General UF stats from the JSON (usually it's the item matching the UF code or the first item if none matches)
   const ufStats = useMemo(() => {
-    if (!ea15Data?.abr) return null;
-    return ea15Data.abr.find(a => a.cdabr === uf.toLowerCase() || a.tpabr === 'uf') || null;
-  }, [ea15Data, uf]);
+    if (!localData?.abr) return null;
+    return localData.abr.find((a: any) => a.cdabr === uf.toLowerCase() || a.tpabr === 'uf') || null;
+  }, [localData, uf]);
 
   // Check if EA15 is outdated compared to EA14
   const isEA15Outdated = useMemo(() => {
-    if (!ea15Data || !ea14dg || !ea14hg) return false;
+    if (!localData || !ea14dg || !ea14hg) return false;
 
     const parseTimestamp = (dg: string, hg: string) => {
       const [d, m, y] = dg.split('/').map(Number);
@@ -198,11 +209,11 @@ export function EA15Viewer({ ciclo, eleicaoCd, uf, onBack, relatedEleicaoCd, rel
       return new Date(y, m - 1, d, h, min, s).getTime();
     };
 
-    const ea15Ts = parseTimestamp(ea15Data.dg, ea15Data.hg);
+    const ea15Ts = parseTimestamp(localData.dg, localData.hg);
     const ea14Ts = parseTimestamp(ea14dg, ea14hg);
 
     return ea15Ts < ea14Ts;
-  }, [ea15Data, ea14dg, ea14hg]);
+  }, [localData, ea14dg, ea14hg]);
 
 
   if (isEA15Loading || isEA12Loading) {
@@ -282,7 +293,7 @@ export function EA15Viewer({ ciclo, eleicaoCd, uf, onBack, relatedEleicaoCd, rel
           </div>
         </div>
 
-        {ea15Data && (() => {
+        {localData && (() => {
           const ufLower = uf.toLowerCase();
           const paddedCd = eleicaoCd.padStart(6, '0');
           const jsonUrl = `https://resultados.tse.jus.br/${ambiente}/${ciclo}/${eleicaoCd}/dados/${ufLower}/${ufLower}-e${paddedCd}-ab.json`;
@@ -297,13 +308,19 @@ export function EA15Viewer({ ciclo, eleicaoCd, uf, onBack, relatedEleicaoCd, rel
                   className="font-mono hover:text-blue-500 dark:hover:text-blue-400 underline underline-offset-2 transition-colors"
                   title="Abrir / baixar JSON EA15"
                 >
-                  {ea15Data.dg} {ea15Data.hg} ↓
+                  {localData.dg} {localData.hg} ↓
                 </a>
               </div>
+              {isModified && (
+                <div className="mt-1 flex items-center gap-1.5 px-2 py-0.5 text-[10px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 rounded border border-amber-200 dark:border-amber-800 animate-pulse">
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                  Dados editados localmente
+                </div>
+              )}
               {isEA15Outdated && (
                 <div className="mt-1 flex items-center gap-1.5 px-2 py-0.5 text-[10px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 rounded border border-amber-200 dark:border-amber-800 animate-pulse">
                   <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-                  Arquivo desatualizado (UF no EA14 em {ea14hg} &gt; EA15 em {ea15Data.hg})
+                  Arquivo desatualizado (UF no EA14 em {ea14hg} &gt; EA15 em {localData.hg})
                 </div>
               )}
             </div>
@@ -360,11 +377,27 @@ export function EA15Viewer({ ciclo, eleicaoCd, uf, onBack, relatedEleicaoCd, rel
                     <span>{parseInt(ufStats.s.st).toLocaleString('pt-BR')} de {parseInt(ufStats.s.ts).toLocaleString('pt-BR')} seções</span>
                   </div>
                 </div>
+
+                {(() => {
+                  const ufErrors = getErrorsForMun(ufStats.cdabr);
+                  if (ufErrors.length === 0) return null;
+                  return (
+                    <div className="mt-4 bg-red-100 dark:bg-red-900/30 border border-red-200 dark:border-red-800/50 rounded p-3 text-xs text-red-700 dark:text-red-300">
+                      <strong className="flex items-center gap-1 mb-1">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                        Inconsistências no Consolidado UF:
+                      </strong>
+                      <ul className="list-disc pl-5 space-y-1">
+                        {ufErrors.map((err: any, i: number) => <li key={i}>{err}</li>)}
+                      </ul>
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* Chart Side */}
               <div className="md:w-56 bg-white/60 dark:bg-slate-800/60 rounded p-3 flex flex-col border border-gray-100 dark:border-slate-700/50 shadow-sm">
-                <div className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1 text-center">
+                <div className="text-xs font-semibold text-gray-60:0 dark:text-gray-400 mb-1 text-center">
                   Status dos Municípios ({totalMuns})
                 </div>
                 <div className="flex-1 flex items-end justify-center gap-4 h-32 mt-2">
@@ -458,12 +491,78 @@ export function EA15Viewer({ ciclo, eleicaoCd, uf, onBack, relatedEleicaoCd, rel
 
       <div className="flex-1 p-4 overflow-y-auto">
         {showRawJson ? (
-          <div className="bg-[#1e1e1e] rounded-lg p-4 overflow-x-auto shadow-inner border border-gray-700">
-            {renderHighlightedJson(ea15Data)}
+          <div className="space-y-4">
+            <div className="flex justify-between items-center bg-gray-50 dark:bg-slate-800/50 p-3 rounded-lg border border-gray-200 dark:border-slate-700">
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>
+                Conteúdo do Arquivo JSON
+              </span>
+              <div className="flex gap-2">
+                {!isEditing ? (
+                  <button
+                    onClick={() => {
+                      setEditValue(JSON.stringify(localData, null, 2));
+                      setIsEditing(true);
+                    }}
+                    className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded transition-colors flex items-center gap-1.5"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                    Editar
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => {
+                        try {
+                          const parsed = JSON.parse(editValue);
+                          setLocalData(parsed);
+                          setIsModified(true);
+                          setIsEditing(false);
+                        } catch (e) {
+                          alert("JSON inválido! Por favor corrija antes de salvar.");
+                        }
+                      }}
+                      className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded transition-colors flex items-center gap-1.5"
+                    >
+                      Salvar
+                    </button>
+                    <button
+                      onClick={() => setIsEditing(false)}
+                      className="px-3 py-1 bg-gray-500 hover:bg-gray-600 text-white text-xs font-bold rounded transition-colors"
+                    >
+                      Cancelar
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {isEditing ? (
+              <textarea
+                value={editValue}
+                onChange={(e) => setEditValue(e.target.value)}
+                className="w-full h-[500px] p-4 font-mono text-sm bg-gray-900 text-gray-100 rounded-lg border border-gray-700 focus:ring-2 focus:ring-blue-500 outline-none resize-none shadow-inner"
+                spellCheck={false}
+              />
+            ) : (
+              <div
+                onClick={() => {
+                  setEditValue(JSON.stringify(localData, null, 2));
+                  setIsEditing(true);
+                }}
+                className="bg-[#1e1e1e] rounded-lg p-4 overflow-x-auto shadow-inner border border-gray-700 cursor-pointer hover:border-blue-500/50 transition-colors group relative"
+                title="Clique para editar"
+              >
+                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-blue-600/80 text-white text-[10px] px-1.5 py-0.5 rounded pointer-events-none">
+                  Clique para editar
+                </div>
+                {renderHighlightedJson(localData)}
+              </div>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
-            {filteredMuns.map(mun => {
+            {filteredMuns.map((mun: any) => {
               const pct = parseFloat(mun.s.pst.replace(',', '.'));
               const isDone = mun.and === 'f';
               const isPartial = mun.and === 'p';
@@ -545,7 +644,7 @@ export function EA15Viewer({ ciclo, eleicaoCd, uf, onBack, relatedEleicaoCd, rel
                           Inconsistências:
                         </strong>
                         <ul className="list-disc pl-4 space-y-0.5">
-                          {munErrors.map((err, i) => <li key={i}>{err}</li>)}
+                          {munErrors.map((err: any, i: number) => <li key={i}>{err}</li>)}
                         </ul>
                       </div>
                     )}
