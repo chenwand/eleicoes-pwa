@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { fetchEA12, flattenEA12Municipios } from '../services/ea12Service';
 import { fetchEA20, buildCandidatoFotoUrl } from '../services/ea20Service';
 import { validateEA20 } from '../services/ea20Validator';
 import { useEnvironment } from '../context/EnvironmentContext';
@@ -430,7 +431,7 @@ function CandCard({
               </button>
               <span className="text-sm font-medium text-gray-800 dark:text-gray-200">{cand.nmu}</span>
               {dvtBadge(cand.dvt)}
-              {isEleito && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300 font-bold">✓ Eleito</span>}
+              {isEleito && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300 font-bold">✓ {cand.st}</span>}
             </div>
             <div className="text-[11px] text-gray-400 dark:text-gray-500">{agr.par.find(p => p.cand.some(c => c.sqcand === cand.sqcand))?.sg} · {agr.nm}</div>
           </td>
@@ -455,7 +456,7 @@ function CandCard({
                       <span className="font-mono text-xs text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-slate-700 px-1.5 py-0.5 rounded">{cand.n}</span>
                       <span className="font-bold text-gray-800 dark:text-gray-100">{cand.nmu}</span>
                       {dvtBadge(cand.dvt)}
-                      {isEleito && <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300 font-bold">✓ Eleito</span>}
+                      {isEleito && <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300 font-bold">✓ {cand.st}</span>}
                     </div>
                     <div className="text-xs text-gray-500 dark:text-gray-400">
                       {agr.par.find(p => p.cand.some(c => c.sqcand === cand.sqcand))?.sg} · <span className="truncate">{agr.nm}</span>
@@ -605,6 +606,19 @@ export function EA20Viewer({ ciclo, eleicaoCd, uf, cdMun, munNome, cargosDisponi
     setFavorites(newFavs);
     localStorage.setItem(`fav_cand_${ciclo}_${eleicaoCd}`, JSON.stringify(Array.from(newFavs)));
   };
+
+  const { data: ea12Data } = useQuery({
+    queryKey: ['ea12-data', ciclo, eleicaoCd, ambiente],
+    queryFn: () => fetchEA12(ciclo, eleicaoCd, ambiente),
+    enabled: !!eleicaoCd && !!ciclo,
+    staleTime: Infinity,
+  });
+
+  const availableZones = useMemo(() => {
+    if (!ea12Data || !cdMun) return [];
+    const mun = flattenEA12Municipios(ea12Data).find(m => m.munCdTse === cdMun);
+    return mun?.z || [];
+  }, [ea12Data, cdMun]);
 
   // Use the first available cargo to load
   const selectedCargo = cargosDisponiveis[selectedCargoIdx];
@@ -832,15 +846,18 @@ export function EA20Viewer({ ciclo, eleicaoCd, uf, cdMun, munNome, cargosDisponi
           {showZonaSelector && (
             <div className="flex items-center gap-2 mt-1">
               <label className="text-xs text-gray-500 dark:text-gray-400 font-medium">Zona:</label>
-              <input
-                type="text"
+              <select
                 value={selectedZona ?? ''}
-                onChange={e => setSelectedZona(e.target.value.trim().padStart(4, '0') || undefined)}
-                placeholder="ex: 0008"
-                className="font-mono text-sm border border-gray-300 dark:border-slate-600 rounded px-2 py-0.5 w-28 bg-white dark:bg-slate-900 text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-blue-500"
-              />
+                onChange={e => setSelectedZona(e.target.value || undefined)}
+                className="text-sm border border-gray-300 dark:border-slate-600 rounded px-2 py-1 w-48 bg-white dark:bg-slate-900 text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-blue-500 font-medium"
+              >
+                <option value="">Todas as Zonas</option>
+                {availableZones.sort().map(z => (
+                  <option key={z} value={z}>Zona {z}</option>
+                ))}
+              </select>
               {selectedZona && (
-                <button onClick={() => setSelectedZona(undefined)} className="text-xs text-red-600 dark:text-red-400 hover:underline">Limpar zona</button>
+                <button onClick={() => setSelectedZona(undefined)} className="text-xs text-red-600 dark:text-red-400 hover:underline">Limpar</button>
               )}
             </div>
           )}
@@ -911,7 +928,7 @@ export function EA20Viewer({ ciclo, eleicaoCd, uf, cdMun, munNome, cargosDisponi
                     const totalErrors = validationResults.reduce((acc, r) => acc + r.errors.length, 0);
                     return (
                       <div className="bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800 rounded-lg shadow-sm animate-fade-in overflow-hidden">
-                        <button 
+                        <button
                           onClick={() => setValidationExpanded(!validationExpanded)}
                           className="w-full p-3 flex justify-between items-center hover:bg-red-100/50 dark:hover:bg-red-900/20 transition-colors text-red-700 dark:text-red-300"
                         >
@@ -922,7 +939,7 @@ export function EA20Viewer({ ciclo, eleicaoCd, uf, cdMun, munNome, cargosDisponi
                           </div>
                           <svg className={`w-4 h-4 transition-transform ${validationExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
                         </button>
-                        
+
                         {validationExpanded && (
                           <div className="p-4 pt-0 text-xs text-red-700 dark:text-red-300 border-t border-red-200/50 dark:border-red-800/50 space-y-4">
                             {validationResults.map((r, i) => (
