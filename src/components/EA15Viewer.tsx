@@ -4,6 +4,7 @@ import { fetchEA12, flattenEA12Municipios } from '../services/ea12Service';
 import { useMemo, useState, useEffect } from 'react';
 import { useEnvironment } from '../context/EnvironmentContext';
 import { validateEA15, getEA15ErrorsForAbr } from '../services/ea15Validator';
+import { EA20Viewer } from './EA20Viewer';
 
 const renderHighlightedJson = (jsonObj: any) => {
   const json = JSON.stringify(jsonObj, null, 2).replace(/[&<>]/g, (c) => {
@@ -33,9 +34,11 @@ interface EA15ViewerProps {
   onChangeEleicao?: (cd: string) => void;
   ea14dg?: string;
   ea14hg?: string;
+  /** Cargos from EA11 to pass to EA20Viewer */
+  cargosDisponiveis?: { cd: string; nm: string }[];
 }
 
-export function EA15Viewer({ ciclo, eleicaoCd, uf, onBack, relatedEleicaoCd, relatedEleicaoTurno, onChangeEleicao, ea14dg, ea14hg }: EA15ViewerProps) {
+export function EA15Viewer({ ciclo, eleicaoCd, uf, onBack, relatedEleicaoCd, relatedEleicaoTurno, onChangeEleicao, ea14dg, ea14hg, cargosDisponiveis = [] }: EA15ViewerProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [showRawJson, setShowRawJson] = useState(false);
   const [expandedMun, setExpandedMun] = useState<string | null>(null);
@@ -47,6 +50,7 @@ export function EA15Viewer({ ciclo, eleicaoCd, uf, onBack, relatedEleicaoCd, rel
   const [isEditing, setIsEditing] = useState(false);
   const [isModified, setIsModified] = useState(false);
   const [editValue, setEditValue] = useState("");
+  const [ea20Mun, setEa20Mun] = useState<{ cdabr: string; nome: string } | null>(null);
 
   const handleBack = () => {
     setIsClosing(true);
@@ -161,10 +165,10 @@ export function EA15Viewer({ ciclo, eleicaoCd, uf, onBack, relatedEleicaoCd, rel
         const bFav = favorites.has(b.cdabr) ? 0 : 1;
         if (aFav !== bFav) return aFav - bFav;
 
-        if (sortMode === 'eleitores')       return parseInt(b.e.te) - parseInt(a.e.te);
-        if (sortMode === 'comparecimento')  return parseFloat(b.e.pc.replace(',', '.')) - parseFloat(a.e.pc.replace(',', '.'));
-        if (sortMode === 'abstencao')       return parseFloat(b.e.pa.replace(',', '.')) - parseFloat(a.e.pa.replace(',', '.'));
-        if (sortMode === 'pst')             return parseFloat(b.s.pst.replace(',', '.')) - parseFloat(a.s.pst.replace(',', '.'));
+        if (sortMode === 'eleitores') return parseInt(b.e.te) - parseInt(a.e.te);
+        if (sortMode === 'comparecimento') return parseFloat(b.e.pc.replace(',', '.')) - parseFloat(a.e.pc.replace(',', '.'));
+        if (sortMode === 'abstencao') return parseFloat(b.e.pa.replace(',', '.')) - parseFloat(a.e.pa.replace(',', '.'));
+        if (sortMode === 'pst') return parseFloat(b.s.pst.replace(',', '.')) - parseFloat(a.s.pst.replace(',', '.'));
 
         const aErrors = getEA15ErrorsForAbr(validationResults, a.cdabr).length;
         const bErrors = getEA15ErrorsForAbr(validationResults, b.cdabr).length;
@@ -343,17 +347,17 @@ export function EA15Viewer({ ciclo, eleicaoCd, uf, onBack, relatedEleicaoCd, rel
           const munsNaoIniciadas = parseInt(ufStats.munnr || '0');
           const totalMuns = munsFinalizadas + munsParciais + munsNaoIniciadas;
           const maxMuns = Math.max(munsFinalizadas, munsParciais, munsNaoIniciadas);
-          
+
           const getBarHeight = (val: number) => {
             if (val === 0) return '0%';
             if (maxMuns === 0) return '0%';
-            
+
             const values = [munsFinalizadas, munsParciais, munsNaoIniciadas]
               .filter(v => v > 0)
               .sort((a, b) => b - a);
-              
+
             const uniqueValues = Array.from(new Set(values));
-            
+
             if (val === uniqueValues[0]) return '100%';
             if (uniqueValues.length > 1 && val === uniqueValues[1]) return '60%';
             if (uniqueValues.length > 2 && val === uniqueValues[2]) return '30%';
@@ -457,17 +461,17 @@ export function EA15Viewer({ ciclo, eleicaoCd, uf, onBack, relatedEleicaoCd, rel
               {([
                 { key: 'all', label: `Todos (${munCounts.all})` },
                 { key: 'fav', label: `♥ Favoritos (${munCounts.fav})` },
-                { key: 'f',   label: `✓ Finalizados (${munCounts.f})` },
-                { key: 'p',   label: `⟳ Parciais (${munCounts.p})` },
-                { key: 'nr',  label: `○ Não recebidos (${munCounts.nr})` },
+                { key: 'f', label: `✓ Finalizados (${munCounts.f})` },
+                { key: 'p', label: `⟳ Parciais (${munCounts.p})` },
+                { key: 'nr', label: `○ Não recebidos (${munCounts.nr})` },
               ] as const).map(({ key, label }) => {
                 const active = statusFilter === key;
                 const colorMap: Record<string, string> = {
-                  all:  active ? 'bg-blue-600 text-white'   : 'bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-700',
-                  fav:  active ? 'bg-pink-500 text-white'   : 'bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-700',
-                  f:    active ? 'bg-green-600 text-white'  : 'bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-700',
-                  p:    active ? 'bg-yellow-500 text-white' : 'bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-700',
-                  nr:   active ? 'bg-gray-500 text-white'   : 'bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-700',
+                  all: active ? 'bg-blue-600 text-white' : 'bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-700',
+                  fav: active ? 'bg-pink-500 text-white' : 'bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-700',
+                  f: active ? 'bg-green-600 text-white' : 'bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-700',
+                  p: active ? 'bg-yellow-500 text-white' : 'bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-700',
+                  nr: active ? 'bg-gray-500 text-white' : 'bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-700',
                 };
                 return (
                   <button
@@ -699,6 +703,20 @@ export function EA15Viewer({ ciclo, eleicaoCd, uf, onBack, relatedEleicaoCd, rel
                             <span className="font-medium text-gray-500">{parseInt(mun.s.snt).toLocaleString('pt-BR')}</span>
                           </div>
                         </div>
+                        {cargosDisponiveis && cargosDisponiveis.length > 0 && (
+                          <div className="pt-2 border-t border-gray-100 dark:border-slate-700">
+                            <button
+                              className="w-full bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-300 font-medium py-1.5 px-3 rounded transition-colors text-xs flex justify-center items-center gap-1"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEa20Mun({ cdabr: mun.cdabr, nome: munName });
+                              }}
+                            >
+                              Ver Resultados (EA20)
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
+                            </button>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -714,6 +732,19 @@ export function EA15Viewer({ ciclo, eleicaoCd, uf, onBack, relatedEleicaoCd, rel
             <p className="text-sm font-medium">Nenhum município encontrado</p>
             {searchTerm && <p className="text-xs mt-1">Tente buscar por outro termo.</p>}
           </div>
+        )}
+
+        {/* ── EA20 Viewer Overlay ── */}
+        {ea20Mun && (
+          <EA20Viewer
+            ciclo={ciclo}
+            eleicaoCd={eleicaoCd}
+            uf={uf}
+            cdMun={ea20Mun.cdabr}
+            munNome={ea20Mun.nome}
+            cargosDisponiveis={cargosDisponiveis}
+            onBack={() => setEa20Mun(null)}
+          />
         )}
       </div>
     </div>

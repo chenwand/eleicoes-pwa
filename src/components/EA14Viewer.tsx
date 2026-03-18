@@ -41,9 +41,10 @@ interface EA14ViewerProps {
   relatedEleicaoCd?: string;
   relatedEleicaoTurno?: '1' | '2';
   onChangeEleicao?: (cd: string) => void;
+  cargosDisponiveis?: { cd: string; nm: string }[];
 }
 
-export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose, relatedEleicaoCd, relatedEleicaoTurno, onChangeEleicao }: EA14ViewerProps) {
+export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose, relatedEleicaoCd, relatedEleicaoTurno, onChangeEleicao, cargosDisponiveis = [] }: EA14ViewerProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const [expandedUf, setExpandedUf] = useState<string | null>(null);
   const [showRawJson, setShowRawJson] = useState(false);
@@ -215,6 +216,7 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose, relatedElei
                 onChangeEleicao={onChangeEleicao}
                 ea14dg={ufEntry?.dt}
                 ea14hg={ufEntry?.ht}
+                cargosDisponiveis={cargosDisponiveis}
               />
             </div>
           );

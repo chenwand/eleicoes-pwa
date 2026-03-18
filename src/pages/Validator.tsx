@@ -797,6 +797,10 @@ export function Validator() {
           ? allElections.find((e: any) => e.cdt2 === selectedEA14EleicaoCd)
           : allElections.find((e: any) => e.cd === currentElectionFromAll?.cdt2);
 
+        const cargosEa11 = currentElectionFromAll?.abr?.flatMap((a: any) => a.cp || []) || [];
+        const uniqueCargos = Array.from(new Map(cargosEa11.map((cg: any) => [cg.cd, cg])).values());
+        const cargosMapped = uniqueCargos.map((cg: any) => ({ cd: cg.cd, nm: cg.ds }));
+
         return (
           <EA14Viewer
             ciclo={cicloString}
@@ -806,6 +810,7 @@ export function Validator() {
             relatedEleicaoTurno={isT2ForEA14 ? '1' : '2'}
             onChangeEleicao={(cd) => setSelectedEA14EleicaoCd(cd)}
             onClose={() => setSelectedEA14EleicaoCd(null)}
+            cargosDisponiveis={cargosMapped}
           />
         );
       })()}
