@@ -166,5 +166,42 @@ export function validateEA20(data: EA20Response): EA20ValidationResult[] {
     }
   }
 
+  // ─── Global sums for Annulled/Sub Judice candidates ───────────────
+  let sumGlobalAnnulled = 0;
+  let sumGlobalSubJudice = 0;
+
+  for (const carg of data.carg) {
+    for (const agr of carg.agr) {
+      for (const par of agr.par) {
+        for (const cand of par.cand) {
+          const vap = parseNum(cand.vap);
+          if (cand.dvt === 'Anulado') {
+            sumGlobalAnnulled += vap;
+          } else if (cand.dvt === 'Anulado sub judice') {
+            sumGlobalSubJudice += vap;
+          }
+        }
+      }
+    }
+  }
+
+  const extraGlobalErrors: string[] = [];
+  if (sumGlobalAnnulled !== van) {
+    extraGlobalErrors.push(`Votos Anulados: soma dos candidatos (${sumGlobalAnnulled}) ≠ v.van (${van}).`);
+  }
+  if (sumGlobalSubJudice !== vansj) {
+    extraGlobalErrors.push(`Votos Anulados Sub Judice: soma dos candidatos (${sumGlobalSubJudice}) ≠ v.vansj (${vansj}).`);
+  }
+
+  if (extraGlobalErrors.length > 0) {
+    // Merge with existing "Totais Gerais" or add a new entry
+    const existing = results.find(r => r.cargo === 'Totais Gerais');
+    if (existing) {
+      existing.errors.push(...extraGlobalErrors);
+    } else {
+      results.unshift({ cargo: 'Totais Gerais', errors: extraGlobalErrors });
+    }
+  }
+
   return results;
 }

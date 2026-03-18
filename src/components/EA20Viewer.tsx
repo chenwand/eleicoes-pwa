@@ -588,6 +588,7 @@ export function EA20Viewer({ ciclo, eleicaoCd, uf, cdMun, munNome, cargosDisponi
   const [partyFilter, setPartyFilter] = useState('all');
   const [sortMode, setSortMode] = useState<'votos' | 'nome' | 'partido' | 'eleito' | 'idade'>('votos');
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
+  const [validationExpanded, setValidationExpanded] = useState(false);
 
   // Load favorites from localStorage
   useEffect(() => {
@@ -906,19 +907,39 @@ export function EA20Viewer({ ciclo, eleicaoCd, uf, cdMun, munNome, cargosDisponi
                 <div className="space-y-6 pt-2">
 
                   {/* Validation errors */}
-                  {validationResults.length > 0 && (
-                    <div className="space-y-2">
-                      {validationResults.map((r, i) => (
-                        <div key={i} className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 text-xs text-red-700 dark:text-red-300">
-                          <strong className="flex items-center gap-1 mb-1">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                            Inconsistências — {r.cargo}:
-                          </strong>
-                          <ul className="list-disc pl-5 space-y-0.5">{r.errors.map((e, j) => <li key={j}>{e}</li>)}</ul>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                  {validationResults.length > 0 && (() => {
+                    const totalErrors = validationResults.reduce((acc, r) => acc + r.errors.length, 0);
+                    return (
+                      <div className="bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800 rounded-lg shadow-sm animate-fade-in overflow-hidden">
+                        <button 
+                          onClick={() => setValidationExpanded(!validationExpanded)}
+                          className="w-full p-3 flex justify-between items-center hover:bg-red-100/50 dark:hover:bg-red-900/20 transition-colors text-red-700 dark:text-red-300"
+                        >
+                          <div className="flex items-center gap-2 text-sm font-bold">
+                            <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                            Inconsistências Encontradas
+                            <span className="ml-1 px-1.5 py-0.5 bg-red-200 dark:bg-red-800 rounded text-[10px] font-black">{totalErrors}</span>
+                          </div>
+                          <svg className={`w-4 h-4 transition-transform ${validationExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
+                        </button>
+                        
+                        {validationExpanded && (
+                          <div className="p-4 pt-0 text-xs text-red-700 dark:text-red-300 border-t border-red-200/50 dark:border-red-800/50 space-y-4">
+                            {validationResults.map((r, i) => (
+                              <div key={i} className={i !== 0 ? "pt-3 border-t border-red-100 dark:border-red-900/40" : "pt-3"}>
+                                <div className="font-bold uppercase tracking-tight mb-1 opacity-80">{r.cargo}:</div>
+                                <ul className="list-disc pl-5 space-y-1">
+                                  {r.errors.map((e, j) => (
+                                    <li key={j} className="leading-relaxed">{e}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
 
                   {/* Section + Elector summary */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
