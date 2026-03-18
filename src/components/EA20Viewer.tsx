@@ -57,7 +57,7 @@ interface EA20ViewerProps {
 // ── Candidate card component ──────────────────────────────────────────────────
 
 function CandCard({
-  cand, agr, totalVotos, ambiente, ciclo, eleicaoCd, uf, isProportional
+  cand, agr, totalVotos, ambiente, ciclo, eleicaoCd, uf, isProportional, isFavorite, onToggleFavorite
 }: {
   cand: EA20Candidato;
   agr: EA20Agrupamento;
@@ -67,6 +67,8 @@ function CandCard({
   eleicaoCd: string;
   uf: string;
   isProportional: boolean;
+  isFavorite: boolean;
+  onToggleFavorite: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [fotoError, setFotoError] = useState(false);
@@ -95,6 +97,12 @@ function CandCard({
           <td className="py-2 px-3 font-mono text-xs text-gray-500 w-10">{cand.n}</td>
           <td className="py-2 px-2">
             <div className="flex items-center gap-1.5">
+              <button
+                onClick={(e) => { e.stopPropagation(); onToggleFavorite(); }}
+                className={`transition-colors ${isFavorite ? 'text-amber-400' : 'text-gray-300 dark:text-slate-600 hover:text-amber-400'}`}
+              >
+                <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
+              </button>
               <span className="text-sm font-medium text-gray-800 dark:text-gray-200">{cand.nmu}</span>
               {dvtBadge(cand.dvt)}
               {isEleito && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300 font-bold">✓ Eleito</span>}
@@ -113,6 +121,12 @@ function CandCard({
                 <div className="flex justify-between items-start gap-2 mb-2">
                   <div className="flex flex-col gap-0.5">
                     <div className="flex items-center gap-2 flex-wrap">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); onToggleFavorite(); }}
+                        className={`transition-colors ${isFavorite ? 'text-amber-400' : 'text-gray-300 dark:text-slate-600 hover:text-amber-400'}`}
+                      >
+                        <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
+                      </button>
                       <span className="font-mono text-xs text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-slate-700 px-1.5 py-0.5 rounded">{cand.n}</span>
                       <span className="font-bold text-gray-800 dark:text-gray-100">{cand.nmu}</span>
                       {dvtBadge(cand.dvt)}
@@ -151,6 +165,12 @@ function CandCard({
       <div className="flex justify-between items-start gap-2 mb-2">
         <div className="flex flex-col gap-0.5">
           <div className="flex items-center gap-2 flex-wrap">
+            <button
+              onClick={(e) => { e.stopPropagation(); onToggleFavorite(); }}
+              className={`transition-colors ${isFavorite ? 'text-amber-400' : 'text-gray-300 dark:text-slate-600 hover:text-amber-400'}`}
+            >
+              <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
+            </button>
             <span className="font-mono text-xs text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-slate-700 px-1.5 py-0.5 rounded">{cand.n}</span>
             <span className="font-bold text-gray-800 dark:text-gray-100">{cand.nmu}</span>
             {dvtBadge(cand.dvt)}
@@ -237,6 +257,29 @@ export function EA20Viewer({ ciclo, eleicaoCd, uf, cdMun, munNome, cargosDisponi
   const [isModified, setIsModified] = useState(false);
   const [editValue, setEditValue] = useState('');
 
+  // Advanced search/filter/sort state
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'fav' | 'eleitos' | 'valido' | 'legenda' | 'anulado' | 'subjudice'>('all');
+  const [partyFilter, setPartyFilter] = useState('all');
+  const [sortMode, setSortMode] = useState<'votos' | 'nome' | 'partido' | 'eleito' | 'idade'>('votos');
+  const [favorites, setFavorites] = useState<Set<string>>(new Set());
+
+  // Load favorites from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem(`fav_cand_${ciclo}_${eleicaoCd}`);
+    if (saved) {
+      try { setFavorites(new Set(JSON.parse(saved))); } catch (e) { console.error(e); }
+    }
+  }, [ciclo, eleicaoCd]);
+
+  const toggleFavorite = (sqcand: string) => {
+    const newFavs = new Set(favorites);
+    if (newFavs.has(sqcand)) newFavs.delete(sqcand);
+    else newFavs.add(sqcand);
+    setFavorites(newFavs);
+    localStorage.setItem(`fav_cand_${ciclo}_${eleicaoCd}`, JSON.stringify(Array.from(newFavs)));
+  };
+
   // Use the first available cargo to load
   const selectedCargo = cargosDisponiveis[selectedCargoIdx];
 
@@ -284,6 +327,98 @@ export function EA20Viewer({ ciclo, eleicaoCd, uf, cdMun, munNome, cargosDisponi
   const totalVotos = useMemo(() => {
     return allCandidates.reduce((sum, c) => sum + (parseInt(c.vap, 10) || 0), 0);
   }, [allCandidates]);
+
+  // Derived list of unique parties for the filter
+  const parties = useMemo(() => {
+    const list = cargoData?.agr.flatMap(a => a.par.map(p => ({ sg: p.sg, nm: p.nm }))) || [];
+    // Unique by sg
+    return Array.from(new Map(list.map(p => [p.sg, p])).values()).sort((a,b) => a.sg.localeCompare(b.sg));
+  }, [cargoData]);
+
+  const filteredAndSortedCandidates = useMemo(() => {
+    if (!cargoData) return [];
+
+    let list = cargoData.agr.flatMap(agr => 
+      agr.par.flatMap(par => par.cand.map(cand => ({ cand, agr, partido: par })))
+    );
+
+    // 1. Search (Name, Number, Party)
+    if (searchTerm) {
+      const lowSearch = searchTerm.toLowerCase();
+      list = list.filter(item => 
+        item.cand.nm.toLowerCase().includes(lowSearch) ||
+        item.cand.nmu.toLowerCase().includes(lowSearch) ||
+        item.cand.n.includes(searchTerm) ||
+        item.partido.sg.toLowerCase().includes(lowSearch)
+      );
+    }
+
+    // 2. Status Filter
+    if (statusFilter !== 'all') {
+      list = list.filter(item => {
+        if (statusFilter === 'fav') return favorites.has(item.cand.sqcand);
+        if (statusFilter === 'eleitos') return item.cand.e === 's';
+        if (statusFilter === 'legenda') return item.cand.dvt === 'Válidos (legenda)';
+        if (statusFilter === 'valido') return item.cand.dvt === 'Válido';
+        if (statusFilter === 'anulado') return item.cand.dvt === 'Anulado';
+        if (statusFilter === 'subjudice') return item.cand.dvt === 'Sub-Judice';
+        return true;
+      });
+    }
+
+    // 3. Party Filter
+    if (partyFilter !== 'all') {
+      list = list.filter(item => item.partido.sg === partyFilter);
+    }
+
+    // 4. Sort
+    list.sort((a, b) => {
+      // Favorites ALWAYS on top
+      const aFav = favorites.has(a.cand.sqcand) ? 1 : 0;
+      const bFav = favorites.has(b.cand.sqcand) ? 1 : 0;
+      if (aFav !== bFav) return bFav - aFav;
+
+      if (sortMode === 'votos') {
+        return (parseInt(b.cand.vap, 10) || 0) - (parseInt(a.cand.vap, 10) || 0);
+      }
+      if (sortMode === 'nome') {
+        return a.cand.nmu.localeCompare(b.cand.nmu);
+      }
+      if (sortMode === 'partido') {
+        return a.partido.sg.localeCompare(b.partido.sg);
+      }
+      if (sortMode === 'eleito') {
+        if (a.cand.e !== b.cand.e) return a.cand.e === 's' ? -1 : 1;
+        return (parseInt(b.cand.vap, 10) || 0) - (parseInt(a.cand.vap, 10) || 0);
+      }
+      if (sortMode === 'idade') {
+        // Nascimento: older (most idosos) first. Date format DD/MM/YYYY
+        const parseDate = (d: string) => {
+          if (!d) return new Date(0);
+          const parts = d.split('/');
+          return new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+        };
+        const dateA = parseDate(a.cand.dt);
+        const dateB = parseDate(b.cand.dt);
+        return dateA.getTime() - dateB.getTime(); // Earlier date = older
+      }
+      return 0;
+    });
+
+    return list;
+  }, [cargoData, searchTerm, statusFilter, partyFilter, sortMode, favorites]);
+
+  const filterCounts = useMemo(() => {
+    const raw = cargoData?.agr.flatMap(a => a.par.flatMap(p => p.cand)) || [];
+    return {
+      all: raw.length,
+      fav: raw.filter(c => favorites.has(c.sqcand)).length,
+      eleitos: raw.filter(c => c.e === 's').length,
+      legenda: raw.filter(c => c.dvt === 'Válidos (legenda)').length,
+      anulado: raw.filter(c => c.dvt === 'Anulado').length,
+      subjudice: raw.filter(c => c.dvt === 'Sub-Judice').length,
+    };
+  }, [cargoData, favorites]);
 
   // Is this a majority (1 vaga) or proportional cargo?
   const isMajority = cargoData ? parseInt(cargoData.nv, 10) <= 2 : false;
@@ -442,7 +577,97 @@ export function EA20Viewer({ ciclo, eleicaoCd, uf, cdMun, munNome, cargosDisponi
               </div>
             ) : (
               // ── Visual Panel ─────────────────────────────────────────────
-              <div className="space-y-6">
+              <div className="space-y-4">
+                {/* Search Bar */}
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="Buscar candidato por nome, partido ou número..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-900 dark:text-gray-100 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block pl-10 p-2.5 transition-colors"
+                  />
+                  {searchTerm && (
+                    <button onClick={() => setSearchTerm('')} className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                  )}
+                </div>
+
+                {/* Filters Row */}
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex flex-wrap gap-1 flex-1">
+                    {([
+                      { key: 'all', label: `Todos (${filterCounts.all})`, color: 'blue' },
+                      { key: 'fav', label: `♥ Favoritos (${filterCounts.fav})`, color: 'pink' },
+                      { key: 'eleitos', label: `✓ Eleitos (${filterCounts.eleitos})`, color: 'green' },
+                      { key: 'valido', label: `Válido`, color: 'indigo' },
+                      { key: 'legenda', label: `Legenda (${filterCounts.legenda})`, color: 'cyan', hide: isMajority },
+                      { key: 'anulado', label: `Anulado (${filterCounts.anulado})`, color: 'orange' },
+                      { key: 'subjudice', label: `Sub-Judice (${filterCounts.subjudice})`, color: 'purple' },
+                    ] as { key: string; label: string; color: string; hide?: boolean }[]).filter(f => !f.hide).map(({ key, label, color }) => {
+                      const active = statusFilter === key;
+                      const activeCls = {
+                        blue: 'bg-blue-600 text-white',
+                        pink: 'bg-pink-500 text-white',
+                        green: 'bg-green-600 text-white',
+                        indigo: 'bg-indigo-600 text-white',
+                        cyan: 'bg-cyan-600 text-white',
+                        orange: 'bg-orange-600 text-white',
+                        purple: 'bg-purple-600 text-white',
+                      }[color];
+                      return (
+                        <button
+                          key={key}
+                          onClick={() => setStatusFilter(key as any)}
+                          className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase transition-colors ${active ? activeCls : 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-slate-700'}`}
+                        >
+                          {label}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <select
+                    value={sortMode}
+                    onChange={(e) => setSortMode(e.target.value as any)}
+                    className="text-xs bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-gray-300 rounded-lg px-2 py-1.5 transition-colors focus:ring-1 focus:ring-blue-500"
+                  >
+                    <option value="votos">Ordenar: Votos (↓)</option>
+                    <option value="nome">Ordenar: Nome (ABC)</option>
+                    <option value="partido">Ordenar: Partido</option>
+                    <option value="eleito">Ordenar: Situação</option>
+                    <option value="idade">Ordenar: Mais Idosos</option>
+                  </select>
+                </div>
+
+                {/* Party filter for proportional */}
+                {!isMajority && parties.length > 0 && (
+                  <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
+                    <span className="text-[10px] font-bold text-gray-400 uppercase shrink-0">Partido:</span>
+                    <button
+                      onClick={() => setPartyFilter('all')}
+                      className={`px-2 py-0.5 rounded text-[10px] font-medium shrink-0 ${partyFilter === 'all' ? 'bg-slate-700 text-white' : 'bg-gray-100 dark:bg-slate-800 text-gray-500 dark:text-gray-400'}`}
+                    >
+                      Todos
+                    </button>
+                    {parties.map(p => (
+                      <button
+                        key={p.sg}
+                        onClick={() => setPartyFilter(p.sg)}
+                        className={`px-2 py-0.5 rounded text-[10px] font-medium shrink-0 ${partyFilter === p.sg ? 'bg-slate-700 text-white' : 'bg-gray-100 dark:bg-slate-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200'}`}
+                        title={p.nm}
+                      >
+                        {p.sg}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                <div className="space-y-6 pt-2">
 
                 {/* Validation errors */}
                 {validationResults.length > 0 && (
@@ -522,15 +747,17 @@ export function EA20Viewer({ ciclo, eleicaoCd, uf, cdMun, munNome, cargosDisponi
                       <span className="text-xs bg-gray-200 dark:bg-slate-700 text-gray-600 dark:text-gray-300 px-2 py-0.5 rounded-full">{cargoData.nv} vaga{parseInt(cargoData.nv) > 1 ? 's' : ''}</span>
                     </h3>
 
-                    {isMajority ? (
+                    {filteredAndSortedCandidates.length === 0 ? (
+                      <div className="p-8 text-center bg-gray-50 dark:bg-slate-800/40 rounded-lg border border-dashed border-gray-200 dark:border-slate-700">
+                        <p className="text-gray-500 dark:text-gray-400">Nenhum candidato encontrado com os filtros atuais.</p>
+                        <button onClick={() => { setSearchTerm(''); setStatusFilter('all'); setPartyFilter('all'); }} className="mt-2 text-sm text-blue-600 dark:text-blue-400 hover:underline">Limpar filtros</button>
+                      </div>
+                    ) : isMajority ? (
                       // ── Majority: cards sorted by votes ───────────────────
                       <div className="space-y-3">
-                        {cargoData.agr
-                          .flatMap(agr => agr.par.flatMap(par => par.cand.map(cand => ({ cand, agr }))))
-                          .sort((a, b) => (parseInt(b.cand.vap, 10) || 0) - (parseInt(a.cand.vap, 10) || 0))
-                          .map(({ cand, agr }) => (
-                            <CandCard key={cand.sqcand} cand={cand} agr={agr} totalVotos={totalVotos} ambiente={ambiente} ciclo={ciclo} eleicaoCd={eleicaoCd} uf={uf} isProportional={false} />
-                          ))}
+                        {filteredAndSortedCandidates.map(({ cand, agr }) => (
+                          <CandCard key={cand.sqcand} cand={cand} agr={agr} totalVotos={totalVotos} ambiente={ambiente} ciclo={ciclo} eleicaoCd={eleicaoCd} uf={uf} isProportional={false} isFavorite={favorites.has(cand.sqcand)} onToggleFavorite={() => toggleFavorite(cand.sqcand)} />
+                        ))}
                       </div>
                     ) : (
                       // ── Proportional: table ───────────────────────────────
@@ -544,12 +771,9 @@ export function EA20Viewer({ ciclo, eleicaoCd, uf, cdMun, munNome, cargosDisponi
                             </tr>
                           </thead>
                           <tbody>
-                            {cargoData.agr
-                              .flatMap(agr => agr.par.flatMap(par => par.cand.map(cand => ({ cand, agr }))))
-                              .sort((a, b) => (parseInt(b.cand.vap, 10) || 0) - (parseInt(a.cand.vap, 10) || 0))
-                              .map(({ cand, agr }) => (
-                                <CandCard key={cand.sqcand} cand={cand} agr={agr} totalVotos={totalVotos} ambiente={ambiente} ciclo={ciclo} eleicaoCd={eleicaoCd} uf={uf} isProportional={true} />
-                              ))}
+                            {filteredAndSortedCandidates.map(({ cand, agr }) => (
+                              <CandCard key={cand.sqcand} cand={cand} agr={agr} totalVotos={totalVotos} ambiente={ambiente} ciclo={ciclo} eleicaoCd={eleicaoCd} uf={uf} isProportional={true} isFavorite={favorites.has(cand.sqcand)} onToggleFavorite={() => toggleFavorite(cand.sqcand)} />
+                            ))}
                           </tbody>
                         </table>
                       </div>
@@ -557,8 +781,9 @@ export function EA20Viewer({ ciclo, eleicaoCd, uf, cdMun, munNome, cargosDisponi
                   </div>
                 )}
               </div>
-            )
-          )}
+            </div>
+          )
+        )}
         </div>
       </div>
     </>
