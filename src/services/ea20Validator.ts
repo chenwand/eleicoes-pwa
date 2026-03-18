@@ -45,13 +45,14 @@ export function validateEA20(data: EA20Response): EA20ValidationResult[] {
     globalErrors.push(`Votos: vvc(${vvc}) + vb(${vb}) + tvn(${tvn}) + vscv(${vscv}) ≠ tv(${tv}).`);
   }
 
-  // 2. vvc = van + vansj + vv
-  if (van + vansj + vv !== vvc) {
+  // 2. vvc = van + vansj + vv (Skip for Popular Consultations if vv is missing)
+  const isConsultaPopular = !!data.perg;
+  if (!isConsultaPopular && van + vansj + vv !== vvc) {
     globalErrors.push(`Votos: van(${van}) + vansj(${vansj}) + vv(${vv}) ≠ vvc(${vvc}).`);
   }
 
-  // 3. vv = vnom + vl
-  if (vnom + vl !== vv) {
+  // 3. vv = vnom + vl (Skip for Popular Consultations)
+  if (!isConsultaPopular && vnom + vl !== vv) {
     globalErrors.push(`Votos: vnom(${vnom}) + vl(${vl}) ≠ vv(${vv}).`);
   }
 
@@ -70,99 +71,128 @@ export function validateEA20(data: EA20Response): EA20ValidationResult[] {
   }
 
   // ─── Per-cargo validation ─────────────────────────────────────────────────
-  for (const carg of data.carg) {
-    const cargoErrors: string[] = [];
-    const cargoLabel = `${carg.nmn} (cd=${carg.cd})`;
+  if (data.carg) {
+    for (const carg of data.carg) {
+      const cargoErrors: string[] = [];
+      const cargoLabel = `${carg.nmn} (cd=${carg.cd})`;
 
-    let totalCargoTvan = 0;
-    let totalCargoTval = 0;
+      let totalCargoTvan = 0;
+      let totalCargoTval = 0;
 
-    for (const agr of carg.agr) {
-      const isIsolated = agr.tp === 'i';
-      let agrTvan = parseNum(agr.tvan);
-      let agrTval = parseNum(agr.tval);
+      for (const agr of carg.agr) {
+        const isIsolated = agr.tp === 'i';
+        let agrTvan = parseNum(agr.tvan);
+        let agrTval = parseNum(agr.tval);
 
-      let sumParTvan = 0;
-      let sumParTval = 0;
+        let sumParTvan = 0;
+        let sumParTval = 0;
 
-      for (const par of agr.par) {
-        const parTvan = parseNum(par.tvan);
-        const parTval = parseNum(par.tval);
-        sumParTvan += parTvan;
-        sumParTval += parTval;
+        for (const par of agr.par) {
+          const parTvan = parseNum(par.tvan);
+          const parTval = parseNum(par.tval);
+          sumParTvan += parTvan;
+          sumParTval += parTval;
 
-        // par.tvan should match sum of candidate vap
-        const sumCandVap = par.cand.reduce((sum, cand) => sum + parseNum(cand.vap), 0);
-        if (parTvan !== sumCandVap) {
+          // par.tvan should match sum of candidate vap
+          const sumCandVap = par.cand.reduce((sum, cand) => sum + parseNum(cand.vap), 0);
+          if (parTvan !== sumCandVap) {
+            cargoErrors.push(
+              `Partido ${par.sg}: tvan(${parTvan}) ≠ soma vap dos candidatos (${sumCandVap}).`
+            );
+          }
+        }
+
+        // In isolated parties, use the party totals as grouping totals if agr totals are missing
+        if (isIsolated && agrTvan === 0 && agrTval === 0) {
+          agrTvan = sumParTvan;
+          agrTval = sumParTval;
+        }
+
+        totalCargoTvan += agrTvan;
+        totalCargoTval += agrTval;
+
+        // agr.tvan should match sum of par.tvan (only if not isolated or if we want to confirm they matched)
+        if (!isIsolated && agrTvan !== sumParTvan) {
           cargoErrors.push(
-            `Partido ${par.sg}: tvan(${parTvan}) ≠ soma vap dos candidatos (${sumCandVap}).`
+            `Agrupamento ${agr.nm || agr.n}: tvan(${agrTvan}) ≠ soma tvan dos partidos (${sumParTvan}).`
+          );
+        }
+
+        // agr.tval should match sum of par.tval
+        if (!isIsolated && agrTval !== sumParTval) {
+          cargoErrors.push(
+            `Agrupamento ${agr.nm || agr.n}: tval(${agrTval}) ≠ soma tval dos partidos (${sumParTval}).`
           );
         }
       }
 
-      // In isolated parties, use the party totals as grouping totals if agr totals are missing
-      if (isIsolated && agrTvan === 0 && agrTval === 0) {
-        agrTvan = sumParTvan;
-        agrTval = sumParTval;
+      // Global cargo check against vnom and vl
+      if (data.carg.length === 1) {
+        if (totalCargoTvan !== vvc - vl) {
+          cargoErrors.push(`Votos Nominais: total do cargo (${totalCargoTvan}) ≠ total do arquivo (${vvc - vl}).`);
+        }
+        if (totalCargoTval !== vl) {
+          cargoErrors.push(`Votos Legenda: total do cargo (${totalCargoTval}) ≠ total do arquivo (${vl}).`);
+        }
       }
 
-      totalCargoTvan += agrTvan;
-      totalCargoTval += agrTval;
-
-      // agr.tvan should match sum of par.tvan (only if not isolated or if we want to confirm they matched)
-      if (!isIsolated && agrTvan !== sumParTvan) {
-        cargoErrors.push(
-          `Agrupamento ${agr.nm || agr.n}: tvan(${agrTvan}) ≠ soma tvan dos partidos (${sumParTvan}).`
-        );
-      }
-
-      // agr.tval should match sum of par.tval
-      if (!isIsolated && agrTval !== sumParTval) {
-        cargoErrors.push(
-          `Agrupamento ${agr.nm || agr.n}: tval(${agrTval}) ≠ soma tval dos partidos (${sumParTval}).`
-        );
-      }
-    }
-
-    // Global cargo check against vnom and vl (only if this is the only cargo or we sum them)
-    // Actually vnom and vl are for the whole file. If there's only one cargo (like Mayor), it should match.
-    // If there are multiple cargos (like Councilor too), we need to be careful.
-    // Usually EA20 is per cargo or has a shared total.
-    if (data.carg.length === 1) {
-      if (totalCargoTvan !== vvc - vl) {
-        cargoErrors.push(`Votos Nominais: total do cargo (${totalCargoTvan}) ≠ total do arquivo (${vvc - vl}).`);
-      }
-      if (totalCargoTval !== vl) {
-        cargoErrors.push(`Votos Legenda: total do cargo (${totalCargoTval}) ≠ total do arquivo (${vl}).`);
-      }
-    }
-
-    // Check percentages for candidates (pvap = vap / vvc)
-    if (vvc > 0) {
-      for (const agr of carg.agr) {
-        for (const par of agr.par) {
-          for (const cand of par.cand) {
-            const vap = parseNum(cand.vap);
-            const pvap = parsePct(cand.pvap);
-            const expectedPvap = (vap / vvc) * 100;
-            if (Math.abs(expectedPvap - pvap) > 0.2) {
-              cargoErrors.push(
-                `Candidato ${cand.nmu}: pvap(${cand.pvap}%) ≠ calculado sobre total vvc (${expectedPvap.toFixed(2)}%).`
-              );
+      // Check percentages
+      if (vvc > 0) {
+        for (const agr of carg.agr) {
+          for (const par of agr.par) {
+            for (const cand of par.cand) {
+              const vap = parseNum(cand.vap);
+              const pvap = parsePct(cand.pvap);
+              const expectedPvap = (vap / vvc) * 100;
+              if (Math.abs(expectedPvap - pvap) > 0.2) {
+                cargoErrors.push(
+                  `Candidato ${cand.nmu}: pvap(${cand.pvap}%) ≠ calculado sobre total vvc (${expectedPvap.toFixed(2)}%).`
+                );
+              }
             }
           }
         }
       }
-    }
 
-    // Warn if cargo is declared finalised but section % is less than 100
-    const pst = parsePct(data.s.pst);
-    if (carg.agr.length > 0 && data.and === 'f' && pst < 99.9) {
-      cargoErrors.push(`Andamento declarado como finalizado (and=f), mas pst=${data.s.pst}%.`);
-    }
+      const pst = parsePct(data.s.pst);
+      if (carg.agr.length > 0 && data.and === 'f' && pst < 99.9) {
+        cargoErrors.push(`Andamento declarado como finalizado (and=f), mas pst=${data.s.pst}%.`);
+      }
 
-    if (cargoErrors.length > 0) {
-      results.push({ cargo: cargoLabel, errors: cargoErrors });
+      if (cargoErrors.length > 0) {
+        results.push({ cargo: cargoLabel, errors: cargoErrors });
+      }
+    }
+  }
+
+  // ─── Per-pergunta validation (Popular Consultation) ───────────────────
+  if (data.perg) {
+    for (const perg of data.perg) {
+      const pergErrors: string[] = [];
+      const pergLabel = `Pergunta: ${perg.ds} (cd=${perg.cd})`;
+
+      const sumRespVap = perg.resp.reduce((sum, r) => sum + parseNum(r.vap), 0);
+      if (sumRespVap !== vvc) {
+        pergErrors.push(`Soma dos votos das respostas (${sumRespVap}) ≠ total vvc do arquivo (${vvc}).`);
+      }
+
+      // Check percentages for responses
+      if (vvc > 0) {
+        for (const resp of perg.resp) {
+          const vap = parseNum(resp.vap);
+          const pvap = parsePct(resp.pvap);
+          const expectedPvap = (vap / vvc) * 100;
+          if (Math.abs(expectedPvap - pvap) > 0.2) {
+            pergErrors.push(
+              `Resposta ${resp.nmu}: pvap(${resp.pvap}%) ≠ calculado sobre total vvc (${expectedPvap.toFixed(2)}%).`
+            );
+          }
+        }
+      }
+
+      if (pergErrors.length > 0) {
+        results.push({ cargo: pergLabel, errors: pergErrors });
+      }
     }
   }
 
@@ -170,15 +200,17 @@ export function validateEA20(data: EA20Response): EA20ValidationResult[] {
   let sumGlobalAnnulled = 0;
   let sumGlobalSubJudice = 0;
 
-  for (const carg of data.carg) {
-    for (const agr of carg.agr) {
-      for (const par of agr.par) {
-        for (const cand of par.cand) {
-          const vap = parseNum(cand.vap);
-          if (cand.dvt === 'Anulado') {
-            sumGlobalAnnulled += vap;
-          } else if (cand.dvt === 'Anulado sub judice') {
-            sumGlobalSubJudice += vap;
+  if (data.carg) {
+    for (const carg of data.carg) {
+      for (const agr of carg.agr) {
+        for (const par of agr.par) {
+          for (const cand of par.cand) {
+            const vap = parseNum(cand.vap);
+            if (cand.dvt === 'Anulado') {
+              sumGlobalAnnulled += vap;
+            } else if (cand.dvt === 'Anulado sub judice') {
+              sumGlobalSubJudice += vap;
+            }
           }
         }
       }
@@ -186,15 +218,14 @@ export function validateEA20(data: EA20Response): EA20ValidationResult[] {
   }
 
   const extraGlobalErrors: string[] = [];
-  if (sumGlobalAnnulled !== van) {
+  if (sumGlobalAnnulled > 0 && sumGlobalAnnulled !== van) {
     extraGlobalErrors.push(`Votos Anulados: soma dos candidatos (${sumGlobalAnnulled}) ≠ v.van (${van}).`);
   }
-  if (sumGlobalSubJudice !== vansj) {
+  if (sumGlobalSubJudice > 0 && sumGlobalSubJudice !== vansj) {
     extraGlobalErrors.push(`Votos Anulados Sub Judice: soma dos candidatos (${sumGlobalSubJudice}) ≠ v.vansj (${vansj}).`);
   }
 
   if (extraGlobalErrors.length > 0) {
-    // Merge with existing "Totais Gerais" or add a new entry
     const existing = results.find(r => r.cargo === 'Totais Gerais');
     if (existing) {
       existing.errors.push(...extraGlobalErrors);

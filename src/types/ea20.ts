@@ -56,6 +56,24 @@ export interface EA20Cargo {
   agr: EA20Agrupamento[];
 }
 
+export interface EA20Resposta {
+  n: string;          // número na urna
+  nm: string;         // nome completo
+  nmu: string;        // nome na urna
+  vap: string;        // votos apurados
+  pvap: string;       // percentual de votos
+  pvapn: string;      // percentual numérico
+  e: 's' | 'n';      // eleito?
+  st: string;         // status
+}
+
+export interface EA20Pergunta {
+  cd: string;         // código da pergunta
+  ds: string;         // descrição (pergunta)
+  dica: string;       // dica (instrução)
+  resp: EA20Resposta[];
+}
+
 export interface EA20Secoes {
   ts: string;   // total seções
   st: string;   // seções totalizadas
@@ -124,7 +142,8 @@ export interface EA20Response {
   dv: string;
   esae: string;
   mnae: any[];
-  carg: EA20Cargo[];
+  carg?: EA20Cargo[];
+  perg?: EA20Pergunta[];
   s: EA20Secoes;
   e: EA20Eleitores;
   v: EA20Votos;

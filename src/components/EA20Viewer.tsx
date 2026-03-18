@@ -42,7 +42,7 @@ const renderHighlightedJson = (jsonObj: any) => {
   return <pre className="text-xs sm:text-sm text-gray-300 font-mono" dangerouslySetInnerHTML={{ __html: highlighted }} />;
 };
 
-function VoteVisualization({ v, isProportional }: { v: any, isProportional: boolean }) {
+function VoteVisualization({ v, isProportional, isConsultaPopular }: { v: any, isProportional: boolean, isConsultaPopular?: boolean }) {
   const [expanded, setExpanded] = useState(true);
   const parseNum = (s: string) => parseInt(s || '0', 10);
 
@@ -56,16 +56,23 @@ function VoteVisualization({ v, isProportional }: { v: any, isProportional: bool
   const vansj = parseNum(v.vansj);
   const tvn = parseNum(v.tvn);
 
-  const getPct = (val: number) => tv > 0 ? (val / tv) * 100 : 0;
+  const segmentsTotal = isConsultaPopular ? (vvc + vb + tvn) : tv;
+  const getPct = (val: number) => segmentsTotal > 0 ? (val / segmentsTotal) * 100 : 0;
   const parsePct = (val: string) => parseFloat((val || '0').replace(',', '.')) || 0;
 
-  const segments = [
-    { label: 'Válidos', val: vv, pct: getPct(vv), color: 'bg-blue-600', text: 'text-blue-600' },
-    { label: 'Anulados', val: van, pct: getPct(van), color: 'bg-yellow-500', text: 'text-yellow-600' },
-    { label: 'Sub Judice', val: vansj, pct: getPct(vansj), color: 'bg-red-600', text: 'text-red-600' },
-    { label: 'Brancos', val: vb, pct: getPct(vb), color: 'bg-gray-400', text: 'text-gray-500' },
-    { label: 'Nulos', val: tvn, pct: getPct(tvn), color: 'bg-gray-600', text: 'text-gray-700' },
-  ];
+  const segments = isConsultaPopular
+    ? [
+      { label: 'Válidos', val: vvc, pct: getPct(vvc), color: 'bg-blue-600', text: 'text-blue-600' },
+      { label: 'Brancos', val: vb, pct: getPct(vb), color: 'bg-gray-400', text: 'text-gray-500' },
+      { label: 'Nulos', val: tvn, pct: getPct(tvn), color: 'bg-gray-600', text: 'text-gray-700' },
+    ]
+    : [
+      { label: 'Válidos', val: vv, pct: getPct(vv), color: 'bg-blue-600', text: 'text-blue-600' },
+      { label: 'Anulados', val: van, pct: getPct(van), color: 'bg-yellow-500', text: 'text-yellow-600' },
+      { label: 'Sub Judice', val: vansj, pct: getPct(vansj), color: 'bg-red-600', text: 'text-red-600' },
+      { label: 'Brancos', val: vb, pct: getPct(vb), color: 'bg-gray-400', text: 'text-gray-500' },
+      { label: 'Nulos', val: tvn, pct: getPct(tvn), color: 'bg-gray-600', text: 'text-gray-700' },
+    ];
 
   return (
     <div className="bg-gray-50 dark:bg-slate-800/60 rounded-lg p-4 border border-gray-200 dark:border-slate-700 shadow-sm cursor-pointer" onClick={() => setExpanded(!expanded)}>
@@ -100,72 +107,89 @@ function VoteVisualization({ v, isProportional }: { v: any, isProportional: bool
             <span>{tv.toLocaleString('pt-BR')}</span>
           </div>
 
-          {/* VVC Level */}
-          <div className="pl-4 border-l-2 border-gray-200 dark:border-slate-700 space-y-1.5 mt-1">
-            <div className="flex justify-between items-center font-semibold text-gray-700 dark:text-slate-300">
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-gray-300"></span>
-                <span>Votos a Votáveis Concorrentes (vvc)</span>
+          {/* VVC Level (Hidden for Popular Consultations) */}
+          {!isConsultaPopular && (
+            <div className="pl-4 border-l-2 border-gray-200 dark:border-slate-700 space-y-1.5 mt-1">
+              <div className="flex justify-between items-center font-semibold text-gray-700 dark:text-slate-300">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-gray-300"></span>
+                  <span>Votos a Votáveis Concorrentes (vvc)</span>
+                </div>
+                <span className="flex items-center gap-1">
+                  {vvc.toLocaleString('pt-BR')}
+                  <span className="text-[10px] font-normal text-gray-400">({getPct(vvc).toFixed(1)}%)</span>
+                  {Math.abs(getPct(vvc) - parsePct(v.pvvc)) > 0.1 && (
+                    <span className="text-[9px] text-yellow-600 dark:text-yellow-500" title={`Arquivo: ${v.pvvc}%`}>⚠️</span>
+                  )}
+                </span>
               </div>
-              <span className="flex items-center gap-1">
-                {vvc.toLocaleString('pt-BR')}
-                <span className="text-[10px] font-normal text-gray-400">({getPct(vvc).toFixed(1)}%)</span>
-                {Math.abs(getPct(vvc) - parsePct(v.pvvc)) > 0.1 && (
-                  <span className="text-[9px] text-yellow-600 dark:text-yellow-500" title={`Arquivo: ${v.pvvc}%`}>⚠️</span>
-                )}
-              </span>
-            </div>
 
-            {/* VV, VAN, VANSJ Level */}
-            <div className="pl-4 border-l-2 border-gray-100 dark:border-slate-800 space-y-1 mt-1">
-              <div className="flex justify-between items-center text-gray-600 dark:text-slate-400">
+              {/* VV, VAN, VANSJ Level */}
+              <div className="pl-4 border-l-2 border-gray-100 dark:border-slate-800 space-y-1 mt-1">
+                <div className="flex justify-between items-center text-gray-600 dark:text-slate-400">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-blue-600"></span>
+                    <span>Válidos (vv)</span>
+                  </div>
+                  <span className="flex items-center gap-1">
+                    {vv.toLocaleString('pt-BR')}
+                  </span>
+                </div>
+
+                {/* VNOM, VL (Proportional only) */}
+                {isProportional && (
+                  <div className="pl-6 text-[11px] text-gray-500 dark:text-slate-500 space-y-0.5">
+                    <div className="flex justify-between items-center">
+                      <span>Nominais (vnom)</span>
+                      <span className="flex items-center gap-1">
+                        {vnom.toLocaleString('pt-BR')}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span>Legenda (vl)</span>
+                      <span className="flex items-center gap-1">
+                        {vl.toLocaleString('pt-BR')}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex justify-between items-center text-gray-600 dark:text-slate-400">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-yellow-500"></span>
+                    <span>Anulados (van)</span>
+                  </div>
+                  <span className="flex items-center gap-1">
+                    {van.toLocaleString('pt-BR')}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center text-gray-600 dark:text-slate-400">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-red-600"></span>
+                    <span>Anulados Sub Judice (vansj)</span>
+                  </div>
+                  <span className="flex items-center gap-1">
+                    {vansj.toLocaleString('pt-BR')}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {isConsultaPopular && (
+            <div className="pl-4 border-l-2 border-transparent space-y-1.5 mt-1">
+              <div className="flex justify-between items-center text-gray-700 dark:text-slate-300 font-semibold">
                 <div className="flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-blue-600"></span>
-                  <span>Válidos (vv)</span>
+                  <span>Válidos (vvc)</span>
                 </div>
                 <span className="flex items-center gap-1">
-                  {vv.toLocaleString('pt-BR')}
-                </span>
-              </div>
-
-              {/* VNOM, VL (Proportional only) */}
-              {isProportional && (
-                <div className="pl-6 text-[11px] text-gray-500 dark:text-slate-500 space-y-0.5">
-                  <div className="flex justify-between items-center">
-                    <span>Nominais (vnom)</span>
-                    <span className="flex items-center gap-1">
-                      {vnom.toLocaleString('pt-BR')}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span>Legenda (vl)</span>
-                    <span className="flex items-center gap-1">
-                      {vl.toLocaleString('pt-BR')}
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              <div className="flex justify-between items-center text-gray-600 dark:text-slate-400">
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-yellow-500"></span>
-                  <span>Anulados (van)</span>
-                </div>
-                <span className="flex items-center gap-1">
-                  {van.toLocaleString('pt-BR')}
-                </span>
-              </div>
-              <div className="flex justify-between items-center text-gray-600 dark:text-slate-400">
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-red-600"></span>
-                  <span>Anulados Sub Judice (vansj)</span>
-                </div>
-                <span className="flex items-center gap-1">
-                  {vansj.toLocaleString('pt-BR')}
+                  {vvc.toLocaleString('pt-BR')}
+                  <span className="text-[10px] text-gray-400">({getPct(vvc).toFixed(1)}%)</span>
                 </span>
               </div>
             </div>
-          </div>
+          )}
 
           {/* VB and TVN Level */}
           <div className="pl-4 border-l-2 border-transparent space-y-1.5 mt-2">
@@ -478,7 +502,7 @@ function CandCard({
                 <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-1.5 mb-3">
                   <div className={`h-1.5 rounded-full ${barColor} transition-all`} style={{ width: `${Math.min(pct, 100)}%` }} />
                 </div>
-                <CandDetail cand={cand} agr={agr} ambiente={ambiente} ciclo={ciclo} eleicaoCd={eleicaoCd} uf={uf} fotoError={fotoError} setFotoError={setFotoError} host={host} />
+                <CandDetail cand={cand} agr={agr} ambiente={ambiente} ciclo={ciclo} eleicaoCd={eleicaoCd} uf={uf} fotoError={fotoError} setFotoError={setFotoError} host={host} isProportional={isProportional} />
               </div>
             </td>
           </tr>
@@ -490,35 +514,47 @@ function CandCard({
   // Card layout for majority cargos
   return (
     <div className={`border rounded-lg p-3 shadow-sm transition-all ${borderBg}`}>
-      <div className="flex justify-between items-start gap-2 mb-2">
-        <div className="flex flex-col gap-0.5">
-          <div className="flex items-center gap-2 flex-wrap">
-            <button
-              onClick={(e) => { e.stopPropagation(); onToggleFavorite(); }}
-              className={`transition-colors ${isFavorite ? 'text-amber-400' : 'text-gray-300 dark:text-slate-600 hover:text-amber-400'}`}
-            >
-              <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
-            </button>
-            <span className="font-mono text-xs text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-slate-700 px-1.5 py-0.5 rounded">{cand.n}</span>
-            <span className="font-bold text-gray-800 dark:text-gray-100">{cand.nmu}</span>
-            {dvtBadge(cand.dvt)}
-            {isEleito && (
-              <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300 font-bold">✓ Eleito</span>
-            )}
-          </div>
-          <div className="text-xs text-gray-500 dark:text-gray-400">
-            {agr.par.find(p => p.cand.some(c => c.sqcand === cand.sqcand))?.sg} · <span className="truncate">{agr.nm}</span>
+      <div className="flex gap-3 mb-2">
+        {!fotoError && (
+          <img
+            src={buildCandidatoFotoUrl(ambiente, ciclo, eleicaoCd, uf, cand.sqcand, host)}
+            alt={cand.nmu}
+            className="w-12 h-14 object-cover rounded shadow-sm border border-gray-200 dark:border-slate-700 shrink-0"
+            onError={() => setFotoError(true)}
+          />
+        )}
+        <div className="flex-1 min-w-0">
+          <div className="flex justify-between items-start gap-2 mb-1">
+            <div className="flex flex-col gap-0.5 min-w-0 flex-1">
+              <div className="flex items-center gap-2 flex-wrap text-sm">
+                <button
+                  onClick={(e) => { e.stopPropagation(); onToggleFavorite(); }}
+                  className={`transition-colors shrink-0 ${isFavorite ? 'text-amber-400' : 'text-gray-300 dark:text-slate-600 hover:text-amber-400'}`}
+                >
+                  <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
+                </button>
+                <span className="font-mono text-[10px] text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-slate-700 px-1.5 py-0.5 rounded shrink-0">{cand.n}</span>
+                <span className="font-bold text-gray-800 dark:text-gray-100 truncate">{cand.nmu}</span>
+                {dvtBadge(cand.dvt)}
+                {isEleito && (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300 font-bold shrink-0">✓ Eleito</span>
+                )}
+              </div>
+              <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                {agr.par.find(p => p.cand.some(c => c.sqcand === cand.sqcand))?.sg} · <span className="truncate">{agr.nm}</span>
+              </div>
+            </div>
+            <div className={`text-right shrink-0`}>
+              <div className={`text-lg font-bold font-mono ${pctColor}`}>{cand.pvap}%</div>
+              <div className="text-[10px] text-gray-500 dark:text-gray-400">{parseInt(cand.vap).toLocaleString('pt-BR')} votos</div>
+            </div>
           </div>
           {cand.vs && cand.vs.length > 0 && (
-            <div className="text-xs text-gray-400 dark:text-gray-500">
+            <div className="text-[10px] text-gray-400 dark:text-gray-500 truncate mt-1">
               Vice: <span className="font-medium text-gray-600 dark:text-gray-300">{cand.vs[0].nmu}</span>
               {cand.vs[0].sgp ? ` (${cand.vs[0].sgp})` : ''}
             </div>
           )}
-        </div>
-        <div className={`text-right shrink-0`}>
-          <div className={`text-lg font-bold font-mono ${pctColor}`}>{cand.pvap}%</div>
-          <div className="text-xs text-gray-500 dark:text-gray-400">{parseInt(cand.vap).toLocaleString('pt-BR')} votos</div>
         </div>
       </div>
       <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2 mb-2">
@@ -534,19 +570,21 @@ function CandCard({
 
       {expanded && (
         <div className="mt-3 pt-3 border-t border-gray-200 dark:border-slate-700">
-          <CandDetail cand={cand} agr={agr} ambiente={ambiente} ciclo={ciclo} eleicaoCd={eleicaoCd} uf={uf} fotoError={fotoError} setFotoError={setFotoError} host={host} />
+          <CandDetail cand={cand} agr={agr} ambiente={ambiente} ciclo={ciclo} eleicaoCd={eleicaoCd} uf={uf} fotoError={fotoError} setFotoError={setFotoError} host={host} isProportional={isProportional} />
         </div>
       )}
     </div>
   );
 }
 
-function CandDetail({ cand, agr, ambiente, ciclo, eleicaoCd, uf, fotoError, setFotoError, host }: any) {
+function CandDetail({ cand, agr, ambiente, ciclo, eleicaoCd, uf, fotoError, setFotoError, host, isProportional }: any) {
   const fotoUrl = buildCandidatoFotoUrl(ambiente, ciclo, eleicaoCd, uf, cand.sqcand, host);
   const partido = agr.par.find((p: any) => p.cand.some((c: any) => c.sqcand === cand.sqcand));
+  const showPhotoInDetail = isProportional; // Only show in detail if not already in card
+
   return (
     <div className="flex gap-3">
-      {!fotoError && (
+      {showPhotoInDetail && !fotoError && (
         <img
           src={fotoUrl}
           alt={cand.nmu}
@@ -572,11 +610,41 @@ function CandDetail({ cand, agr, ambiente, ciclo, eleicaoCd, uf, fotoError, setF
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
+function RespostaCard({ resp, pctColor }: { resp: any, pctColor: string }) {
+  const pct = parseFloat((resp.pvap || '0').replace(',', '.'));
+  const isEleito = resp.e === 's';
+  const barColor = isEleito ? 'bg-green-500' : 'bg-blue-500';
+  const borderBg = isEleito ? 'border-green-200 bg-green-50/30 dark:border-green-900/40 dark:bg-green-900/10' : 'border-gray-200 dark:border-slate-800';
+
+  return (
+    <div className={`border rounded-lg p-3 shadow-sm transition-all ${borderBg}`}>
+      <div className="flex justify-between items-start gap-2 mb-2">
+        <div className="flex flex-col gap-0.5 min-w-0 flex-1">
+          <div className="flex items-center gap-2 flex-wrap text-sm">
+            <span className="font-mono text-[10px] text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-slate-700 px-1.5 py-0.5 rounded shrink-0">{resp.n}</span>
+            <span className="font-bold text-gray-800 dark:text-gray-100 truncate">{resp.ds}</span>
+            {isEleito && (
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300 font-bold shrink-0">✓ Eleito</span>
+            )}
+          </div>
+        </div>
+        <div className={`text-right shrink-0`}>
+          <div className={`text-lg font-bold font-mono ${pctColor}`}>{resp.pvap}%</div>
+          <div className="text-[10px] text-gray-500 dark:text-gray-400">{parseInt(resp.vap).toLocaleString('pt-BR')} votos</div>
+        </div>
+      </div>
+      <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2">
+        <div className={`h-2 rounded-full ${barColor} transition-all`} style={{ width: `${Math.min(pct, 100)}%` }} />
+      </div>
+    </div>
+  );
+}
 
 export function EA20Viewer({ ciclo, eleicaoCd, uf, cdMun, munNome, cargosDisponiveis, initialZona, onBack }: EA20ViewerProps) {
   const { ambiente, host } = useEnvironment();
   const [isClosing, setIsClosing] = useState(false);
   const [selectedCargoIdx, setSelectedCargoIdx] = useState(0);
+  const [selectedPerguntaIdx, setSelectedPerguntaIdx] = useState(0);
   const [showZonaSelector, setShowZonaSelector] = useState(false);
   const [selectedZona, setSelectedZona] = useState<string | undefined>(initialZona);
   const [showRawJson, setShowRawJson] = useState(false);
@@ -655,27 +723,58 @@ export function EA20Viewer({ ciclo, eleicaoCd, uf, cdMun, munNome, cargosDisponi
   };
 
   // Derive allCandidates for the selected cargo in localData
+  const isConsultaPopular = !!localData?.perg;
+
   const cargoData: EA20Cargo | null = useMemo(() => {
     if (!localData?.carg?.length) return null;
-    // The returned JSON only has one cargo per file
     return localData.carg[0] ?? null;
   }, [localData]);
+
+  const perguntaData: any | null = useMemo(() => {
+    if (!localData?.perg?.length) return null;
+    return localData.perg[selectedPerguntaIdx] ?? localData.perg[0] ?? null;
+  }, [localData, selectedPerguntaIdx]);
 
   const allCandidates = useMemo(() => {
     if (!cargoData) return [];
     return cargoData.agr.flatMap(agr => agr.par.flatMap(par => par.cand));
   }, [cargoData]);
 
+  const allRespostas = useMemo(() => {
+    if (!perguntaData) return [];
+    return perguntaData.resp || [];
+  }, [perguntaData]);
+
   const totalVotos = useMemo(() => {
+    if (isConsultaPopular) {
+      return allRespostas.reduce((sum: number, r: any) => sum + (parseInt(r.vap, 10) || 0), 0);
+    }
     return allCandidates.reduce((sum, c) => sum + (parseInt(c.vap, 10) || 0), 0);
-  }, [allCandidates]);
+  }, [isConsultaPopular, allCandidates, allRespostas]);
 
   // Derived list of unique parties for the filter
   const parties = useMemo(() => {
     const list = cargoData?.agr.flatMap(a => a.par.map(p => ({ sg: p.sg, nm: p.nm }))) || [];
     // Unique by sg
-    return Array.from(new Map(list.map(p => [p.sg, p])).values()).sort((a, b) => a.sg.localeCompare(b.sg));
+    return Array.from(new Map(list.map(p => [p.sg, p])).values()).sort((a: any, b: any) => a.sg.localeCompare(b.sg));
   }, [cargoData]);
+
+  const filteredAndSortedRespostas = useMemo(() => {
+    if (!perguntaData) return [];
+    let list = perguntaData.resp.map((r: any) => ({ resp: r }));
+
+    if (searchTerm) {
+      const lowSearch = searchTerm.toLowerCase();
+      list = list.filter((item: any) =>
+        item.resp.nm.toLowerCase().includes(lowSearch) ||
+        item.resp.nmu.toLowerCase().includes(lowSearch) ||
+        item.resp.n.includes(searchTerm)
+      );
+    }
+
+    list.sort((a: any, b: any) => (parseInt(b.resp.vap, 10) || 0) - (parseInt(a.resp.vap, 10) || 0));
+    return list;
+  }, [perguntaData, searchTerm]);
 
   const filteredAndSortedCandidates = useMemo(() => {
     if (!cargoData) return [];
@@ -753,20 +852,17 @@ export function EA20Viewer({ ciclo, eleicaoCd, uf, cdMun, munNome, cargosDisponi
   const filterCounts = useMemo(() => {
     const raw = cargoData?.agr.flatMap(a => a.par.flatMap(p => p.cand)) || [];
     return {
-      all: raw.length,
+      all: isConsultaPopular ? allRespostas.length : raw.length,
       fav: raw.filter(c => favorites.has(c.sqcand)).length,
       eleitos: raw.filter(c => c.e === 's').length,
       legenda: raw.filter(c => c.dvt === 'Válidos (legenda)').length,
       anulado: raw.filter(c => c.dvt === 'Anulado').length,
       subjudice: raw.filter(c => c.dvt === 'Sub-Judice').length,
     };
-  }, [cargoData, favorites]);
+  }, [cargoData, favorites, isConsultaPopular, allRespostas]);
 
   // Is this a majority (1 vaga) or proportional cargo?
   const isMajority = cargoData ? parseInt(cargoData.nv, 10) <= 2 : false;
-
-  const parseNum = (s: string) => parseInt(s, 10) || 0;
-  const parsePct = (s: string) => parseFloat((s || '0').replace(',', '.')) || 0;
 
   return (
     <>
@@ -822,27 +918,36 @@ export function EA20Viewer({ ciclo, eleicaoCd, uf, cdMun, munNome, cargosDisponi
             </div>
           </div>
 
-          {/* ── Cargo pills ── */}
-          {cargosDisponiveis.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 mb-2">
-              {cargosDisponiveis.map((cg, idx) => (
-                <button
-                  key={cg.cd}
-                  onClick={() => setSelectedCargoIdx(idx)}
-                  className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${selectedCargoIdx === idx ? 'bg-blue-600 text-white' : 'bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-700'}`}
-                >
-                  {cg.nm}
-                </button>
-              ))}
+          {/* ── Cargo / Pergunta pills ── */}
+          <div className="flex flex-wrap gap-1.5 mb-2">
+            {!isConsultaPopular && cargosDisponiveis.map((cg, idx) => (
               <button
-                onClick={() => setShowZonaSelector(!showZonaSelector)}
-                className={`ml-auto px-3 py-1 rounded-full text-xs font-medium transition-colors ${showZonaSelector ? 'bg-indigo-600 text-white' : 'bg-gray-100 dark:bg-slate-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-slate-700'}`}
-                title="Detalhar por zona eleitoral"
+                key={cg.cd}
+                onClick={() => setSelectedCargoIdx(idx)}
+                className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${selectedCargoIdx === idx ? 'bg-blue-600 text-white' : 'bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-700'}`}
               >
-                {selectedZona ? `Zona ${selectedZona}` : '⊕ Por Zona'}
+                {cg.nm}
               </button>
-            </div>
-          )}
+            ))}
+
+            {isConsultaPopular && localData?.perg?.map((p: any, idx: number) => (
+              <button
+                key={p.cd}
+                onClick={() => setSelectedPerguntaIdx(idx)}
+                className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${selectedPerguntaIdx === idx ? 'bg-blue-600 text-white' : 'bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-700'}`}
+              >
+                Q{p.cd}
+              </button>
+            ))}
+
+            <button
+              onClick={() => setShowZonaSelector(!showZonaSelector)}
+              className={`ml-auto px-3 py-1 rounded-full text-xs font-medium transition-colors ${showZonaSelector ? 'bg-indigo-600 text-white' : 'bg-gray-100 dark:bg-slate-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-slate-700'}`}
+              title="Detalhar por zona eleitoral"
+            >
+              {selectedZona ? `Zona ${selectedZona}` : '⊕ Por Zona'}
+            </button>
+          </div>
 
           {/* ── Zone selector ── */}
           {showZonaSelector && (
@@ -967,76 +1072,80 @@ export function EA20Viewer({ ciclo, eleicaoCd, uf, cdMun, munNome, cargosDisponi
                   </div>
 
                   {/* Votes breakdown */}
-                  <VoteVisualization v={localData.v} isProportional={!isMajority} />
+                  <VoteVisualization v={localData.v} isProportional={!isMajority && !isConsultaPopular} isConsultaPopular={isConsultaPopular} />
 
-                  {/* Search Bar */}
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                    </div>
-                    <input
-                      type="text"
-                      placeholder="Buscar candidato por nome, partido ou número..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-full bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-900 dark:text-gray-100 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block pl-10 p-2.5 transition-colors"
-                    />
-                    {searchTerm && (
-                      <button onClick={() => setSearchTerm('')} className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Filters Row */}
-                  <div className="flex flex-wrap items-center gap-2">
-                    <div className="flex flex-wrap gap-1 flex-1">
-                      {([
-                        { key: 'all', label: `Todos (${filterCounts.all})`, color: 'blue' },
-                        { key: 'fav', label: `★ Favoritos (${filterCounts.fav})`, color: 'pink' },
-                        { key: 'eleitos', label: `✓ Eleitos (${filterCounts.eleitos})`, color: 'green' },
-                        { key: 'valido', label: `Válido`, color: 'indigo' },
-                        { key: 'legenda', label: `Legenda (${filterCounts.legenda})`, color: 'cyan', hide: isMajority },
-                        { key: 'anulado', label: `Anulado (${filterCounts.anulado})`, color: 'orange' },
-                        { key: 'subjudice', label: `Sub Judice (${filterCounts.subjudice})`, color: 'yellow' },
-                      ] as { key: string; label: string; color: string; hide?: boolean }[]).filter(f => !f.hide).map(({ key, label, color }) => {
-                        const active = statusFilter === key;
-                        const activeCls = {
-                          blue: 'bg-blue-600 text-white',
-                          pink: 'bg-pink-500 text-white',
-                          green: 'bg-green-600 text-white',
-                          indigo: 'bg-indigo-600 text-white',
-                          cyan: 'bg-cyan-600 text-white',
-                          orange: 'bg-orange-600 text-white',
-                          purple: 'bg-purple-600 text-white',
-                        }[color];
-                        return (
-                          <button
-                            key={key}
-                            onClick={() => setStatusFilter(key as any)}
-                            className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase transition-colors ${active ? activeCls : 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-slate-700'}`}
-                          >
-                            {label}
+                  {!isConsultaPopular && (
+                    <>
+                      {/* Search Bar */}
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                          <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                        </div>
+                        <input
+                          type="text"
+                          placeholder="Buscar candidato por nome, partido ou número..."
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          className="w-full bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-900 dark:text-gray-100 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block pl-10 p-2.5 transition-colors"
+                        />
+                        {searchTerm && (
+                          <button onClick={() => setSearchTerm('')} className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
                           </button>
-                        );
-                      })}
-                    </div>
+                        )}
+                      </div>
 
-                    <select
-                      value={sortMode}
-                      onChange={(e) => setSortMode(e.target.value as any)}
-                      className="text-xs bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-gray-300 rounded-lg px-2 py-1.5 transition-colors focus:ring-1 focus:ring-blue-500"
-                    >
-                      <option value="votos">Ordenar: Votos (↓)</option>
-                      <option value="nome">Ordenar: Nome (ABC)</option>
-                      <option value="partido">Ordenar: Partido</option>
-                      <option value="eleito">Ordenar: Situação</option>
-                      <option value="idade">Ordenar: Mais Idosos</option>
-                    </select>
-                  </div>
+                      {/* Filters Row */}
+                      <div className="flex flex-wrap items-center gap-2">
+                        <div className="flex flex-wrap gap-1 flex-1">
+                          {([
+                            { key: 'all', label: `Todos (${filterCounts.all})`, color: 'blue' },
+                            { key: 'fav', label: `★ Favoritos (${filterCounts.fav})`, color: 'pink' },
+                            { key: 'eleitos', label: `✓ Eleitos (${filterCounts.eleitos})`, color: 'green' },
+                            { key: 'valido', label: `Válido`, color: 'indigo' },
+                            { key: 'legenda', label: `Legenda (${filterCounts.legenda})`, color: 'cyan', hide: isMajority },
+                            { key: 'anulado', label: `Anulado (${filterCounts.anulado})`, color: 'orange' },
+                            { key: 'subjudice', label: `Sub Judice (${filterCounts.subjudice})`, color: 'yellow' },
+                          ] as { key: string; label: string; color: string; hide?: boolean }[]).filter(f => !f.hide).map(({ key, label, color }) => {
+                            const active = statusFilter === key;
+                            const activeCls = {
+                              blue: 'bg-blue-600 text-white',
+                              pink: 'bg-pink-500 text-white',
+                              green: 'bg-green-600 text-white',
+                              indigo: 'bg-indigo-600 text-white',
+                              cyan: 'bg-cyan-600 text-white',
+                              orange: 'bg-orange-600 text-white',
+                              purple: 'bg-purple-600 text-white',
+                            }[color];
+                            return (
+                              <button
+                                key={key}
+                                onClick={() => setStatusFilter(key as any)}
+                                className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase transition-colors ${active ? activeCls : 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-slate-700'}`}
+                              >
+                                {label}
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        <select
+                          value={sortMode}
+                          onChange={(e) => setSortMode(e.target.value as any)}
+                          className="text-xs bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-gray-300 rounded-lg px-2 py-1.5 transition-colors focus:ring-1 focus:ring-blue-500"
+                        >
+                          <option value="votos">Ordenar: Votos (↓)</option>
+                          <option value="nome">Ordenar: Nome (ABC)</option>
+                          <option value="partido">Ordenar: Partido</option>
+                          <option value="eleito">Ordenar: Situação</option>
+                          <option value="idade">Ordenar: Mais Idosos</option>
+                        </select>
+                      </div>
+                    </>
+                  )}
 
                   {/* Party filter for proportional */}
-                  {!isMajority && parties.length > 0 && (
+                  {!isConsultaPopular && !isMajority && parties.length > 0 && (
                     <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
                       <span className="text-[10px] font-bold text-gray-400 uppercase shrink-0">Partido:</span>
                       <button
@@ -1058,8 +1167,34 @@ export function EA20Viewer({ ciclo, eleicaoCd, uf, cdMun, munNome, cargosDisponi
                     </div>
                   )}
 
-                  {/* Candidates */}
-                  {cargoData && (
+                  {/* Questions / Candidates */}
+                  {isConsultaPopular && perguntaData && (
+                    <div className="space-y-6">
+                      <div className="bg-blue-50 dark:bg-blue-900/10 p-4 rounded-lg border border-blue-100 dark:border-blue-800">
+                        <div className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-1">Pergunta</div>
+                        <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100 leading-snug">
+                          {perguntaData.ds}
+                        </h3>
+                        {perguntaData.dica && (
+                          <div className="mt-2 text-sm text-gray-600 dark:text-gray-400 italic">
+                            {perguntaData.dica}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {filteredAndSortedRespostas.map((item: any) => (
+                          <RespostaCard
+                            key={item.resp.n}
+                            resp={item.resp}
+                            pctColor={parseFloat(item.resp.pvap.replace(',', '.')) >= 50 ? 'text-green-600 dark:text-green-400' : 'text-blue-600 dark:text-blue-400'}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {!isConsultaPopular && cargoData && (
                     <div>
                       <h3 className="font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
                         {cargoData.nmn}
@@ -1075,7 +1210,7 @@ export function EA20Viewer({ ciclo, eleicaoCd, uf, cdMun, munNome, cargosDisponi
                         // ── Majority: cards sorted by votes ───────────────────
                         <div className="space-y-3">
                           {filteredAndSortedCandidates.map(({ cand, agr }) => (
-                             <CandCard key={cand.sqcand} cand={cand} agr={agr} totalVotos={totalVotos} ambiente={ambiente} ciclo={ciclo} eleicaoCd={eleicaoCd} uf={uf} isProportional={false} isFavorite={favorites.has(cand.sqcand)} onToggleFavorite={() => toggleFavorite(cand.sqcand)} host={host} />
+                            <CandCard key={cand.sqcand} cand={cand} agr={agr} totalVotos={totalVotos} ambiente={ambiente} ciclo={ciclo} eleicaoCd={eleicaoCd} uf={uf} isProportional={false} isFavorite={favorites.has(cand.sqcand)} onToggleFavorite={() => toggleFavorite(cand.sqcand)} host={host} />
                           ))}
                         </div>
                       ) : (
@@ -1091,7 +1226,7 @@ export function EA20Viewer({ ciclo, eleicaoCd, uf, cdMun, munNome, cargosDisponi
                             </thead>
                             <tbody>
                               {filteredAndSortedCandidates.map(({ cand, agr }) => (
-                                 <CandCard key={cand.sqcand} cand={cand} agr={agr} totalVotos={totalVotos} ambiente={ambiente} ciclo={ciclo} eleicaoCd={eleicaoCd} uf={uf} isProportional={true} isFavorite={favorites.has(cand.sqcand)} onToggleFavorite={() => toggleFavorite(cand.sqcand)} host={host} />
+                                <CandCard key={cand.sqcand} cand={cand} agr={agr} totalVotos={totalVotos} ambiente={ambiente} ciclo={ciclo} eleicaoCd={eleicaoCd} uf={uf} isProportional={true} isFavorite={favorites.has(cand.sqcand)} onToggleFavorite={() => toggleFavorite(cand.sqcand)} host={host} />
                               ))}
                             </tbody>
                           </table>

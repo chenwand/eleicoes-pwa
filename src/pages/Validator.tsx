@@ -55,6 +55,8 @@ export function Validator() {
   const [eleicaoSearchTerm, setEleicaoSearchTerm] = useState('');
   const [eleicaoStatusFilter, setEleicaoStatusFilter] = useState<'all' | 'fav'>('all');
   const [eleicaoSortMode, setEleicaoSortMode] = useState<'default' | 'data' | 'tipo' | 'nome'>('default');
+  const [eleicaoTypeFilter, setEleicaoTypeFilter] = useState<'all' | 'ordinaria' | 'suplementar' | 'consulta'>('all');
+  const [eleicaoScopeFilter, setEleicaoScopeFilter] = useState<'all' | 'federal' | 'estadual' | 'municipal'>('all');
 
   const [favorites, setFavorites] = useState<Set<string>>(() => {
     try {
@@ -191,14 +193,39 @@ export function Validator() {
     .filter((e: any) => {
       if (eleicaoStatusFilter === 'fav' && !favorites.has(e.cd)) return false;
 
-      if (!eleicaoSearchTerm) return true;
-      const search = normalizeString(eleicaoSearchTerm);
+      // 2. Type Filter
+      if (eleicaoTypeFilter !== 'all') {
+        const isOrdinaria = ['1', '3', '6'].includes(e.tp);
+        const isSuplementar = ['2', '4'].includes(e.tp);
+        const isConsulta = e.tp === '7';
 
-      const eT2 = e.cdt2 ? allElections.find((t: any) => t.cd === e.cdt2) : null;
-      const match1 = normalizeString(e.nm).includes(search) || e.cd.includes(search) || normalizeString(formatTipoEleicao(e.tp)).includes(search);
-      const match2 = eT2 ? (normalizeString(eT2.nm).includes(search) || eT2.cd.includes(search) || normalizeString(formatTipoEleicao(eT2.tp)).includes(search)) : false;
+        if (eleicaoTypeFilter === 'ordinaria' && !isOrdinaria) return false;
+        if (eleicaoTypeFilter === 'suplementar' && !isSuplementar) return false;
+        if (eleicaoTypeFilter === 'consulta' && !isConsulta) return false;
+      }
 
-      return match1 || match2;
+      // 3. Scope Filter
+      if (eleicaoScopeFilter !== 'all') {
+        const isFederal = e.abr.some((a: any) => a.cd === 'br');
+        const isMunicipal = e.abr.some((a: any) => a.mu && a.mu.length > 0);
+        const isEstadual = !isFederal && !isMunicipal;
+
+        if (eleicaoScopeFilter === 'federal' && !isFederal) return false;
+        if (eleicaoScopeFilter === 'municipal' && !isMunicipal) return false;
+        if (eleicaoScopeFilter === 'estadual' && !isEstadual) return false;
+      }
+
+      // 4. Search Filter
+      if (eleicaoSearchTerm) {
+        const search = normalizeString(eleicaoSearchTerm);
+        const eT2 = e.cdt2 ? allElections.find((t: any) => t.cd === e.cdt2) : null;
+        const match1 = normalizeString(e.nm).includes(search) || e.cd.includes(search) || normalizeString(formatTipoEleicao(e.tp)).includes(search);
+        const match2 = eT2 ? (normalizeString(eT2.nm).includes(search) || eT2.cd.includes(search) || normalizeString(formatTipoEleicao(eT2.tp)).includes(search)) : false;
+
+        if (!match1 && !match2) return false;
+      }
+
+      return true;
     })
     .sort((a: any, b: any) => {
       const aFav = favorites.has(a.cd) ? 0 : 1;
@@ -430,6 +457,28 @@ export function Validator() {
                     <option value="data">↓ Data do Pleito</option>
                     <option value="tipo">↓ Tipo de Eleição</option>
                     <option value="nome">↓ Nome (Alfabética)</option>
+                  </select>
+
+                  <select
+                    value={eleicaoTypeFilter}
+                    onChange={(e) => setEleicaoTypeFilter(e.target.value as typeof eleicaoTypeFilter)}
+                    className="text-xs bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-gray-300 rounded-lg px-2 py-1.5 transition-colors focus:ring-1 focus:ring-blue-500 outline-none"
+                  >
+                    <option value="all">Tipo: Todos</option>
+                    <option value="ordinaria">Ordinária</option>
+                    <option value="suplementar">Suplementar</option>
+                    <option value="consulta">Consulta Popular</option>
+                  </select>
+
+                  <select
+                    value={eleicaoScopeFilter}
+                    onChange={(e) => setEleicaoScopeFilter(e.target.value as typeof eleicaoScopeFilter)}
+                    className="text-xs bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-gray-300 rounded-lg px-2 py-1.5 transition-colors focus:ring-1 focus:ring-blue-500 outline-none"
+                  >
+                    <option value="all">Abrangência: Todas</option>
+                    <option value="federal">Federal</option>
+                    <option value="estadual">Estadual</option>
+                    <option value="municipal">Municipal</option>
                   </select>
                 </div>
               </div>
