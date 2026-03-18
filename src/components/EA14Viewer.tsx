@@ -115,7 +115,7 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose, relatedElei
       <div className={`fixed inset-0 bg-black/40 z-40 backdrop-blur-sm ${isClosing ? 'animate-fade-out' : 'animate-fade-in'}`} />
       <div
         ref={panelRef}
-        className={`fixed inset-y-0 right-0 z-50 w-full sm:w-[500px] md:w-1/2 lg:w-7/12 xl:w-8/12 bg-white dark:bg-slate-900 shadow-2xl overflow-y-auto border-l border-gray-200 dark:border-slate-800 flex flex-col ${isClosing ? 'animate-slide-out-right' : 'animate-slide-in-right'}`}
+        className={`fixed inset-y-0 right-0 z-50 w-[90vw] bg-white dark:bg-slate-900 shadow-2xl overflow-y-auto border-l border-gray-200 dark:border-slate-800 flex flex-col ${isClosing ? 'animate-slide-out-right' : 'animate-slide-in-right'}`}
       >
         <div className="sticky top-0 z-10 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-gray-200 dark:border-slate-800 p-4">
           <div className="flex justify-between items-center mb-4">
@@ -320,13 +320,13 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose, relatedElei
                       const getBarHeight = (val: number) => {
                         if (val === 0) return '0%';
                         if (maxUfs === 0) return '0%';
-                        
+
                         const values = [ufsFinalizadas, ufsParciais, ufsNaoIniciadas]
                           .filter(v => v > 0)
                           .sort((a, b) => b - a); // descending
-                          
+
                         const uniqueValues = Array.from(new Set(values));
-                        
+
                         if (val === uniqueValues[0]) return '100%';
                         if (uniqueValues.length > 1 && val === uniqueValues[1]) {
                           return uniqueValues.length === 2 ? '60%' : '60%';
@@ -433,7 +433,7 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose, relatedElei
                         .sort((aValue: any, bValue: any) => {
                           const a = aValue;
                           const b = bValue;
-                          
+
                           // Sort by most recently updated
                           if (sortMode === 'recent') {
                             const toSortable = (dt: string, ht: string) => {
