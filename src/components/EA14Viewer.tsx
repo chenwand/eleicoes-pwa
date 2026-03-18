@@ -213,46 +213,100 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose, relatedElei
                     {data.abr.filter((a: any) => a.cdabr === 'br').map((br: any) => {
                       const brErrors = getErrorsForAbr('br');
                       const hasErrors = brErrors.length > 0;
-                      const ufsFinalizadas = data.abr.filter(a => a.cdabr !== 'br' && a.and === 'f').length;
-                      const totalUfs = data.abr.filter(a => a.cdabr !== 'br').length;
+                      const ufsFinalizadas = data.abr.filter((a: any) => a.cdabr !== 'br' && a.and === 'f').length;
+                      const ufsParciais = data.abr.filter((a: any) => a.cdabr !== 'br' && a.and === 'p').length;
+                      const totalUfs = data.abr.filter((a: any) => a.cdabr !== 'br').length;
+                      const ufsNaoIniciadas = totalUfs - ufsFinalizadas - ufsParciais;
+                      const maxUfs = Math.max(ufsFinalizadas, ufsParciais, ufsNaoIniciadas);
+
+                      const getBarHeight = (val: number) => {
+                        if (val === 0) return '0%';
+                        if (maxUfs === 0) return '0%';
+                        
+                        const values = [ufsFinalizadas, ufsParciais, ufsNaoIniciadas]
+                          .filter(v => v > 0)
+                          .sort((a, b) => b - a); // descending
+                          
+                        const uniqueValues = Array.from(new Set(values));
+                        
+                        if (val === uniqueValues[0]) return '100%';
+                        if (uniqueValues.length > 1 && val === uniqueValues[1]) {
+                          return uniqueValues.length === 2 ? '60%' : '60%';
+                        }
+                        if (uniqueValues.length > 2 && val === uniqueValues[2]) return '30%';
+
+                        return '30%'; // fallback
+                      };
 
                       return (
-                        <div key="br" className={`border-l-4 rounded p-4 shadow-sm mb-6 ${hasErrors ? 'bg-red-50 dark:bg-red-900/10 border-red-500' : 'bg-blue-50 dark:bg-blue-900/20 border-blue-500'}`}>
-                          <div className="flex justify-between items-center mb-2">
-                            <h3 className="font-bold text-gray-800 dark:text-gray-200 uppercase flex items-center gap-2">
-                              <img src="/flags/br.svg" alt="Brasil" className="w-5 h-4 object-contain rounded-sm" onError={(e) => (e.currentTarget.style.display = 'none')} />
-                              Brasil
-                            </h3>
-                            <span className={`text-xs font-bold px-2 py-1 rounded-full ${br.and === 'f' ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300'}`}>
-                              {br.and === 'f' ? 'Finalizado' : 'Em andamento'}
-                            </span>
+                        <div key="br" className={`border-l-4 rounded p-4 shadow-sm mb-6 flex flex-col md:flex-row gap-6 ${hasErrors ? 'bg-red-50 dark:bg-red-900/10 border-red-500' : 'bg-blue-50 dark:bg-blue-900/20 border-blue-500'}`}>
+                          <div className="flex-1 flex flex-col justify-center">
+                            <div className="flex justify-between items-center mb-2">
+                              <h3 className="font-bold text-gray-800 dark:text-gray-200 uppercase flex items-center gap-2">
+                                <img src="/flags/br.svg" alt="Brasil" className="w-5 h-4 object-contain rounded-sm" onError={(e) => (e.currentTarget.style.display = 'none')} />
+                                Brasil
+                              </h3>
+                              <span className={`text-xs font-bold px-2 py-1 rounded-full ${br.and === 'f' ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300'}`}>
+                                {br.and === 'f' ? 'Finalizado' : 'Em andamento'}
+                              </span>
+                            </div>
+
+                            <div className="mt-3">
+                              <div className="flex justify-between text-sm mb-1">
+                                <span className="text-gray-600 dark:text-gray-400">Seções Totalizadas</span>
+                                <span className="font-semibold text-gray-800 dark:text-gray-200">{br.s.pst}%</span>
+                              </div>
+                              <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2.5">
+                                <div className="bg-blue-600 h-2.5 rounded-full" style={{ width: `${parseFloat(br.s.pst.replace(',', '.'))}%` }}></div>
+                              </div>
+                              <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                <span>{ufsFinalizadas} de {totalUfs} UFs finalizadas</span>
+                                <span>{parseInt(br.s.st).toLocaleString('pt-BR')} de {parseInt(br.s.ts).toLocaleString('pt-BR')} seções</span>
+                              </div>
+                            </div>
+
+                            {hasErrors && (
+                              <div className="mt-3 bg-red-100 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded p-2 text-xs text-red-700 dark:text-red-300">
+                                <strong className="flex items-center gap-1 mb-1">
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                                  Inconsistências Identificadas:
+                                </strong>
+                                <ul className="list-disc pl-5 space-y-1">
+                                  {brErrors.map((err, i) => <li key={i}>{err}</li>)}
+                                </ul>
+                              </div>
+                            )}
                           </div>
 
-                          <div className="mt-3">
-                            <div className="flex justify-between text-sm mb-1">
-                              <span className="text-gray-600 dark:text-gray-400">Seções Totalizadas</span>
-                              <span className="font-semibold text-gray-800 dark:text-gray-200">{br.s.pst}%</span>
+                          {/* Chart Side */}
+                          <div className="md:w-56 bg-white/60 dark:bg-slate-800/60 rounded p-3 flex flex-col border border-gray-100 dark:border-slate-700/50 shadow-sm shrink-0">
+                            <div className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1 text-center">
+                              Status das UFs ({totalUfs})
                             </div>
-                            <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2.5">
-                              <div className="bg-blue-600 h-2.5 rounded-full" style={{ width: `${parseFloat(br.s.pst.replace(',', '.'))}%` }}></div>
-                            </div>
-                            <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-1">
-                              <span>{ufsFinalizadas} de {totalUfs} UFs finalizadas</span>
-                              <span>{parseInt(br.s.st).toLocaleString('pt-BR')} de {parseInt(br.s.ts).toLocaleString('pt-BR')} seções</span>
+                            <div className="flex-1 flex items-end justify-center gap-4 h-32 mt-2">
+                              <div className="flex flex-col items-center gap-1 group h-full justify-end w-5 sm:w-6">
+                                <div className="text-[10px] font-medium text-gray-500 shrink-0">{ufsNaoIniciadas}</div>
+                                <div className="flex-1 w-full relative">
+                                  <div className="absolute bottom-0 w-full bg-gray-300 dark:bg-slate-600 rounded-t transition-all duration-500 group-hover:opacity-80 min-h-[2px]" style={{ height: getBarHeight(ufsNaoIniciadas) }}></div>
+                                </div>
+                                <div className="text-[10px] text-gray-500 font-medium shrink-0" title="Não Iniciadas">NI</div>
+                              </div>
+                              <div className="flex flex-col items-center gap-1 group h-full justify-end w-5 sm:w-6">
+                                <div className="text-[10px] font-medium text-yellow-600 dark:text-yellow-500 shrink-0">{ufsParciais}</div>
+                                <div className="flex-1 w-full relative">
+                                  <div className="absolute bottom-0 w-full bg-yellow-400 dark:bg-yellow-500 rounded-t transition-all duration-500 group-hover:opacity-80 min-h-[2px]" style={{ height: getBarHeight(ufsParciais) }}></div>
+                                </div>
+                                <div className="text-[10px] text-gray-500 font-medium shrink-0" title="Parciais">PA</div>
+                              </div>
+                              <div className="flex flex-col items-center gap-1 group h-full justify-end w-5 sm:w-6">
+                                <div className="text-[10px] font-medium text-green-600 dark:text-green-500 shrink-0">{ufsFinalizadas}</div>
+                                <div className="flex-1 w-full relative">
+                                  <div className="absolute bottom-0 w-full bg-green-500 dark:bg-green-500 rounded-t transition-all duration-500 group-hover:opacity-80 min-h-[2px]" style={{ height: getBarHeight(ufsFinalizadas) }}></div>
+                                </div>
+                                <div className="text-[10px] text-gray-500 font-medium shrink-0" title="Finalizadas">FI</div>
+                              </div>
                             </div>
                           </div>
-
-                          {hasErrors && (
-                            <div className="mt-3 bg-red-100 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded p-2 text-xs text-red-700 dark:text-red-300">
-                              <strong className="flex items-center gap-1 mb-1">
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-                                Inconsistências Identificadas:
-                              </strong>
-                              <ul className="list-disc pl-5 space-y-1">
-                                {brErrors.map((err, i) => <li key={i}>{err}</li>)}
-                              </ul>
-                            </div>
-                          )}
                         </div>
                       )
                     })}
