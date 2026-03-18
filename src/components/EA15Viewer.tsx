@@ -28,9 +28,12 @@ interface EA15ViewerProps {
   eleicaoCd: string;
   uf: string;
   onBack: () => void;
+  relatedEleicaoCd?: string;
+  relatedEleicaoTurno?: '1' | '2';
+  onChangeEleicao?: (cd: string) => void;
 }
 
-export function EA15Viewer({ ciclo, eleicaoCd, uf, onBack }: EA15ViewerProps) {
+export function EA15Viewer({ ciclo, eleicaoCd, uf, onBack, relatedEleicaoCd, relatedEleicaoTurno, onChangeEleicao }: EA15ViewerProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [showRawJson, setShowRawJson] = useState(false);
   const [expandedMun, setExpandedMun] = useState<string | null>(null);
@@ -66,7 +69,7 @@ export function EA15Viewer({ ciclo, eleicaoCd, uf, onBack }: EA15ViewerProps) {
   };
 
   // Fetch EA15 Data
-  const { data: ea15Data, isLoading: isEA15Loading, isError: isEA15Error, error: ea15Error } = useQuery({
+  const { data: ea15Data, isLoading: isEA15Loading, isError: isEA15Error, error: ea15Error, refetch: refetchEA15, isFetching: isEA15Fetching } = useQuery({
     queryKey: ['ea15-data', ciclo, eleicaoCd, uf, ambiente],
     queryFn: () => fetchEA15(ciclo, eleicaoCd, uf, ambiente),
     enabled: !!eleicaoCd && !!ciclo && !!uf,
@@ -224,18 +227,41 @@ export function EA15Viewer({ ciclo, eleicaoCd, uf, onBack }: EA15ViewerProps) {
             >
               <svg className="w-5 h-5 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
             </button>
-            <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
-              <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-              <span>Acompanhamento UF (EA15)</span>
-              <span className="uppercase text-gray-500 dark:text-gray-400 text-base font-semibold">· {uf}</span>
-            </h2>
+            <div>
+              <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
+                <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                <span>Acompanhamento UF (EA15)</span>
+                <span className="uppercase text-gray-500 dark:text-gray-400 text-base font-semibold">· {uf}</span>
+              </h2>
+              {relatedEleicaoCd && onChangeEleicao && (
+                <div className="mt-1">
+                  <button
+                    onClick={() => onChangeEleicao(relatedEleicaoCd)}
+                    className="flex items-center gap-1.5 px-2 py-0.5 text-xs font-semibold bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 rounded border border-blue-200 dark:border-blue-800 hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors inline-flex"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
+                    Ir para {relatedEleicaoTurno}º Turno
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
-          <button
-            onClick={() => setShowRawJson(!showRawJson)}
-            className="shrink-0 px-3 py-1.5 bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-300 rounded text-sm font-medium transition-colors"
-          >
-            {showRawJson ? 'Painel Visual' : 'Ver JSON'}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => refetchEA15()}
+              disabled={isEA15Fetching}
+              className={`p-1.5 bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-full transition-colors ${isEA15Fetching ? 'opacity-50 cursor-not-allowed' : ''}`}
+              title="Atualizar dados (EA15)"
+            >
+              <svg className={`w-5 h-5 ${isEA15Fetching ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+            </button>
+            <button
+              onClick={() => setShowRawJson(!showRawJson)}
+              className="shrink-0 px-3 py-1.5 bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-300 rounded text-sm font-medium transition-colors"
+            >
+              {showRawJson ? 'Painel Visual' : 'Ver JSON'}
+            </button>
+          </div>
         </div>
 
         {ea15Data && (() => {

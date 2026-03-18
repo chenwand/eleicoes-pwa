@@ -7,6 +7,7 @@ export async function fetchEA14(ciclo: string, eleicaoCd: string, ambiente: stri
   // URL base oficial de onde obtemos os JSON do TSE
   const url = `https://resultados.tse.jus.br/${ambiente}/${ciclo}/${eleicaoCd}/dados/br/br-e${eleicaoFormatted}-ab.json`;
 
+  console.log(`[EA14 Request] ${url}`);
   const response = await fetch(url);
 
   if (!response.ok) {

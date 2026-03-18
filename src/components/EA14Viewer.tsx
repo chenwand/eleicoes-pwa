@@ -38,9 +38,12 @@ interface EA14ViewerProps {
   eleicaoCd: string;
   eleicaoNome: string;
   onClose: () => void;
+  relatedEleicaoCd?: string;
+  relatedEleicaoTurno?: '1' | '2';
+  onChangeEleicao?: (cd: string) => void;
 }
 
-export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose }: EA14ViewerProps) {
+export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose, relatedEleicaoCd, relatedEleicaoTurno, onChangeEleicao }: EA14ViewerProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const [expandedUf, setExpandedUf] = useState<string | null>(null);
   const [showRawJson, setShowRawJson] = useState(false);
@@ -57,7 +60,7 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose }: EA14Viewe
 
   const { ambiente } = useEnvironment();
 
-  const { data, isLoading, isError, error } = useQuery({
+  const { data, isLoading, isError, error, refetch: refetchEA14, isFetching: isEA14Fetching } = useQuery({
     queryKey: ['ea14-data', ciclo, eleicaoCd, ambiente],
     queryFn: () => fetchEA14(ciclo, eleicaoCd, ambiente),
     enabled: !!eleicaoCd && !!ciclo,
@@ -110,11 +113,30 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose }: EA14Viewe
                 <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
                 Acompanhamento BR (EA14)
               </h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                {eleicaoNome}
-              </p>
+              <div className="flex items-center gap-3">
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  {eleicaoNome}
+                </p>
+                {relatedEleicaoCd && onChangeEleicao && (
+                  <button
+                    onClick={() => onChangeEleicao(relatedEleicaoCd)}
+                    className="flex items-center gap-1.5 px-2 py-0.5 text-xs font-semibold bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 rounded border border-blue-200 dark:border-blue-800 hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
+                    Ir para {relatedEleicaoTurno}º Turno
+                  </button>
+                )}
+              </div>
             </div>
             <div className="flex items-center gap-2">
+              <button
+                onClick={() => refetchEA14()}
+                disabled={isEA14Fetching}
+                className={`p-2 bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-full transition-colors ${isEA14Fetching ? 'opacity-50 cursor-not-allowed' : ''}`}
+                title="Atualizar dados (EA14)"
+              >
+                <svg className={`w-5 h-5 ${isEA14Fetching ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+              </button>
               {!selectedEA15Uf && (
                 <button
                   onClick={() => setShowRawJson(!showRawJson)}
@@ -159,6 +181,9 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose }: EA14Viewe
               eleicaoCd={eleicaoCd}
               uf={selectedEA15Uf}
               onBack={() => setSelectedEA15Uf(null)}
+              relatedEleicaoCd={relatedEleicaoCd}
+              relatedEleicaoTurno={relatedEleicaoTurno}
+              onChangeEleicao={onChangeEleicao}
             />
           </div>
         ) : (

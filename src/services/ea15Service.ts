@@ -6,6 +6,7 @@ export async function fetchEA15(ciclo: string, eleicaoCd: string, uf: string, am
 
   const url = `https://resultados.tse.jus.br/${ambiente}/${ciclo}/${eleicaoCd}/dados/${ufLower}/${ufLower}-e${eleicaoFormatted}-ab.json`;
 
+  console.log(`[EA15 Request] ${url}`);
   const response = await fetch(url);
 
   if (!response.ok) {

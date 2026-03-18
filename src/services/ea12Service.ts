@@ -9,6 +9,7 @@ export async function fetchEA12(ciclo: string, cdEleicao: string, ambiente: stri
   const paddedCd = formatCodigoEleicao(cdEleicao);
   const url = `https://resultados.tse.jus.br/${ambiente}/${ciclo}/${cdEleicao}/config/mun-e${paddedCd}-cm.json`;
   
+  console.log(`[EA12 Request] ${url}`);
   const response = await fetch(url, {
     method: 'GET',
     headers: {
