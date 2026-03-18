@@ -3,14 +3,23 @@ import { useTheme } from '../context/ThemeContext';
 import { useEnvironment } from '../context/EnvironmentContext';
 import { SettingsModal } from './SettingsModal';
 import { useState, useRef } from 'react';
-import type { EA20Response } from '../types/ea20';
 
 
-export function Header({ onLocalFileLoaded }: { onLocalFileLoaded: (data: EA20Response) => void }) {
+export function Header({ onLocalFileLoaded }: { onLocalFileLoaded: (data: { type: 'EA11' | 'EA14' | 'EA15' | 'EA20', data: any }) => void }) {
   const { theme, toggleTheme } = useTheme();
   const { ambiente } = useEnvironment();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const detectFileType = (data: any): 'EA11' | 'EA14' | 'EA15' | 'EA20' | null => {
+    if (data.pl) return 'EA11';
+    if (data.v && data.s) return 'EA20';
+    if (data.abr && Array.isArray(data.abr)) {
+      if (data.abr.some((a: any) => a.tpabr === 'mu')) return 'EA15';
+      return 'EA14';
+    }
+    return null;
+  };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -20,7 +29,12 @@ export function Header({ onLocalFileLoaded }: { onLocalFileLoaded: (data: EA20Re
     reader.onload = (event) => {
       try {
         const json = JSON.parse(event.target?.result as string);
-        onLocalFileLoaded(json);
+        const type = detectFileType(json);
+        if (!type) {
+          alert('Tipo de arquivo não reconhecido (não é EA11, EA14, EA15 ou EA20).');
+          return;
+        }
+        onLocalFileLoaded({ type, data: json });
         // Reset input
         if (fileInputRef.current) fileInputRef.current.value = '';
       } catch (err) {
@@ -57,10 +71,10 @@ export function Header({ onLocalFileLoaded }: { onLocalFileLoaded: (data: EA20Re
             <button
               onClick={() => fileInputRef.current?.click()}
               className="px-4 py-2 rounded bg-blue-800 dark:bg-slate-800 hover:bg-blue-900 dark:hover:bg-slate-700 transition flex items-center gap-2 border border-blue-400 dark:border-slate-600 shadow-inner"
-              title="Abrir e validar um arquivo EA20 local (.json)"
+              title="Abrir e validar um arquivo local (EA11, EA14, EA15, EA20)"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
-              <span>Local EA20</span>
+              <span>Arquivo Local</span>
             </button>
             <input
               type="file"

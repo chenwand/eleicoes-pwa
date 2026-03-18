@@ -36,9 +36,10 @@ interface EA15ViewerProps {
   ea14hg?: string;
   /** Cargos from EA11 to pass to EA20Viewer */
   cargosDisponiveis?: { cd: string; nm: string }[];
+  initialLocalData?: any;
 }
 
-export function EA15Viewer({ ciclo, eleicaoCd, uf, onBack, relatedEleicaoCd, relatedEleicaoTurno, onChangeEleicao, ea14dg, ea14hg, cargosDisponiveis = [] }: EA15ViewerProps) {
+export function EA15Viewer({ ciclo, eleicaoCd, uf, onBack, relatedEleicaoCd, relatedEleicaoTurno, onChangeEleicao, ea14dg, ea14hg, cargosDisponiveis = [], initialLocalData }: EA15ViewerProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [showRawJson, setShowRawJson] = useState(false);
   const [expandedMun, setExpandedMun] = useState<string | null>(null);
@@ -46,7 +47,7 @@ export function EA15Viewer({ ciclo, eleicaoCd, uf, onBack, relatedEleicaoCd, rel
   const [sortMode, setSortMode] = useState<'default' | 'recent' | 'eleitores' | 'comparecimento' | 'abstencao' | 'pst'>('default');
   const [isClosing, setIsClosing] = useState(false);
   const { ambiente, host } = useEnvironment();
-  const [localData, setLocalData] = useState<any>(null);
+  const [localData, setLocalData] = useState<any>(initialLocalData || null);
   const [isEditing, setIsEditing] = useState(false);
   const [isModified, setIsModified] = useState(false);
   const [editValue, setEditValue] = useState("");
@@ -82,7 +83,7 @@ export function EA15Viewer({ ciclo, eleicaoCd, uf, onBack, relatedEleicaoCd, rel
   const { data: ea15Data, isLoading: isEA15Loading, isError: isEA15Error, error: ea15Error, refetch: refetchEA15, isFetching: isEA15Fetching } = useQuery({
     queryKey: ['ea15-data', ciclo, eleicaoCd, uf, ambiente, host],
     queryFn: () => fetchEA15(ciclo, eleicaoCd, uf, ambiente, host),
-    enabled: !!eleicaoCd && !!ciclo && !!uf,
+    enabled: !!eleicaoCd && !!ciclo && !!uf && !initialLocalData,
     staleTime: 30000,
   });
 

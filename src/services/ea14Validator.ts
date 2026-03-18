@@ -9,10 +9,10 @@ export function validateEA14(data: EA14Response): EA14ValidationResult[] {
   const results: EA14ValidationResult[] = [];
 
   // Helper to parse numbers
-  const parseNum = (val: string) => parseInt(val, 10) || 0;
+  const parseNum = (val: any) => parseInt(val || '0', 10) || 0;
 
   // Helper to parse percentages that come securely with commands like "100,00"
-  const parsePct = (val: string) => parseFloat(val.replace(',', '.')) || 0;
+  const parsePct = (val: any) => parseFloat((val || '0').replace(',', '.')) || 0;
 
   // Track finished UFs for the BR validation rule
   let finishedUFsCount = 0;

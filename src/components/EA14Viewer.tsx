@@ -42,9 +42,10 @@ interface EA14ViewerProps {
   relatedEleicaoTurno?: '1' | '2';
   onChangeEleicao?: (cd: string) => void;
   cargosDisponiveis?: { cd: string; nm: string }[];
+  initialLocalData?: any;
 }
 
-export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose, relatedEleicaoCd, relatedEleicaoTurno, onChangeEleicao, cargosDisponiveis = [] }: EA14ViewerProps) {
+export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose, relatedEleicaoCd, relatedEleicaoTurno, onChangeEleicao, cargosDisponiveis = [], initialLocalData }: EA14ViewerProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const [expandedUf, setExpandedUf] = useState<string | null>(null);
   const [showRawJson, setShowRawJson] = useState(false);
@@ -60,7 +61,7 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose, relatedElei
   };
 
   const { ambiente, host } = useEnvironment();
-  const [localData, setLocalData] = useState<any>(null);
+  const [localData, setLocalData] = useState<any>(initialLocalData || null);
   const [isEditing, setIsEditing] = useState(false);
   const [isModified, setIsModified] = useState(false);
   const [editValue, setEditValue] = useState("");
@@ -68,7 +69,7 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose, relatedElei
   const { data, isLoading, isError, error, refetch: refetchEA14, isFetching: isEA14Fetching } = useQuery({
     queryKey: ['ea14-data', ciclo, eleicaoCd, ambiente, host],
     queryFn: () => fetchEA14(ciclo, eleicaoCd, ambiente, host),
-    enabled: !!eleicaoCd && !!ciclo,
+    enabled: !!eleicaoCd && !!ciclo && !initialLocalData,
   });
 
   useEffect(() => {
