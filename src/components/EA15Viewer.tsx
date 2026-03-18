@@ -277,7 +277,15 @@ export function EA15Viewer({ ciclo, eleicaoCd, uf, onBack, relatedEleicaoCd, rel
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => refetchEA15()}
+              onClick={() => {
+                refetchEA15().then((result) => {
+                  if (result.data) {
+                    setLocalData(result.data);
+                    setIsModified(false);
+                    setIsEditing(false);
+                  }
+                });
+              }}
               disabled={isEA15Fetching}
               className={`p-1.5 bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-full transition-colors ${isEA15Fetching ? 'opacity-50 cursor-not-allowed' : ''}`}
               title="Atualizar dados (EA15)"

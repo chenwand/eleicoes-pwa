@@ -141,7 +141,15 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose, relatedElei
             </div>
             <div className="flex items-center gap-2">
               <button
-                onClick={() => refetchEA14()}
+                onClick={() => {
+                  refetchEA14().then((result) => {
+                    if (result.data) {
+                      setLocalData(result.data);
+                      setIsModified(false);
+                      setIsEditing(false);
+                    }
+                  });
+                }}
                 disabled={isEA14Fetching}
                 className={`p-2 bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-full transition-colors ${isEA14Fetching ? 'opacity-50 cursor-not-allowed' : ''}`}
                 title="Atualizar dados (EA14)"

@@ -274,7 +274,15 @@ export function Validator() {
           <div className="flex flex-col items-end gap-2">
             <div className="flex items-center gap-2">
               <button
-                onClick={() => refetchEA11()}
+                onClick={() => {
+                  refetchEA11().then((result) => {
+                    if (result.data) {
+                      setLocalEA11Data(result.data);
+                      setIsEA11Modified(false);
+                      setIsEA11Editing(false);
+                    }
+                  });
+                }}
                 disabled={isEA11Fetching}
                 className={`p-1.5 bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-300 rounded transition-colors ${isEA11Fetching ? 'opacity-50 cursor-not-allowed' : ''}`}
                 title="Atualizar dados (EA11)"
