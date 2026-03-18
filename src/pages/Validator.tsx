@@ -80,6 +80,10 @@ export function Validator() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [selectedEA14EleicaoCd, setSelectedEA14EleicaoCd] = useState<string | null>(null);
   const [showRawJson, setShowRawJson] = useState(false);
+  const [localEA11Data, setLocalEA11Data] = useState<any>(null);
+  const [isEA11Editing, setIsEA11Editing] = useState(false);
+  const [isEA11Modified, setIsEA11Modified] = useState(false);
+  const [ea11EditValue, setEA11EditValue] = useState("");
 
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -101,7 +105,14 @@ export function Validator() {
     queryFn: () => fetchEA11(ambiente),
   });
 
-  const cicloString = ea11Data ? ea11Data.c : '';
+  useEffect(() => {
+    if (ea11Data) {
+      setLocalEA11Data(ea11Data);
+      setIsEA11Modified(false);
+    }
+  }, [ea11Data]);
+
+  const cicloString = localEA11Data ? localEA11Data.c : '';
 
   const { data: ea12Data, isLoading: isEA12Loading, isError: isEA12Error } = useQuery({
     queryKey: ['ea12-config', cicloString, selectedEleicaoCd, ambiente],
@@ -136,7 +147,7 @@ export function Validator() {
     );
   }
 
-  if (isEA11Error || !ea11Data) {
+  if (isEA11Error || !localEA11Data) {
     return (
       <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/30 rounded-lg p-6 text-center max-w-2xl mx-auto mt-8 transition-colors duration-300">
         <h2 className="text-xl font-bold text-red-700 dark:text-red-400 mb-2">Erro de Conexão</h2>
@@ -150,12 +161,12 @@ export function Validator() {
 
   // Pre-calculate which elections are being referenced as 2nd round by others
   const t2ElectionCodes = new Set(
-    ea11Data.pl.flatMap(p => p.e).map(e => e.cdt2).filter(Boolean)
+    localEA11Data.pl.flatMap((p: any) => p.e).map((e: any) => e.cdt2).filter(Boolean)
   );
 
   // Flatten all elections and attach their parent pleito for easy rendering
-  const allElections = ea11Data.pl.flatMap(p =>
-    p.e.map(e => ({
+  const allElections = localEA11Data.pl.flatMap((p: any) =>
+    p.e.map((e: any) => ({
       ...e,
       pleitoCd: p.cd,
       pleitoDt: p.dt
@@ -166,22 +177,22 @@ export function Validator() {
     ? flattenEA12Municipios(ea12Data!).find(m => m.munCdTse === selectedMunCd)
     : null;
 
-  const topLevelElections = allElections.filter(e => !t2ElectionCodes.has(e.cd));
+  const topLevelElections = allElections.filter((e: any) => !t2ElectionCodes.has(e.cd));
 
   const topLevelElectionsFiltered = topLevelElections
-    .filter(e => {
+    .filter((e: any) => {
       if (eleicaoStatusFilter === 'fav' && !favorites.has(e.cd)) return false;
 
       if (!eleicaoSearchTerm) return true;
       const search = normalizeString(eleicaoSearchTerm);
       
-      const eT2 = e.cdt2 ? allElections.find(t => t.cd === e.cdt2) : null;
+      const eT2 = e.cdt2 ? allElections.find((t: any) => t.cd === e.cdt2) : null;
       const match1 = normalizeString(e.nm).includes(search) || e.cd.includes(search) || normalizeString(formatTipoEleicao(e.tp)).includes(search);
       const match2 = eT2 ? (normalizeString(eT2.nm).includes(search) || eT2.cd.includes(search) || normalizeString(formatTipoEleicao(eT2.tp)).includes(search)) : false;
 
       return match1 || match2;
     })
-    .sort((a, b) => {
+    .sort((a: any, b: any) => {
       const aFav = favorites.has(a.cd) ? 0 : 1;
       const bFav = favorites.has(b.cd) ? 0 : 1;
       if (aFav !== bFav) return aFav - bFav;
@@ -240,7 +251,7 @@ export function Validator() {
               Arquivo de configuração de eleições (EA11)
             </h1>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 flex flex-wrap items-center gap-x-2">
-              Ciclo: <span className="font-semibold text-blue-600 dark:text-blue-400">{ea11Data.c}</span>
+              Ciclo: <span className="font-semibold text-blue-600 dark:text-blue-400">{localEA11Data.c}</span>
               <span className="text-gray-300 dark:text-gray-700">|</span>
               Arquivo gerado em:{' '}
               <a
@@ -250,9 +261,15 @@ export function Validator() {
                 className="font-mono hover:text-blue-500 dark:hover:text-blue-400 underline underline-offset-2 transition-colors ml-1"
                 title="Abrir / baixar JSON EA11 (ele-c.json)"
               >
-                {ea11Data.dg} {ea11Data.hg} ↓
+                {localEA11Data.dg} {localEA11Data.hg} ↓
               </a>
             </p>
+            {isEA11Modified && (
+              <div className="mt-1 flex items-center gap-1.5 px-2 py-0.5 text-[10px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 rounded border border-amber-200 dark:border-amber-800 animate-pulse w-fit">
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                Dados de configuração editados localmente
+              </div>
+            )}
           </div>
           <div className="flex flex-col items-end gap-2">
             <div className="flex items-center gap-2">
@@ -278,8 +295,74 @@ export function Validator() {
         </div>
 
         {showRawJson ? (
-          <div className="bg-[#1e1e1e] rounded-lg p-4 overflow-x-auto shadow-inner border border-gray-700">
-            {renderHighlightedJson(ea11Data)}
+          <div className="space-y-4">
+            <div className="flex justify-between items-center bg-gray-50 dark:bg-slate-800/50 p-3 rounded-lg border border-gray-200 dark:border-slate-700">
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>
+                Configuração EA11 (ele-c.json)
+              </span>
+              <div className="flex gap-2">
+                {!isEA11Editing ? (
+                  <button
+                    onClick={() => {
+                      setEA11EditValue(JSON.stringify(localEA11Data, null, 2));
+                      setIsEA11Editing(true);
+                    }}
+                    className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded transition-colors flex items-center gap-1.5"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                    Editar
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => {
+                        try {
+                          const parsed = JSON.parse(ea11EditValue);
+                          setLocalEA11Data(parsed);
+                          setIsEA11Modified(true);
+                          setIsEA11Editing(false);
+                        } catch (e) {
+                          alert("JSON inválido! Por favor corrija antes de salvar.");
+                        }
+                      }}
+                      className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded transition-colors flex items-center gap-1.5"
+                    >
+                      Salvar
+                    </button>
+                    <button
+                      onClick={() => setIsEA11Editing(false)}
+                      className="px-3 py-1 bg-gray-500 hover:bg-gray-600 text-white text-xs font-bold rounded transition-colors"
+                    >
+                      Cancelar
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {isEA11Editing ? (
+              <textarea
+                value={ea11EditValue}
+                onChange={(e) => setEA11EditValue(e.target.value)}
+                className="w-full h-[500px] p-4 font-mono text-sm bg-gray-900 text-gray-100 rounded-lg border border-gray-700 focus:ring-2 focus:ring-blue-500 outline-none resize-none shadow-inner"
+                spellCheck={false}
+              />
+            ) : (
+              <div
+                onClick={() => {
+                  setEA11EditValue(JSON.stringify(localEA11Data, null, 2));
+                  setIsEA11Editing(true);
+                }}
+                className="bg-[#1e1e1e] rounded-lg p-4 overflow-x-auto shadow-inner border border-gray-700 cursor-pointer hover:border-blue-500/50 transition-colors group relative"
+                title="Clique para editar"
+              >
+                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-blue-600/80 text-white text-[10px] px-1.5 py-0.5 rounded pointer-events-none">
+                  Clique para editar
+                </div>
+                {renderHighlightedJson(localEA11Data)}
+              </div>
+            )}
           </div>
         ) : (
           <div className="space-y-6">
@@ -335,15 +418,15 @@ export function Validator() {
               </div>
             )}
             {topLevelElectionsFiltered
-              .filter((eleicao) => {
+              .filter((eleicao: any) => {
                 if (selectedEleicaoCd === null) return true;
                 if (selectedEleicaoCd === eleicao.cd) return true;
                 // Se o selecionado for o T2 deste pleito, mantém o pai visível
                 if (eleicao.cdt2 === selectedEleicaoCd) return true;
                 return false;
               })
-              .map((eleicao) => {
-                const eleicaoT2 = eleicao.cdt2 ? allElections.find(e => e.cd === eleicao.cdt2) : null;
+              .map((eleicao: any) => {
+                const eleicaoT2 = eleicao.cdt2 ? allElections.find((e: any) => e.cd === eleicao.cdt2) : null;
 
                 return (
                   <div
@@ -700,11 +783,11 @@ export function Validator() {
       </div>
 
       {selectedEA14EleicaoCd && (() => {
-        const currentElectionFromAll = allElections.find(e => e.cd === selectedEA14EleicaoCd);
+        const currentElectionFromAll = allElections.find((e: any) => e.cd === selectedEA14EleicaoCd);
         const isT2ForEA14 = currentElectionFromAll?.t === '2';
         const relatedEA14Eleicao = isT2ForEA14 
-          ? allElections.find(e => e.cdt2 === selectedEA14EleicaoCd)
-          : allElections.find(e => e.cd === currentElectionFromAll?.cdt2);
+          ? allElections.find((e: any) => e.cdt2 === selectedEA14EleicaoCd)
+          : allElections.find((e: any) => e.cd === currentElectionFromAll?.cdt2);
 
         return (
           <EA14Viewer
