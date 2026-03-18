@@ -4,7 +4,7 @@ import { fetchEA12, flattenEA12Municipios } from '../services/ea12Service';
 import { fetchEA20, buildCandidatoFotoUrl } from '../services/ea20Service';
 import { validateEA20 } from '../services/ea20Validator';
 import { useEnvironment } from '../context/EnvironmentContext';
-import type { EA20Cargo, EA20Candidato, EA20Agrupamento } from '../types/ea20';
+import type { EA20Cargo, EA20Candidato, EA20Agrupamento, EA20Response } from '../types/ea20';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -391,20 +391,6 @@ function EleitoresSummary({ e }: { e: any }) {
   );
 }
 
-// ── PropTypes ─────────────────────────────────────────────────────────────────
-
-interface EA20ViewerProps {
-  ciclo: string;
-  eleicaoCd: string;
-  uf: string;
-  cdMun: string;      // e.g. "01120"
-  munNome: string;
-  /** Cargos disponíveis (code + name) from EA11 */
-  cargosDisponiveis: { cd: string; nm: string }[];
-  initialZona?: string;
-  onBack: () => void;
-}
-
 // ── Candidate card component ──────────────────────────────────────────────────
 
 function CandCard({
@@ -640,7 +626,27 @@ function RespostaCard({ resp, pctColor }: { resp: any, pctColor: string }) {
   );
 }
 
-export function EA20Viewer({ ciclo, eleicaoCd, uf, cdMun, munNome, cargosDisponiveis, initialZona, onBack }: EA20ViewerProps) {
+export function EA20Viewer({
+  ciclo,
+  eleicaoCd,
+  uf,
+  cdMun,
+  munNome,
+  cargosDisponiveis = [],
+  initialZona,
+  onBack,
+  initialLocalData
+}: {
+  ciclo?: string;
+  eleicaoCd?: string;
+  uf?: string;
+  cdMun?: string;
+  munNome?: string;
+  cargosDisponiveis?: { cd: string; nm: string }[];
+  initialZona?: string;
+  onBack: () => void;
+  initialLocalData?: EA20Response;
+}) {
   const { ambiente, host } = useEnvironment();
   const [isClosing, setIsClosing] = useState(false);
   const [selectedCargoIdx, setSelectedCargoIdx] = useState(0);
@@ -648,7 +654,7 @@ export function EA20Viewer({ ciclo, eleicaoCd, uf, cdMun, munNome, cargosDisponi
   const [showZonaSelector, setShowZonaSelector] = useState(false);
   const [selectedZona, setSelectedZona] = useState<string | undefined>(initialZona);
   const [showRawJson, setShowRawJson] = useState(false);
-  const [localData, setLocalData] = useState<any>(null);
+  const [localData, setLocalData] = useState<any>(initialLocalData || null);
   const [isEditing, setIsEditing] = useState(false);
   const [isModified, setIsModified] = useState(false);
   const [editValue, setEditValue] = useState('');
@@ -663,7 +669,9 @@ export function EA20Viewer({ ciclo, eleicaoCd, uf, cdMun, munNome, cargosDisponi
 
   // Load favorites from localStorage
   useEffect(() => {
-    const saved = localStorage.getItem(`fav_cand_${ciclo}_${eleicaoCd}`);
+    const key = (ciclo && eleicaoCd) ? `fav_cand_${ciclo}_${eleicaoCd}` : null;
+    if (!key) return;
+    const saved = localStorage.getItem(key);
     if (saved) {
       try { setFavorites(new Set(JSON.parse(saved))); } catch (e) { console.error(e); }
     }
@@ -679,8 +687,8 @@ export function EA20Viewer({ ciclo, eleicaoCd, uf, cdMun, munNome, cargosDisponi
 
   const { data: ea12Data } = useQuery({
     queryKey: ['ea12-data', ciclo, eleicaoCd, ambiente, host],
-    queryFn: () => fetchEA12(ciclo, eleicaoCd, ambiente, host),
-    enabled: !!eleicaoCd && !!ciclo,
+    queryFn: () => fetchEA12(ciclo!, eleicaoCd!, ambiente, host),
+    enabled: !!eleicaoCd && !!ciclo && !initialLocalData,
     staleTime: Infinity,
   });
 
@@ -695,8 +703,8 @@ export function EA20Viewer({ ciclo, eleicaoCd, uf, cdMun, munNome, cargosDisponi
 
   const { data: ea20Data, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ['ea20', ciclo, eleicaoCd, uf, cdMun, selectedCargo?.cd, selectedZona, ambiente, host],
-    queryFn: () => fetchEA20(ambiente, ciclo, eleicaoCd, uf, cdMun, selectedCargo.cd, selectedZona, host),
-    enabled: !!selectedCargo && !!cdMun,
+    queryFn: () => fetchEA20(ambiente, ciclo!, eleicaoCd!, uf!, cdMun!, selectedCargo!.cd, selectedZona, host),
+    enabled: !!selectedCargo && !!cdMun && !!ciclo && !initialLocalData,
     staleTime: 30000,
   });
 
@@ -879,7 +887,7 @@ export function EA20Viewer({ ciclo, eleicaoCd, uf, cdMun, munNome, cargosDisponi
               <div>
                 <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
                   <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                  Resultados (EA20) — {munNome} {selectedZona ? ` — Zona ${selectedZona}` : ''}
+                  Resultados (EA20) — {munNome || localData?.cdabr || 'Arquivo Local'} {selectedZona ? ` — Zona ${selectedZona}` : ''}
                 </h2>
                 {localData && (
                   <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
@@ -1210,7 +1218,20 @@ export function EA20Viewer({ ciclo, eleicaoCd, uf, cdMun, munNome, cargosDisponi
                         // ── Majority: cards sorted by votes ───────────────────
                         <div className="space-y-3">
                           {filteredAndSortedCandidates.map(({ cand, agr }) => (
-                            <CandCard key={cand.sqcand} cand={cand} agr={agr} totalVotos={totalVotos} ambiente={ambiente} ciclo={ciclo} eleicaoCd={eleicaoCd} uf={uf} isProportional={false} isFavorite={favorites.has(cand.sqcand)} onToggleFavorite={() => toggleFavorite(cand.sqcand)} host={host} />
+                            <CandCard 
+                              key={cand.sqcand} 
+                              cand={cand} 
+                              agr={agr} 
+                              totalVotos={totalVotos} 
+                              ambiente={ambiente} 
+                              ciclo={ciclo || ''} 
+                              eleicaoCd={eleicaoCd || localData?.ele || ''} 
+                              uf={uf || localData?.f || ''} 
+                              isProportional={false} 
+                              isFavorite={favorites.has(cand.sqcand)} 
+                              onToggleFavorite={() => toggleFavorite(cand.sqcand)} 
+                              host={host} 
+                            />
                           ))}
                         </div>
                       ) : (
@@ -1226,7 +1247,20 @@ export function EA20Viewer({ ciclo, eleicaoCd, uf, cdMun, munNome, cargosDisponi
                             </thead>
                             <tbody>
                               {filteredAndSortedCandidates.map(({ cand, agr }) => (
-                                <CandCard key={cand.sqcand} cand={cand} agr={agr} totalVotos={totalVotos} ambiente={ambiente} ciclo={ciclo} eleicaoCd={eleicaoCd} uf={uf} isProportional={true} isFavorite={favorites.has(cand.sqcand)} onToggleFavorite={() => toggleFavorite(cand.sqcand)} host={host} />
+                                <CandCard 
+                                  key={cand.sqcand} 
+                                  cand={cand} 
+                                  agr={agr} 
+                                  totalVotos={totalVotos} 
+                                  ambiente={ambiente} 
+                                  ciclo={ciclo || ''} 
+                                  eleicaoCd={eleicaoCd || localData?.ele || ''} 
+                                  uf={uf || localData?.f || ''} 
+                                  isProportional={true} 
+                                  isFavorite={favorites.has(cand.sqcand)} 
+                                  onToggleFavorite={() => toggleFavorite(cand.sqcand)} 
+                                  host={host} 
+                                />
                               ))}
                             </tbody>
                           </table>

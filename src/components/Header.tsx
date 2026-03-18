@@ -2,13 +2,33 @@ import { Link } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import { useEnvironment } from '../context/EnvironmentContext';
 import { SettingsModal } from './SettingsModal';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
+import type { EA20Response } from '../types/ea20';
 
 
-export function Header() {
+export function Header({ onLocalFileLoaded }: { onLocalFileLoaded: (data: EA20Response) => void }) {
   const { theme, toggleTheme } = useTheme();
   const { ambiente } = useEnvironment();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const json = JSON.parse(event.target?.result as string);
+        onLocalFileLoaded(json);
+        // Reset input
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      } catch (err) {
+        alert('Erro ao processar arquivo JSON: ' + (err instanceof Error ? err.message : 'Arquivo inválido'));
+      }
+    };
+    reader.readAsText(file);
+  };
 
   return (
     <>
@@ -34,6 +54,21 @@ export function Header() {
             >
               Download
             </Link>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="px-4 py-2 rounded bg-blue-800 dark:bg-slate-800 hover:bg-blue-900 dark:hover:bg-slate-700 transition flex items-center gap-2 border border-blue-400 dark:border-slate-600 shadow-inner"
+              title="Abrir e validar um arquivo EA20 local (.json)"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+              <span>Local EA20</span>
+            </button>
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileUpload}
+              accept=".json"
+              className="hidden"
+            />
           </nav>
 
           <div className="flex items-center gap-3">
