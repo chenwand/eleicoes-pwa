@@ -63,17 +63,24 @@ export interface EA20Secoes {
   pstn: string;
   snt: string;  // seções não totalizadas
   si: string;   // seções instaladas
+  sni: string;  // seções não instaladas
   sa: string;   // seções apuradas
+  sna: string;  // seções não apuradas
 }
 
 export interface EA20Eleitores {
   te: string;   // total eleitores
   est: string;  // eleitores em seções totalizadas
   pest: string;
+  esnt: string; // eleitores em seções não totalizadas
   c: string;    // comparecimento
   pc: string;   // % comparecimento
   a: string;    // abstenção
   pa: string;   // % abstenção
+  esi: string;  // eleitores em seções instaladas
+  esni: string; // eleitores em seções não instaladas
+  esa: string;  // eleitores em seções apuradas
+  esna: string; // eleitores em seções não apuradas
 }
 
 export interface EA20Votos {

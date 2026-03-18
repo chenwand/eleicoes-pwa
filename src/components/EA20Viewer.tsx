@@ -41,6 +41,331 @@ const renderHighlightedJson = (jsonObj: any) => {
   return <pre className="text-xs sm:text-sm text-gray-300 font-mono" dangerouslySetInnerHTML={{ __html: highlighted }} />;
 };
 
+function VoteVisualization({ v, isProportional }: { v: any, isProportional: boolean }) {
+  const [expanded, setExpanded] = useState(true);
+  const parseNum = (s: string) => parseInt(s || '0', 10);
+
+  const tv = parseNum(v.tv);
+  const vvc = parseNum(v.vvc);
+  const vv = parseNum(v.vv);
+  const vnom = parseNum(v.vnom);
+  const vl = parseNum(v.vl);
+  const vb = parseNum(v.vb);
+  const van = parseNum(v.van);
+  const vansj = parseNum(v.vansj);
+  const tvn = parseNum(v.tvn);
+
+  const getPct = (val: number) => tv > 0 ? (val / tv) * 100 : 0;
+  const parsePct = (val: string) => parseFloat((val || '0').replace(',', '.')) || 0;
+
+  const segments = [
+    { label: 'Válidos', val: vv, pct: getPct(vv), color: 'bg-blue-600', text: 'text-blue-600' },
+    { label: 'Anulados', val: van, pct: getPct(van), color: 'bg-yellow-500', text: 'text-yellow-600' },
+    { label: 'Sub Judice', val: vansj, pct: getPct(vansj), color: 'bg-red-600', text: 'text-red-600' },
+    { label: 'Brancos', val: vb, pct: getPct(vb), color: 'bg-gray-400', text: 'text-gray-500' },
+    { label: 'Nulos', val: tvn, pct: getPct(tvn), color: 'bg-gray-600', text: 'text-gray-700' },
+  ];
+
+  return (
+    <div className="bg-gray-50 dark:bg-slate-800/60 rounded-lg p-4 border border-gray-200 dark:border-slate-700 shadow-sm cursor-pointer" onClick={() => setExpanded(!expanded)}>
+      <div className="flex justify-between items-center mb-4">
+        <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Distribuição de Votos</div>
+        <svg className={`w-4 h-4 text-gray-400 transition-transform ${expanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
+      </div>
+
+      {/* Stake Bar Chart */}
+      <div className="w-full h-4 flex rounded-full overflow-hidden mb-2 bg-gray-200 dark:bg-slate-700 shadow-inner">
+        {segments.map((seg, i) => seg.pct > 0 && (
+          <div
+            key={i}
+            style={{ width: `${seg.pct}%` }}
+            className={`${seg.color} h-full transition-all hover:brightness-110 relative group`}
+            title={`${seg.label}: ${seg.pct.toFixed(2)}%`}
+          >
+            {seg.pct > 5 && (
+              <span className="absolute inset-0 flex items-center justify-center text-[8px] font-bold text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                {seg.pct.toFixed(0)}%
+              </span>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {expanded && (
+        <div className="mt-6 space-y-1.5 text-sm transition-all animate-fade-in" onClick={e => e.stopPropagation()}>
+          {/* Total */}
+          <div className="flex justify-between items-center font-bold text-gray-800 dark:text-slate-100">
+            <span>Total de Votos (tv)</span>
+            <span>{tv.toLocaleString('pt-BR')}</span>
+          </div>
+
+          {/* VVC Level */}
+          <div className="pl-4 border-l-2 border-gray-200 dark:border-slate-700 space-y-1.5 mt-1">
+            <div className="flex justify-between items-center font-semibold text-gray-700 dark:text-slate-300">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-gray-300"></span>
+                <span>Votos Válidos Conc. (vvc)</span>
+              </div>
+              <span className="flex items-center gap-1">
+                {vvc.toLocaleString('pt-BR')}
+                <span className="text-[10px] font-normal text-gray-400">({getPct(vvc).toFixed(1)}%)</span>
+                {Math.abs(getPct(vvc) - parsePct(v.pvvc)) > 0.1 && (
+                  <span className="text-[9px] text-yellow-600 dark:text-yellow-500" title={`Arquivo: ${v.pvvc}%`}>⚠️</span>
+                )}
+              </span>
+            </div>
+
+            {/* VV, VAN, VANSJ Level */}
+            <div className="pl-4 border-l-2 border-gray-100 dark:border-slate-800 space-y-1 mt-1">
+              <div className="flex justify-between items-center text-gray-600 dark:text-slate-400">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-blue-600"></span>
+                  <span>Válidos (vv)</span>
+                </div>
+                <span className="flex items-center gap-1">
+                  {vv.toLocaleString('pt-BR')}
+                </span>
+              </div>
+
+              {/* VNOM, VL (Proportional only) */}
+              {isProportional && (
+                <div className="pl-6 text-[11px] text-gray-500 dark:text-slate-500 space-y-0.5">
+                  <div className="flex justify-between items-center">
+                    <span>Nominais (vnom)</span>
+                    <span className="flex items-center gap-1">
+                      {vnom.toLocaleString('pt-BR')}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span>Legenda (vl)</span>
+                    <span className="flex items-center gap-1">
+                      {vl.toLocaleString('pt-BR')}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex justify-between items-center text-gray-600 dark:text-slate-400">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-yellow-500"></span>
+                  <span>Anulados (van)</span>
+                </div>
+                <span className="flex items-center gap-1">
+                  {van.toLocaleString('pt-BR')}
+                </span>
+              </div>
+              <div className="flex justify-between items-center text-gray-600 dark:text-slate-400">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-red-600"></span>
+                  <span>Anulados Sub Judice (vansj)</span>
+                </div>
+                <span className="flex items-center gap-1">
+                  {vansj.toLocaleString('pt-BR')}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* VB and TVN Level */}
+          <div className="pl-4 border-l-2 border-transparent space-y-1.5 mt-2">
+            <div className="flex justify-between items-center text-gray-600 dark:text-slate-400">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-gray-400"></span>
+                <span>Brancos (vb)</span>
+              </div>
+              <span className="flex items-center gap-1">
+                {vb.toLocaleString('pt-BR')}
+                <span className="text-[10px] text-gray-400">({getPct(vb).toFixed(1)}%)</span>
+                {Math.abs(getPct(vb) - parsePct(v.pvb)) > 0.1 && (
+                  <span className="text-[9px] text-yellow-600 dark:text-yellow-500" title={`Arquivo: ${v.pvb}%`}>⚠️</span>
+                )}
+              </span>
+            </div>
+            <div className="flex justify-between items-center text-gray-600 dark:text-slate-400">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-gray-600"></span>
+                <span>Nulos (tvn)</span>
+              </div>
+              <span className="flex items-center gap-1">
+                {tvn.toLocaleString('pt-BR')}
+                <span className="text-[10px] text-gray-400">({getPct(tvn).toFixed(1)}%)</span>
+                {Math.abs(getPct(tvn) - parsePct(v.ptvn)) > 0.1 && (
+                  <span className="text-[9px] text-yellow-600 dark:text-yellow-500" title={`Arquivo: ${v.ptvn}%`}>⚠️</span>
+                )}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SecoesSummary({ s }: { s: any }) {
+  const [expanded, setExpanded] = useState(false);
+  const parseNum = (val: string) => parseInt(val, 10) || 0;
+  const parsePct = (val: string) => parseFloat((val || '0').replace(',', '.')) || 0;
+
+  const ts = parseNum(s.ts);
+  const st = parseNum(s.st);
+  const snt = parseNum(s.snt);
+  const si = parseNum(s.si);
+  const sni = parseNum(s.sni);
+  const sa = parseNum(s.sa);
+  const sna = parseNum(s.sna);
+
+  return (
+    <div className="bg-gray-50 dark:bg-slate-800/60 rounded-lg p-3 border border-gray-200 dark:border-slate-700 cursor-pointer" onClick={() => setExpanded(!expanded)}>
+      <div className="flex justify-between items-center mb-2">
+        <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Seções</div>
+        <svg className={`w-3.5 h-3.5 text-gray-400 transition-transform ${expanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
+      </div>
+      <div className="flex justify-between text-sm mb-1">
+        <span className="text-gray-600 dark:text-gray-400 text-xs">Totalizadas</span>
+        <span className="font-semibold text-gray-800 dark:text-gray-200">{s.pst}%</span>
+      </div>
+      <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2 mb-1">
+        <div className="h-2 rounded-full bg-blue-600 transition-all" style={{ width: `${parsePct(s.pst)}%` }} />
+      </div>
+      <div className="text-[10px] text-gray-400 dark:text-gray-500">{st.toLocaleString('pt-BR')} de {ts.toLocaleString('pt-BR')}</div>
+
+      {expanded && (
+        <div className="mt-4 space-y-2 text-xs border-t border-gray-100 dark:border-slate-700 pt-3 animate-fade-in" onClick={e => e.stopPropagation()}>
+          <div className="space-y-1">
+            <div className="flex justify-between font-medium text-gray-700 dark:text-gray-300">
+              <span>Total de Seções (ts)</span>
+              <span>{ts.toLocaleString('pt-BR')}</span>
+            </div>
+            <div className="pl-4 border-l border-gray-200 dark:border-slate-700 space-y-1">
+              <div className="flex justify-between text-gray-700 dark:text-gray-300 font-medium">
+                <span>Totalizadas (st)</span>
+                <span className="flex items-center gap-1">
+                  {st.toLocaleString('pt-BR')}
+                  <span className="text-[10px] font-normal text-gray-400">
+                    ({(ts > 0 ? (st / ts) * 100 : 0).toFixed(1)}%)
+                  </span>
+                  {Math.abs((ts > 0 ? (st / ts) * 100 : 0) - parsePct(s.pst)) > 0.1 && (
+                    <span className="text-[9px] text-yellow-600 dark:text-yellow-500" title={`Arquivo: ${s.pst}%`}>⚠️</span>
+                  )}
+                </span>
+              </div>
+              <div className="pl-4 border-l border-gray-100 dark:border-slate-800 space-y-1">
+                <div className="flex justify-between text-gray-600 dark:text-gray-400 font-medium">
+                  <span>Instaladas (si)</span>
+                  <span>{si.toLocaleString('pt-BR')} <span className="text-[10px] font-normal text-gray-400">({(st > 0 ? (si / st) * 100 : 0).toFixed(1)}%)</span></span>
+                </div>
+                <div className="pl-4 border-l border-gray-50 dark:border-slate-900 space-y-1">
+                  <div className="flex justify-between text-gray-500">
+                    <span>Apuradas (sa)</span>
+                    <span>{sa.toLocaleString('pt-BR')} <span className="text-[10px] text-gray-400">({(si > 0 ? (sa / si) * 100 : 0).toFixed(1)}%)</span></span>
+                  </div>
+                  <div className="flex justify-between text-gray-500">
+                    <span>Não Apuradas (sna)</span>
+                    <span>{sna.toLocaleString('pt-BR')} <span className="text-[10px] text-gray-400">({(si > 0 ? (sna / si) * 100 : 0).toFixed(1)}%)</span></span>
+                  </div>
+                </div>
+                <div className="flex justify-between text-gray-500">
+                  <span>Não Instaladas (sni)</span>
+                  <span>{sni.toLocaleString('pt-BR')} <span className="text-[10px] text-gray-400">({(st > 0 ? (sni / st) * 100 : 0).toFixed(1)}%)</span></span>
+                </div>
+              </div>
+              <div className="flex justify-between text-gray-500">
+                <span>Não Totalizadas (snt)</span>
+                <span>{snt.toLocaleString('pt-BR')} <span className="text-[10px] text-gray-400">({(ts > 0 ? (snt / ts) * 100 : 0).toFixed(1)}%)</span></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function EleitoresSummary({ e }: { e: any }) {
+  const [expanded, setExpanded] = useState(false);
+  const parseNum = (val: string) => parseInt(val, 10) || 0;
+  const parsePct = (val: string) => parseFloat((val || '0').replace(',', '.')) || 0;
+
+  const te = parseNum(e.te);
+  const est = parseNum(e.est);
+  const esnt = parseNum(e.esnt);
+  const c = parseNum(e.c);
+  // a is not used in the detail view as per user request
+  const esi = parseNum(e.esi);
+  const esni = parseNum(e.esni);
+  const esa = parseNum(e.esa);
+  const esna = parseNum(e.esna);
+
+  return (
+    <div className="bg-gray-50 dark:bg-slate-800/60 rounded-lg p-3 border border-gray-200 dark:border-slate-700 cursor-pointer" onClick={() => setExpanded(!expanded)}>
+      <div className="flex justify-between items-center mb-2">
+        <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Eleitores</div>
+        <svg className={`w-3.5 h-3.5 text-gray-400 transition-transform ${expanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
+      </div>
+      <div className="flex justify-between text-sm mb-1">
+        <span className="text-gray-600 dark:text-gray-400 text-xs">Comparecimento</span>
+        <span className="font-semibold text-gray-800 dark:text-gray-200">{e.pc}%</span>
+      </div>
+      <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2 mb-1">
+        <div className="h-2 rounded-full bg-green-500 transition-all" style={{ width: `${parsePct(e.pc)}%` }} />
+      </div>
+      <div className="text-[10px] text-gray-400 dark:text-gray-500">
+        {c.toLocaleString('pt-BR')} de {est.toLocaleString('pt-BR')}
+      </div>
+
+      {expanded && (
+        <div className="mt-4 space-y-2 text-xs border-t border-gray-100 dark:border-slate-700 pt-3 animate-fade-in" onClick={evt => evt.stopPropagation()}>
+          <div className="flex justify-between font-medium text-gray-700 dark:text-gray-300">
+            <span>Total de Eleitores (te)</span>
+            <span>{te.toLocaleString('pt-BR')}</span>
+          </div>
+
+          <div className="space-y-1">
+            <div className="flex justify-between font-medium text-gray-700 dark:text-gray-300">
+              <span>Em seções totalizadas (est)</span>
+              <span className="flex items-center gap-1">
+                {est.toLocaleString('pt-BR')}
+                <span className="text-[10px] font-normal text-gray-400">
+                  ({(te > 0 ? (est / te) * 100 : 0).toFixed(1)}%)
+                </span>
+                {Math.abs((te > 0 ? (est / te) * 100 : 0) - parsePct(e.pest)) > 0.1 && (
+                  <span className="text-[9px] text-yellow-600 dark:text-yellow-500" title={`Arquivo: ${e.pest}%`}>⚠️</span>
+                )}
+              </span>
+            </div>
+            <div className="pl-4 border-l border-gray-200 dark:border-slate-700 space-y-1">
+              <div className="flex justify-between text-gray-700 dark:text-gray-300 font-medium">
+                <span>Em seções instaladas (esi)</span>
+                <span>{esi.toLocaleString('pt-BR')} <span className="text-[10px] font-normal text-gray-400">({(est > 0 ? (esi / est) * 100 : 0).toFixed(1)}%)</span></span>
+              </div>
+              <div className="pl-4 border-l border-gray-100 dark:border-slate-800 space-y-1">
+                <div className="flex justify-between text-gray-600 dark:text-gray-400 font-medium">
+                  <span>Em seções apuradas (esa)</span>
+                  <span>{esa.toLocaleString('pt-BR')} <span className="text-[10px] font-normal text-gray-400">({(esi > 0 ? (esa / esi) * 100 : 0).toFixed(1)}%)</span></span>
+                </div>
+                {/* c and a are intentionally omitted here as they are in the card header bar */}
+                <div className="flex justify-between text-gray-500">
+                  <span>Em seções não apuradas (esna)</span>
+                  <span>{esna.toLocaleString('pt-BR')} <span className="text-[10px] text-gray-400">({(esi > 0 ? (esna / esi) * 100 : 0).toFixed(1)}%)</span></span>
+                </div>
+              </div>
+              <div className="flex justify-between text-gray-500">
+                <span>Em seções não instaladas (esni)</span>
+                <span>{esni.toLocaleString('pt-BR')} <span className="text-[10px] text-gray-400">({(est > 0 ? (esni / est) * 100 : 0).toFixed(1)}%)</span></span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-between text-gray-500">
+            <span>Em seções não totalizadas (esnt)</span>
+            <span>{esnt.toLocaleString('pt-BR')} <span className="text-[10px] text-gray-400">({(te > 0 ? (esnt / te) * 100 : 0).toFixed(1)}%)</span></span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── PropTypes ─────────────────────────────────────────────────────────────────
 
 interface EA20ViewerProps {
@@ -597,58 +922,12 @@ export function EA20Viewer({ ciclo, eleicaoCd, uf, cdMun, munNome, cargosDisponi
 
                   {/* Section + Elector summary */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="bg-gray-50 dark:bg-slate-800/60 rounded-lg p-3 border border-gray-200 dark:border-slate-700">
-                      <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wide">Seções</div>
-                      <div className="flex justify-between text-sm mb-1">
-                        <span className="text-gray-600 dark:text-gray-400">Totalizadas</span>
-                        <span className="font-semibold text-gray-800 dark:text-gray-200">{localData.s.pst}%</span>
-                      </div>
-                      <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2 mb-1">
-                        <div className="h-2 rounded-full bg-blue-600 transition-all" style={{ width: `${parsePct(localData.s.pst)}%` }} />
-                      </div>
-                      <div className="text-xs text-gray-400 dark:text-gray-500">{parseNum(localData.s.st).toLocaleString('pt-BR')} de {parseNum(localData.s.ts).toLocaleString('pt-BR')}</div>
-                    </div>
-                    <div className="bg-gray-50 dark:bg-slate-800/60 rounded-lg p-3 border border-gray-200 dark:border-slate-700">
-                      <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wide">Eleitores</div>
-                      <div className="flex justify-between text-sm mb-1">
-                        <span className="text-gray-600 dark:text-gray-400">Comparecimento</span>
-                        <span className="font-semibold text-gray-800 dark:text-gray-200">{localData.e.pc}%</span>
-                      </div>
-                      <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2 mb-1">
-                        <div className="h-2 rounded-full bg-green-500 transition-all" style={{ width: `${parsePct(localData.e.pc)}%` }} />
-                      </div>
-                      <div className="text-xs text-gray-400 dark:text-gray-500">
-                        {parseNum(localData.e.c).toLocaleString('pt-BR')} comparecimentos · {parseNum(localData.e.a).toLocaleString('pt-BR')} abstenções
-                      </div>
-                    </div>
+                    <SecoesSummary s={localData.s} />
+                    <EleitoresSummary e={localData.e} />
                   </div>
 
                   {/* Votes breakdown */}
-                  <div className="bg-gray-50 dark:bg-slate-800/60 rounded-lg p-3 border border-gray-200 dark:border-slate-700">
-                    <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wide">Distribuição de Votos</div>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2 text-center">
-                      {[
-                        { label: 'Total (tv)', val: localData.v.tv, pct: '100', color: 'text-gray-800 dark:text-gray-100 font-bold' },
-                        { label: 'Vál. Conc. (vvc)', val: localData.v.vvc, pct: localData.v.pvvc, color: 'text-green-700 dark:text-green-300' },
-                        { label: 'Válidos (vv)', val: localData.v.vv, pct: localData.v.pvv, color: 'text-green-600 dark:text-green-400' },
-                        { label: 'Nominais (vnom)', val: localData.v.vnom, pct: localData.v.pvnom, color: 'text-blue-600 dark:text-blue-400' },
-                        { label: 'Legenda (vl)', val: localData.v.vl, pct: localData.v.pvl, color: 'text-blue-500 dark:text-blue-400' },
-                        { label: 'Brancos (vb)', val: localData.v.vb, pct: localData.v.pvb, color: 'text-gray-500 dark:text-gray-400' },
-                        { label: 'Anulados (van)', val: localData.v.van, pct: localData.v.pvan, color: 'text-orange-600 dark:text-orange-400' },
-                        { label: 'Anul. SJ (vansj)', val: localData.v.vansj, pct: localData.v.pvansj, color: 'text-purple-600 dark:text-purple-400' },
-                        { label: 'Total Nulos (tvn)', val: localData.v.tvn, pct: localData.v.ptvn, color: 'text-red-600 dark:text-red-400' },
-                        { label: 'Nulos (vn)', val: localData.v.vn, pct: localData.v.pvn, color: 'text-red-500 dark:text-red-450' },
-                        { label: 'Nulos Técn. (vnt)', val: localData.v.vnt, pct: localData.v.pvnt, color: 'text-red-400 dark:text-red-500' },
-                        { label: 'Sem Cand. (vscv)', val: localData.v.vscv, pct: '-', color: 'text-gray-400 dark:text-gray-600' },
-                      ].map(({ label, val, pct, color }) => (
-                        <div key={label} className="bg-white dark:bg-slate-900 rounded p-2 border border-gray-100 dark:border-slate-700 shadow-sm flex flex-col justify-center">
-                          <div className={`text-xs font-bold ${color}`}>{parseInt(val || '0', 10).toLocaleString('pt-BR')}</div>
-                          <div className="text-[10px] text-gray-400 dark:text-gray-500">{pct}%</div>
-                          <div className="text-[9px] text-gray-500 dark:text-gray-400 font-medium leading-tight">{label}</div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+                  <VoteVisualization v={localData.v} isProportional={!isMajority} />
 
                   {/* Search Bar */}
                   <div className="relative">
