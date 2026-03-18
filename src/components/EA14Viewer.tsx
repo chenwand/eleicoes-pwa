@@ -174,19 +174,24 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose, relatedElei
           )}
         </div>
 
-        {selectedEA15Uf ? (
-          <div className="flex-1 bg-gray-50 dark:bg-slate-900/50">
-            <EA15Viewer
-              ciclo={ciclo}
-              eleicaoCd={eleicaoCd}
-              uf={selectedEA15Uf}
-              onBack={() => setSelectedEA15Uf(null)}
-              relatedEleicaoCd={relatedEleicaoCd}
-              relatedEleicaoTurno={relatedEleicaoTurno}
-              onChangeEleicao={onChangeEleicao}
-            />
-          </div>
-        ) : (
+        {selectedEA15Uf && data ? (() => {
+          const ufEntry = data.abr.find((a: any) => a.cdabr === selectedEA15Uf.toLowerCase());
+          return (
+            <div className="flex-1 bg-gray-50 dark:bg-slate-900/50">
+              <EA15Viewer
+                ciclo={ciclo}
+                eleicaoCd={eleicaoCd}
+                uf={selectedEA15Uf}
+                onBack={() => setSelectedEA15Uf(null)}
+                relatedEleicaoCd={relatedEleicaoCd}
+                relatedEleicaoTurno={relatedEleicaoTurno}
+                onChangeEleicao={onChangeEleicao}
+                ea14dg={ufEntry?.dt}
+                ea14hg={ufEntry?.ht}
+              />
+            </div>
+          );
+        })() : (
           <div className="p-4 flex-1">
             {isLoading ? (
               <div className="flex flex-col items-center justify-center h-48 space-y-4">

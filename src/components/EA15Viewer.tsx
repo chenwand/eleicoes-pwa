@@ -31,9 +31,11 @@ interface EA15ViewerProps {
   relatedEleicaoCd?: string;
   relatedEleicaoTurno?: '1' | '2';
   onChangeEleicao?: (cd: string) => void;
+  ea14dg?: string;
+  ea14hg?: string;
 }
 
-export function EA15Viewer({ ciclo, eleicaoCd, uf, onBack, relatedEleicaoCd, relatedEleicaoTurno, onChangeEleicao }: EA15ViewerProps) {
+export function EA15Viewer({ ciclo, eleicaoCd, uf, onBack, relatedEleicaoCd, relatedEleicaoTurno, onChangeEleicao, ea14dg, ea14hg }: EA15ViewerProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [showRawJson, setShowRawJson] = useState(false);
   const [expandedMun, setExpandedMun] = useState<string | null>(null);
@@ -186,6 +188,22 @@ export function EA15Viewer({ ciclo, eleicaoCd, uf, onBack, relatedEleicaoCd, rel
     return ea15Data.abr.find(a => a.cdabr === uf.toLowerCase() || a.tpabr === 'uf') || null;
   }, [ea15Data, uf]);
 
+  // Check if EA15 is outdated compared to EA14
+  const isEA15Outdated = useMemo(() => {
+    if (!ea15Data || !ea14dg || !ea14hg) return false;
+
+    const parseTimestamp = (dg: string, hg: string) => {
+      const [d, m, y] = dg.split('/').map(Number);
+      const [h, min, s] = hg.split(':').map(Number);
+      return new Date(y, m - 1, d, h, min, s).getTime();
+    };
+
+    const ea15Ts = parseTimestamp(ea15Data.dg, ea15Data.hg);
+    const ea14Ts = parseTimestamp(ea14dg, ea14hg);
+
+    return ea15Ts < ea14Ts;
+  }, [ea15Data, ea14dg, ea14hg]);
+
 
   if (isEA15Loading || isEA12Loading) {
     return (
@@ -269,17 +287,25 @@ export function EA15Viewer({ ciclo, eleicaoCd, uf, onBack, relatedEleicaoCd, rel
           const paddedCd = eleicaoCd.padStart(6, '0');
           const jsonUrl = `https://resultados.tse.jus.br/${ambiente}/${ciclo}/${eleicaoCd}/dados/${ufLower}/${ufLower}-e${paddedCd}-ab.json`;
           return (
-            <div className="text-xs text-gray-400 dark:text-gray-500 text-right -mt-2 mb-3">
-              Arquivo gerado em:{' '}
-              <a
-                href={jsonUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="font-mono hover:text-blue-500 dark:hover:text-blue-400 underline underline-offset-2 transition-colors"
-                title="Abrir / baixar JSON EA15"
-              >
-                {ea15Data.dg} {ea15Data.hg} ↓
-              </a>
+            <div className="flex flex-col items-end -mt-2 mb-3">
+              <div className="text-xs text-gray-400 dark:text-gray-500 text-right">
+                Arquivo gerado em:{' '}
+                <a
+                  href={jsonUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="font-mono hover:text-blue-500 dark:hover:text-blue-400 underline underline-offset-2 transition-colors"
+                  title="Abrir / baixar JSON EA15"
+                >
+                  {ea15Data.dg} {ea15Data.hg} ↓
+                </a>
+              </div>
+              {isEA15Outdated && (
+                <div className="mt-1 flex items-center gap-1.5 px-2 py-0.5 text-[10px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 rounded border border-amber-200 dark:border-amber-800 animate-pulse">
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                  Arquivo desatualizado (UF no EA14 em {ea14hg} &gt; EA15 em {ea15Data.hg})
+                </div>
+              )}
             </div>
           );
         })()}
