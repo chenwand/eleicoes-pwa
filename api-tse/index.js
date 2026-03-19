@@ -1,4 +1,3 @@
-// api/tse.js - DEBUG FINAL
 export default async function handler(req, res) {
   if (req.method === 'OPTIONS') {
     res.setHeader('Access-Control-Allow-Origin', '*');
