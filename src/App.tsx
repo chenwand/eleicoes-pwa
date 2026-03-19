@@ -59,6 +59,7 @@ export function AppContent({ onLocalFileLoaded, localFile, setLocalFile, turno }
           ciclo={ciclo} 
           eleicaoCd={selectedEleicao.cd} 
           eleicaoNome={selectedEleicao.nm.replace(/&#186;/g, 'º')} 
+          cargosDisponiveis={selectedEleicao.abr?.flatMap(a => a.cp || []).map(cp => ({ cd: cp.cd, nm: cp.ds })) || []}
           onClose={() => setOpenEA14(false)} 
         />
       )}
@@ -67,6 +68,7 @@ export function AppContent({ onLocalFileLoaded, localFile, setLocalFile, turno }
           ciclo={ciclo} 
           eleicaoCd={selectedEleicao.cd} 
           uf={selectedAbrangencia.ufCd} 
+          cargosDisponiveis={selectedEleicao.abr?.flatMap(a => a.cp || []).map(cp => ({ cd: cp.cd, nm: cp.ds })) || []}
           onBack={() => setOpenEA15(false)} 
         />
       )}
