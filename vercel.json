@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/tse/:path*",
-      "destination": "/api/tse"
+      "destination": "/api-tse"
     }
   ]
 }
