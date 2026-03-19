@@ -1,4 +1,4 @@
-// api/cors.js
+// api/tse.js
 export default async function handler(req, res) {
   try {
     const url = new URL(req.url, `http://${req.headers.host}`);
