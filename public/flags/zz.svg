@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800" role="img" aria-label="Bandeira branca com globo estilizado no centro">
+  <defs>
+    <radialGradient id="globeFill" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#f8f8f8"/>
+      <stop offset="100%" stop-color="#d9d9d9"/>
+    </radialGradient>
+    <radialGradient id="shadow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#000" stop-opacity="0.22"/>
+      <stop offset="100%" stop-color="#000" stop-opacity="0"/>
+    </radialGradient>
+    <clipPath id="globeClip">
+      <circle cx="600" cy="400" r="180"/>
+    </clipPath>
+  </defs>
+
+  <rect width="1200" height="800" fill="#ffffff"/>
+  <ellipse cx="600" cy="610" rx="150" ry="26" fill="url(#shadow)"/>
+
+  <circle cx="600" cy="400" r="180" fill="url(#globeFill)" stroke="#111" stroke-width="3"/>
+
+  <g clip-path="url(#globeClip)" fill="none" stroke="#222" stroke-width="2.2" opacity="0.95">
+    <ellipse cx="600" cy="400" rx="45" ry="180"/>
+    <ellipse cx="600" cy="400" rx="90" ry="180"/>
+    <ellipse cx="600" cy="400" rx="135" ry="180"/>
+    <ellipse cx="600" cy="400" rx="175" ry="180"/>
+
+    <ellipse cx="600" cy="400" rx="180" ry="45"/>
+    <ellipse cx="600" cy="400" rx="180" ry="90"/>
+    <ellipse cx="600" cy="400" rx="180" ry="135"/>
+    <line x1="420" y1="400" x2="780" y2="400"/>
+  </g>
+
+  <g clip-path="url(#globeClip)" fill="#0a0a0a">
+    <path d="M518 243
+             C492 250, 475 271, 473 296
+             C465 303, 462 315, 467 326
+             C458 338, 459 352, 471 364
+             C485 377, 492 394, 496 411
+             C507 408, 518 399, 519 385
+             C523 373, 535 367, 546 363
+             C553 352, 550 342, 542 334
+             C549 323, 548 312, 540 302
+             C534 292, 527 280, 528 268
+             C527 258, 525 249, 518 243 Z"/>
+
+    <path d="M637 226
+             C651 221, 667 226, 674 238
+             C671 248, 662 257, 650 260
+             C639 256, 634 244, 637 226 Z"/>
+
+    <path d="M531 420
+             C542 421, 551 426, 555 434
+             C550 441, 541 444, 533 442
+             C527 436, 526 428, 531 420 Z"/>
+
+    <path d="M567 454
+             C589 463, 606 482, 609 506
+             C613 531, 604 556, 590 577
+             C579 594, 572 612, 575 629
+             C564 628, 555 621, 552 611
+             C554 594, 548 578, 537 566
+             C530 553, 530 539, 535 526
+             C541 513, 545 499, 545 486
+             C551 474, 557 463, 567 454 Z"/>
+
+    <path d="M738 287
+             C750 284, 761 291, 765 302
+             C760 311, 751 316, 742 314
+             C734 307, 733 296, 738 287 Z
+             M744 325
+             C758 328, 769 339, 770 353
+             C763 364, 754 373, 748 384
+             C744 395, 745 408, 750 420
+             C744 433, 733 445, 720 451
+             C713 442, 713 431, 716 420
+             C713 407, 707 394, 705 381
+             C709 359, 722 339, 744 325 Z"/>
+  </g>
+</svg>

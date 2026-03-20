@@ -5,6 +5,7 @@ import { useMemo, useState, useEffect } from 'react';
 import { useEnvironment } from '../context/EnvironmentContext';
 import { validateEA15, getEA15ErrorsForAbr } from '../services/ea15Validator';
 import { EA20Viewer } from './EA20Viewer';
+import { TrendIndicator } from './TrendIndicator';
 
 const renderHighlightedJson = (jsonObj: any) => {
   const json = JSON.stringify(jsonObj, null, 2).replace(/[&<>]/g, (c) => {
@@ -52,6 +53,8 @@ export function EA15Viewer({ ciclo, eleicaoCd, uf, onBack, relatedEleicaoCd, rel
   const [isModified, setIsModified] = useState(false);
   const [editValue, setEditValue] = useState("");
   const [ea20Mun, setEa20Mun] = useState<{ cdabr: string; nome: string } | null>(null);
+  const [previousData, setPreviousData] = useState<any>(null);
+  const [isUfExpanded, setIsUfExpanded] = useState(false);
 
   const handleBack = () => {
     setIsClosing(true);
@@ -89,6 +92,9 @@ export function EA15Viewer({ ciclo, eleicaoCd, uf, onBack, relatedEleicaoCd, rel
 
   useEffect(() => {
     if (ea15Data) {
+      if (localData && localData !== ea15Data) {
+        setPreviousData(localData);
+      }
       setLocalData(ea15Data);
       setIsModified(false);
     }
@@ -290,6 +296,7 @@ export function EA15Viewer({ ciclo, eleicaoCd, uf, onBack, relatedEleicaoCd, rel
               onClick={() => {
                 refetchEA15().then((result) => {
                   if (result.data) {
+                    setPreviousData(localData);
                     setLocalData(result.data);
                     setIsModified(false);
                     setIsEditing(false);
@@ -372,7 +379,10 @@ export function EA15Viewer({ ciclo, eleicaoCd, uf, onBack, relatedEleicaoCd, rel
           };
 
           return (
-            <div className={`mb-4 border-l-4 rounded p-4 shadow-sm flex flex-col md:flex-row gap-6 ${isDone ? 'bg-green-50 dark:bg-green-900/10 border-green-500' : 'bg-blue-50 dark:bg-blue-900/20 border-blue-500'}`}>
+            <div 
+              onClick={() => setIsUfExpanded(!isUfExpanded)}
+              className={`mb-4 border-l-4 rounded p-4 shadow-sm flex flex-col md:flex-row gap-6 cursor-pointer hover:shadow-md transition-all ${isDone ? 'bg-green-50 dark:bg-green-900/10 border-green-500' : 'bg-blue-50 dark:bg-blue-900/20 border-blue-500'}`}
+            >
               <div className="flex-1 flex flex-col justify-center">
                 <div className="flex justify-between items-center mb-2">
                   <h3 className="font-bold text-gray-800 dark:text-gray-200 uppercase flex items-center gap-2">
@@ -386,7 +396,13 @@ export function EA15Viewer({ ciclo, eleicaoCd, uf, onBack, relatedEleicaoCd, rel
                 <div className="mt-3">
                   <div className="flex justify-between text-sm mb-1">
                     <span className="text-gray-600 dark:text-gray-400">Seções Totalizadas</span>
-                    <span className="font-semibold text-gray-800 dark:text-gray-200">{ufStats.s.pst}%</span>
+                    <span className="font-semibold text-gray-800 dark:text-gray-200 flex items-center">
+                      {ufStats.s.pst}%
+                      <TrendIndicator 
+                        current={ufStats.s.pst} 
+                        previous={previousData?.abr?.find((a: any) => a.cdabr === uf.toLowerCase())?.s?.pst} 
+                      />
+                    </span>
                   </div>
                   <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2.5">
                     <div className={`h-2.5 rounded-full ${isDone ? 'bg-green-500' : 'bg-blue-600'}`} style={{ width: `${parseFloat(ufStats.s.pst.replace(',', '.'))}%` }}></div>
@@ -394,6 +410,41 @@ export function EA15Viewer({ ciclo, eleicaoCd, uf, onBack, relatedEleicaoCd, rel
                   <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-1">
                     <span>{parseInt(ufStats.s.st).toLocaleString('pt-BR')} de {parseInt(ufStats.s.ts).toLocaleString('pt-BR')} seções</span>
                   </div>
+
+                  {isUfExpanded && (
+                    <div className="mt-4 pt-3 border-t border-gray-200 dark:border-slate-700 space-y-2 text-sm text-gray-600 dark:text-gray-400">
+                      <div className="flex justify-between">
+                        <span>Eleitores:</span>
+                        <span className="font-medium text-gray-700 dark:text-gray-300">{parseInt(ufStats.e.te).toLocaleString('pt-BR')}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Comparecimento:</span>
+                        <span className="font-medium text-blue-600 dark:text-blue-400 flex items-center">
+                          {parseInt(ufStats.e.c).toLocaleString('pt-BR')} ({ufStats.e.pc}%)
+                          <TrendIndicator 
+                            current={ufStats.e.pc} 
+                            previous={previousData?.abr?.find((a: any) => a.cdabr === uf.toLowerCase())?.e?.pc} 
+                          />
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Abstenção:</span>
+                        <span className="font-medium text-gray-500 flex items-center">
+                          {parseInt(ufStats.e.a).toLocaleString('pt-BR')} ({ufStats.e.pa}%)
+                          <TrendIndicator 
+                            current={ufStats.e.pa} 
+                            previous={previousData?.abr?.find((a: any) => a.cdabr === uf.toLowerCase())?.e?.pa} 
+                          />
+                        </span>
+                      </div>
+                      <div className="border-t border-gray-100 dark:border-slate-800 pt-2 mt-2">
+                        <div className="flex justify-between">
+                          <span>Não totalizadas:</span>
+                          <span className="font-medium">{parseInt(ufStats.s.snt).toLocaleString('pt-BR')}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {(() => {
@@ -533,6 +584,7 @@ export function EA15Viewer({ ciclo, eleicaoCd, uf, onBack, relatedEleicaoCd, rel
                       onClick={() => {
                         try {
                           const parsed = JSON.parse(editValue);
+                          setPreviousData(localData);
                           setLocalData(parsed);
                           setIsModified(true);
                           setIsEditing(false);
@@ -656,8 +708,12 @@ export function EA15Viewer({ ciclo, eleicaoCd, uf, onBack, relatedEleicaoCd, rel
                             </svg>
                           </button>
                         )}
-                        <span className={`font-mono font-bold text-xs ${pctColor}`}>
+                        <span className={`font-mono font-bold text-xs flex items-center ${pctColor}`}>
                           {mun.s.pst}%
+                          <TrendIndicator 
+                            current={mun.s.pst} 
+                            previous={previousData?.abr?.find((a: any) => a.cdabr === mun.cdabr)?.s?.pst} 
+                          />
                         </span>
                       </div>
                     </div>
@@ -668,7 +724,13 @@ export function EA15Viewer({ ciclo, eleicaoCd, uf, onBack, relatedEleicaoCd, rel
 
                     <div className="flex justify-between items-center text-xs text-gray-500 dark:text-gray-400">
                       <span>Eleitores: <strong className="text-gray-700 dark:text-gray-300">{parseInt(mun.e.te).toLocaleString('pt-BR')}</strong></span>
-                      <span>Comp: <strong className="text-blue-600 dark:text-blue-400">{mun.e.pc}%</strong></span>
+                      <span className="flex items-center">
+                        Comp: <strong className="text-blue-600 dark:text-blue-400">{mun.e.pc}%</strong>
+                        <TrendIndicator 
+                          current={mun.e.pc} 
+                          previous={previousData?.abr?.find((a: any) => a.cdabr === mun.cdabr)?.e?.pc} 
+                        />
+                      </span>
                     </div>
 
                     {hasErrors && (
@@ -707,11 +769,23 @@ export function EA15Viewer({ ciclo, eleicaoCd, uf, onBack, relatedEleicaoCd, rel
                           </div>
                           <div className="flex justify-between">
                             <span>Comparecimento:</span>
-                            <span className="font-medium text-blue-600 dark:text-blue-400">{parseInt(mun.e.c).toLocaleString('pt-BR')} ({mun.e.pc}%)</span>
+                            <span className="font-medium text-blue-600 dark:text-blue-400 flex items-center">
+                              {parseInt(mun.e.c).toLocaleString('pt-BR')} ({mun.e.pc}%)
+                              <TrendIndicator 
+                                current={mun.e.pc} 
+                                previous={previousData?.abr?.find((a: any) => a.cdabr === mun.cdabr)?.e?.pc} 
+                              />
+                            </span>
                           </div>
                           <div className="flex justify-between">
                             <span>Abstenção:</span>
-                            <span className="font-medium text-gray-500">{parseInt(mun.e.a).toLocaleString('pt-BR')} ({mun.e.pa}%)</span>
+                            <span className="font-medium text-gray-500 flex items-center">
+                              {parseInt(mun.e.a).toLocaleString('pt-BR')} ({mun.e.pa}%)
+                              <TrendIndicator 
+                                current={mun.e.pa} 
+                                previous={previousData?.abr?.find((a: any) => a.cdabr === mun.cdabr)?.e?.pa} 
+                              />
+                            </span>
                           </div>
                         </div>
                         <div className="border-t border-gray-100 dark:border-slate-700 pt-1.5">
