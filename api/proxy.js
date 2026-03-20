@@ -1,44 +1,43 @@
 export default async function handler(req, res) {
-  // O Vercel passa a URL original no req.url quando usamos um rewrite
-  // Ex: /tse-api/oficial/comum/config/ele-c.json
-  const path = req.url.replace('/tse-api/', '');
+  // Reconstruct the target URL
+  const path = req.url.split('/tse-api/')[1] || '';
   const url = `https://resultados.tse.jus.br/${path}`;
-
-  console.log(`[Proxy] Forwarding to: ${url}`);
 
   try {
     const response = await fetch(url, {
+      method: req.method,
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
         'Accept': 'application/json, text/plain, */*',
-        'Referer': 'https://resultados.tse.jus.br/'
+        'Accept-Language': 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
+        'Origin': 'https://resultados.tse.jus.br',
+        'Referer': 'https://resultados.tse.jus.br/',
+        'Sec-Fetch-Dest': 'empty',
+        'Sec-Fetch-Mode': 'cors',
+        'Sec-Fetch-Site': 'same-origin',
       }
     });
 
     const contentType = response.headers.get('content-type');
-    res.setHeader('Content-Type', contentType || 'application/json');
+    
+    // Copy relevant headers back
+    if (contentType) res.setHeader('Content-Type', contentType);
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
     
     if (!response.ok) {
-      console.error(`[Proxy] Error from TSE: ${response.status}`);
-      return res.status(response.status).send(await response.text());
+        const errorText = await response.text();
+        console.error(`Status: ${response.status}, Body: ${errorText.substring(0, 100)}`);
+        return res.status(response.status).send(errorText);
     }
 
-    // Para JSON, enviamos como JSON. Para outros (fotos/icones), enviamos como buffer/stream se necessário.
-    if (contentType && (contentType.includes('application/json') || contentType.includes('text/plain'))) {
-      const data = await response.text();
-      try {
-        res.status(200).json(JSON.parse(data));
-      } catch {
-        res.status(200).send(data);
-      }
-    } else {
-      const buffer = await response.arrayBuffer();
-      res.status(200).send(Buffer.from(buffer));
-    }
+    const data = await response.arrayBuffer();
+    res.status(200).send(Buffer.from(data));
+
   } catch (error) {
-    console.error(`[Proxy] Fatal Error: ${error.message}`);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ 
+      error: 'Proxy Error', 
+      message: error.message,
+      target: url 
+    });
   }
 }
