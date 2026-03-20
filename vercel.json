@@ -1,8 +1,0 @@
-{
-  "rewrites": [
-    {
-      "source": "/tse/:path*",
-      "destination": "/api-tse"
-    }
-  ]
-}
