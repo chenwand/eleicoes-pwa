@@ -6,6 +6,7 @@ import { useEffect, useRef, useMemo, useState } from 'react';
 import { EA15Viewer } from './EA15Viewer';
 import { useEnvironment } from '../context/EnvironmentContext';
 import { TrendIndicator } from './TrendIndicator';
+import { UF_TO_REGION, REGIONS, calculateRegionTotals } from '../utils/electionUtils';
 
 const renderHighlightedJson = (jsonObj: any) => {
   const json = JSON.stringify(jsonObj, null, 2).replace(/[&<>]/g, (c) => {
@@ -36,24 +37,6 @@ const renderHighlightedJson = (jsonObj: any) => {
   );
 };
 
-const UF_TO_REGION: Record<string, string> = {
-  'AC': 'N', 'AM': 'N', 'AP': 'N', 'PA': 'N', 'RO': 'N', 'RR': 'N', 'TO': 'N',
-  'AL': 'NE', 'BA': 'NE', 'CE': 'NE', 'MA': 'NE', 'PB': 'NE', 'PE': 'NE', 'PI': 'NE', 'RN': 'NE', 'SE': 'NE',
-  'ES': 'SE', 'MG': 'SE', 'RJ': 'SE', 'SP': 'SE',
-  'PR': 'S', 'RS': 'S', 'SC': 'S',
-  'DF': 'CO', 'GO': 'CO', 'MT': 'CO', 'MS': 'CO'
-};
-
-const REGIONS = [
-  { cd: 'BR', nm: 'Brasil', icon: '🇧🇷' },
-  { cd: 'N', nm: 'Norte', icon: '🌲' },
-  { cd: 'NE', nm: 'Nordeste', icon: '🌵' },
-  { cd: 'SE', nm: 'Sudeste', icon: '🏢' },
-  { cd: 'S', nm: 'Sul', icon: '❄️' },
-  { cd: 'CO', nm: 'Centro-Oeste', icon: '🌾' },
-  { cd: 'ZZ', nm: 'Exterior', icon: '🗼' }
-];
-
 interface EA14ViewerProps {
   ciclo: string;
   eleicaoCd: string;
@@ -64,9 +47,11 @@ interface EA14ViewerProps {
   onChangeEleicao?: (cd: string) => void;
   cargosDisponiveis?: { cd: string; nm: string }[];
   initialLocalData?: any;
+  initialRegion?: string;
+  onBack?: () => void;
 }
 
-export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose, relatedEleicaoCd, relatedEleicaoTurno, onChangeEleicao, cargosDisponiveis = [], initialLocalData }: EA14ViewerProps) {
+export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose, relatedEleicaoCd, relatedEleicaoTurno, onChangeEleicao, cargosDisponiveis = [], initialLocalData, initialRegion, onBack }: EA14ViewerProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const [expandedUf, setExpandedUf] = useState<string | null>(null);
   const [showRawJson, setShowRawJson] = useState(false);
@@ -75,13 +60,22 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose, relatedElei
   const [isClosing, setIsClosing] = useState(false);
   const [previousData, setPreviousData] = useState<any>(null);
   const [isBrExpanded, setIsBrExpanded] = useState(false);
-  const [selectedRegion, setSelectedRegion] = useState('BR');
+  const [selectedRegion, setSelectedRegion] = useState(initialRegion || 'BR');
 
   const handleClose = () => {
     setIsClosing(true);
     setTimeout(() => {
       onClose();
     }, 300); // Match slide-out duration
+  };
+
+  const handleBack = () => {
+    if (onBack) {
+      setIsClosing(true);
+      setTimeout(() => {
+        onBack();
+      }, 300);
+    }
   };
 
   const { ambiente, host } = useEnvironment();
@@ -134,70 +128,7 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose, relatedElei
   }, [data]);
 
   const activeAbr = useMemo(() => {
-    if (!localData?.abr) return null;
-    if (selectedRegion === 'BR') {
-      return localData.abr.find((a: any) => a.cdabr === 'br');
-    }
-
-    if (selectedRegion === 'ZZ') {
-      return localData.abr.find((a: any) => a.cdabr === 'zz');
-    }
-
-    const ufsInRegion = localData.abr.filter((a: any) => 
-      UF_TO_REGION[a.cdabr.toUpperCase()] === selectedRegion
-    );
-
-    if (ufsInRegion.length === 0) return null;
-
-    // Summation of all numeric fields
-    const sum = {
-      cdabr: selectedRegion.toLowerCase(),
-      tpabr: 'regiao',
-      and: ufsInRegion.every((a: any) => a.and === 'f') ? 'f' : 'p',
-      dt: ufsInRegion.sort((a: any, b: any) => {
-        const toSortable = (dt: string, ht: string) => {
-          if (!dt) return '';
-          const [d, m, y] = dt.split('/');
-          return `${y}/${m}/${d} ${ht || ''}`;
-        };
-        return toSortable(b.dt, b.ht).localeCompare(toSortable(a.dt, a.ht));
-      })[0].dt, // Use the latest update date
-      ht: ufsInRegion.sort((a: any, b: any) => {
-        const toSortable = (dt: string, ht: string) => {
-          if (!dt) return '';
-          const [d, m, y] = dt.split('/');
-          return `${y}/${m}/${d} ${ht || ''}`;
-        };
-        return toSortable(b.dt, b.ht).localeCompare(toSortable(a.dt, a.ht));
-      })[0].ht, // Use the latest update hour
-      s: {
-        ts: ufsInRegion.reduce((acc: number, a: any) => acc + (parseInt(a.s.ts) || 0), 0).toString(),
-        st: ufsInRegion.reduce((acc: number, a: any) => acc + (parseInt(a.s.st) || 0), 0).toString(),
-        pst: '', 
-        snt: ufsInRegion.reduce((acc: number, a: any) => acc + (parseInt(a.s.snt) || 0), 0).toString(),
-        si: ufsInRegion.reduce((acc: number, a: any) => acc + (parseInt(a.s.si) || 0), 0).toString(),
-      },
-      e: {
-        te: ufsInRegion.reduce((acc: number, a: any) => acc + (parseInt(a.e.te) || 0), 0).toString(),
-        c: ufsInRegion.reduce((acc: number, a: any) => acc + (parseInt(a.e.c) || 0), 0).toString(),
-        pc: '', 
-        a: ufsInRegion.reduce((acc: number, a: any) => acc + (parseInt(a.e.a) || 0), 0).toString(),
-        pa: '', 
-      },
-      munf: ufsInRegion.reduce((acc: number, a: any) => acc + (parseInt(a.munf) || 0), 0).toString(),
-      munpt: ufsInRegion.reduce((acc: number, a: any) => acc + (parseInt(a.munpt) || 0), 0).toString(),
-      munnr: ufsInRegion.reduce((acc: number, a: any) => acc + (parseInt(a.munnr) || 0), 0).toString(),
-    };
-
-    // Recalculate Percentages
-    const safePct = (val: number, total: number) => 
-      total > 0 ? ((val / total) * 100).toFixed(2).replace('.', ',') : '0,00';
-
-    sum.s.pst = safePct(parseInt(sum.s.st), parseInt(sum.s.ts));
-    sum.e.pc = safePct(parseInt(sum.e.c), parseInt(sum.e.te));
-    sum.e.pa = safePct(parseInt(sum.e.a), parseInt(sum.e.te));
-
-    return sum;
+    return calculateRegionTotals(localData, selectedRegion);
   }, [localData, selectedRegion]);
 
   const validationResults = useMemo(() => {
@@ -242,24 +173,35 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose, relatedElei
       >
         <div className="sticky top-0 z-10 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-gray-200 dark:border-slate-800 p-4">
           <div className="flex justify-between items-center mb-4">
-            <div>
-              <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
-                <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                Acompanhamento BR (EA14)
-              </h2>
-              <div className="flex items-center gap-3">
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  {eleicaoNome}
-                </p>
-                {relatedEleicaoCd && onChangeEleicao && (
-                  <button
-                    onClick={() => onChangeEleicao(relatedEleicaoCd)}
-                    className="flex items-center gap-1.5 px-2 py-0.5 text-xs font-semibold bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 rounded border border-blue-200 dark:border-blue-800 hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors"
-                  >
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
-                    Ir para {relatedEleicaoTurno}º Turno
-                  </button>
-                )}
+            <div className="flex items-center gap-3">
+              {onBack && (
+                <button
+                  onClick={handleBack}
+                  className="p-1.5 bg-gray-100 hover:bg-gray-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-full transition-colors flex items-center justify-center shadow-sm"
+                  title="Voltar"
+                >
+                  <svg className="w-5 h-5 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                </button>
+              )}
+              <div>
+                <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
+                  <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                  Acompanhamento BR (EA14)
+                </h2>
+                <div className="flex items-center gap-3">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    {eleicaoNome}
+                  </p>
+                  {relatedEleicaoCd && onChangeEleicao && (
+                    <button
+                      onClick={() => onChangeEleicao(relatedEleicaoCd)}
+                      className="flex items-center gap-1.5 px-2 py-0.5 text-xs font-semibold bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 rounded border border-blue-200 dark:border-blue-800 hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
+                      Ir para {relatedEleicaoTurno}º Turno
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -442,10 +384,10 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose, relatedElei
                     <div className="flex flex-wrap gap-1 p-1 bg-gray-100 dark:bg-slate-800/50 rounded-lg w-fit">
                       {REGIONS.map((r) => {
                         const isZZ = r.cd === 'ZZ';
-                        const hasData = r.cd === 'BR' || localData.abr.some((a: any) => 
+                        const hasData = r.cd === 'BR' || localData.abr.some((a: any) =>
                           isZZ ? a.cdabr === 'zz' : UF_TO_REGION[a.cdabr.toUpperCase()] === r.cd
                         );
-                        
+
                         if (!hasData) return null;
 
                         return (
@@ -455,11 +397,10 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose, relatedElei
                               setSelectedRegion(r.cd);
                               setIsBrExpanded(false);
                             }}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
-                              selectedRegion === r.cd
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${selectedRegion === r.cd
                                 ? 'bg-blue-600 text-white shadow-sm'
                                 : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-slate-700'
-                            }`}
+                              }`}
                           >
                             <span>{r.icon}</span>
                             <span>{r.nm}</span>
@@ -472,8 +413,8 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose, relatedElei
                     {activeAbr && (() => {
                       const brErrors = getErrorsForAbr(activeAbr.cdabr);
                       const hasErrors = brErrors.length > 0;
-                      
-                      const relevantUfs = selectedRegion === 'BR' 
+
+                      const relevantUfs = selectedRegion === 'BR'
                         ? localData.abr.filter((a: any) => a.cdabr !== 'br')
                         : localData.abr.filter((a: any) => UF_TO_REGION[a.cdabr.toUpperCase()] === selectedRegion);
 
