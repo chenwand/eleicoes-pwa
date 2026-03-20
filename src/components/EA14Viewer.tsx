@@ -570,6 +570,19 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose, relatedElei
                                 <div className="flex items-center gap-2 font-mono font-bold uppercase text-gray-700 dark:text-gray-300">
                                   <img src={`/flags/${uf.cdabr.toLowerCase()}.svg`} alt={uf.cdabr} className="w-4 h-3 object-contain rounded-sm" onError={(e) => (e.currentTarget.style.display = 'none')} />
                                   {uf.cdabr}
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSelectedEA15Uf(uf.cdabr.toLowerCase());
+                                    }}
+                                    title="Ver Municípios (EA15)"
+                                    className="p-1 rounded bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-800 transition-colors ml-1 shadow-sm"
+                                  >
+                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                    </svg>
+                                  </button>
                                 </div>
                                 <span className={`font-semibold flex items-center ${pctColor}`}>
                                   {uf.s.pst}%
