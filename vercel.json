@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/tse-api/:path*",
-      "destination": "https://resultados.tse.jus.br/:path*"
+      "destination": "/api/proxy"
     }
   ]
 }
