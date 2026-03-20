@@ -70,7 +70,25 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
               placeholder="https://resultados.tse.jus.br"
               className="w-full px-3 py-2 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
             />
-            <p className="text-[10px] text-gray-500 italic">Ex: https://resultados.tse.jus.br</p>
+            <div className="flex flex-wrap gap-2 mt-2">
+              {[
+                'https://resultados.tse.jus.br',
+                'https://resultados-hmg.tse.jus.br',
+                '/tse-api'
+              ].map(h => (
+                <button
+                  key={h}
+                  onClick={() => setTempHost(h)}
+                  className={`px-2 py-1 text-[10px] rounded border transition-colors ${
+                    tempHost === h 
+                      ? 'bg-blue-100 dark:bg-blue-900/40 border-blue-400 text-blue-700 dark:text-blue-300' 
+                      : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 text-gray-500 hover:border-gray-300'
+                  }`}
+                >
+                  {h === '/tse-api' ? 'Local Proxy' : h.replace('https://', '')}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Environment Configuration */}

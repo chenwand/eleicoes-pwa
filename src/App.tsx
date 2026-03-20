@@ -15,9 +15,9 @@ import { ElectionProvider, useElection } from './context/ElectionContext';
 import type { EleicaoEA11 } from './types/ea11';
 import { queryClient } from './queryClient';
 
-export function AppContent({ onLocalFileLoaded, localFile, setLocalFile, turno }: { 
-  onLocalFileLoaded: (file: { type: 'EA11' | 'EA14' | 'EA15' | 'EA20'; data: unknown }) => void; 
-  localFile: { type: 'EA11' | 'EA14' | 'EA15' | 'EA20'; data: any } | null; 
+export function AppContent({ onLocalFileLoaded, localFile, setLocalFile, turno }: {
+  onLocalFileLoaded: (file: { type: 'EA11' | 'EA14' | 'EA15' | 'EA20'; data: unknown }) => void;
+  localFile: { type: 'EA11' | 'EA14' | 'EA15' | 'EA20'; data: any } | null;
   setLocalFile: (val: { type: 'EA11' | 'EA14' | 'EA15' | 'EA20'; data: any } | null) => void;
   turno: Turno;
 }) {
@@ -29,18 +29,18 @@ export function AppContent({ onLocalFileLoaded, localFile, setLocalFile, turno }
   const cargosDisponiveis = useMemo(() => {
     if (!selectedEleicao?.abr) return [];
     const uf = selectedAbrangencia?.ufCd?.toUpperCase() || '';
-    
+
     // Flatten all cargos from all abrangências
     const allCargos = selectedEleicao.abr.flatMap(a => a.cp || []).map(cp => ({ cd: cp.cd, nm: cp.ds }));
     const seen = new Set();
-    
+
     return allCargos.filter(c => {
       // Rule: Deputado Distrital (8) is DF only. Deputado Estadual (7) is non-DF only.
       if (uf) {
         if (c.cd === '8' && uf !== 'DF') return false;
         if (c.cd === '7' && uf === 'DF') return false;
       }
-      
+
       const duplicate = seen.has(c.cd);
       seen.add(c.cd);
       return !duplicate;
@@ -72,59 +72,59 @@ export function AppContent({ onLocalFileLoaded, localFile, setLocalFile, turno }
       </main>
 
       {openEA14 && selectedEleicao && (
-        <EA14Viewer 
-          ciclo={ciclo} 
-          eleicaoCd={selectedEleicao.cd} 
-          eleicaoNome={selectedEleicao.nm.replace(/&#186;/g, 'º')} 
+        <EA14Viewer
+          ciclo={ciclo}
+          eleicaoCd={selectedEleicao.cd}
+          eleicaoNome={selectedEleicao.nm.replace(/&#186;/g, 'º')}
           cargosDisponiveis={cargosDisponiveis}
-          onClose={() => setOpenEA14(false)} 
+          onClose={() => setOpenEA14(false)}
         />
       )}
       {openEA15 && selectedEleicao && selectedAbrangencia && (
-        <EA15Viewer 
-          ciclo={ciclo} 
-          eleicaoCd={selectedEleicao.cd} 
-          uf={selectedAbrangencia.ufCd} 
+        <EA15Viewer
+          ciclo={ciclo}
+          eleicaoCd={selectedEleicao.cd}
+          uf={selectedAbrangencia.ufCd}
           cargosDisponiveis={cargosDisponiveis}
-          onBack={() => setOpenEA15(false)} 
+          onBack={() => setOpenEA15(false)}
         />
       )}
       {openEA20 && selectedEleicao && selectedAbrangencia && (
-        <EA20Viewer 
-          ciclo={ciclo} 
-          eleicaoCd={selectedEleicao.cd} 
-          uf={selectedAbrangencia.ufCd} 
-          cdMun={selectedAbrangencia.munCdTse} 
+        <EA20Viewer
+          ciclo={ciclo}
+          eleicaoCd={selectedEleicao.cd}
+          uf={selectedAbrangencia.ufCd}
+          cdMun={selectedAbrangencia.munCdTse}
           munNome={selectedAbrangencia.munNome}
           cargosDisponiveis={cargosDisponiveis}
-          onBack={() => setOpenEA20(false)} 
+          onBack={() => setOpenEA20(false)}
         />
       )}
 
       {localFile?.type === 'EA20' && (
-        <EA20Viewer 
-          initialLocalData={localFile.data} 
-          onBack={() => setLocalFile(null)} 
+        <EA20Viewer
+          initialLocalData={localFile.data}
+          onBack={() => setLocalFile(null)}
         />
       )}
 
       {localFile?.type === 'EA14' && (
-        <EA14Viewer 
-          ciclo="" 
-          eleicaoCd="" 
-          eleicaoNome="Arquivo Local EA14" 
-          initialLocalData={localFile.data} 
-          onClose={() => setLocalFile(null)} 
+        <EA14Viewer
+          ciclo=""
+          eleicaoCd=""
+          eleicaoNome="Arquivo Local EA14"
+          initialLocalData={localFile.data}
+          onClose={() => setLocalFile(null)}
         />
       )}
 
       {localFile?.type === 'EA15' && (
-        <EA15Viewer 
-          ciclo="" 
-          eleicaoCd="" 
-          uf="" 
-          initialLocalData={localFile.data} 
-          onBack={() => setLocalFile(null)} 
+        <EA15Viewer
+          ciclo=""
+          eleicaoCd=""
+          uf=""
+          initialLocalData={localFile.data}
+          onBack={() => setLocalFile(null)}
         />
       )}
 
@@ -152,8 +152,8 @@ export function AppContent({ onLocalFileLoaded, localFile, setLocalFile, turno }
                   </div>
                   <div className="space-y-2">
                     {pl.e?.map((e: { cd: string; nm: string; t: string; tp: string }) => (
-                      <div 
-                        key={e.cd} 
+                      <div
+                        key={e.cd}
                         className="bg-white dark:bg-slate-900 p-3 rounded border border-gray-200 dark:border-slate-700 shadow-sm cursor-pointer hover:border-blue-500 transition-colors"
                         onClick={() => {
                           selectEleicao(e as EleicaoEA11, localFile.data.c);
@@ -189,11 +189,11 @@ export default function App() {
         <ElectionProvider>
           <ThemeProvider>
             <BrowserRouter>
-              <AppContent 
-                onLocalFileLoaded={setLocalFile} 
-                localFile={localFile} 
-                setLocalFile={setLocalFile} 
-                turno={turno} 
+              <AppContent
+                onLocalFileLoaded={setLocalFile}
+                localFile={localFile}
+                setLocalFile={setLocalFile}
+                turno={turno}
               />
             </BrowserRouter>
           </ThemeProvider>

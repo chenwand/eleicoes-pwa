@@ -61,7 +61,7 @@ export function Header({ onLocalFileLoaded }: { onLocalFileLoaded: (data: { type
                 </div>
                 <span className="text-xl font-black tracking-tight uppercase">Resultados Dashboard</span>
               </Link>
-              
+
               {/* Selected Election Info */}
               {selectedEleicao && (
                 <div className="flex items-center gap-2 mt-1 px-1">
@@ -73,10 +73,10 @@ export function Header({ onLocalFileLoaded }: { onLocalFileLoaded: (data: { type
                       Turno {selectedEleicao.t} • {selectedAbrangencia ? `${selectedAbrangencia.munNome} (${selectedAbrangencia.ufCd})` : 'Sem abrangência'} • ID {selectedEleicao.cd}
                     </span>
                   </div>
-                  
+
                   {/* Round Switcher */}
                   {(selectedEleicao.cdt2 || selectedEleicao.t === '2') && (
-                    <button 
+                    <button
                       className="ml-2 px-2 py-0.5 text-[9px] bg-white/20 hover:bg-white/30 rounded uppercase font-bold transition-colors"
                       title={selectedEleicao.t === '1' ? "Mudar para 2º Turno" : "Mudar para 1º Turno"}
                       onClick={switchTurno}
@@ -90,11 +90,10 @@ export function Header({ onLocalFileLoaded }: { onLocalFileLoaded: (data: { type
 
             {/* Actions */}
             <div className="flex items-center gap-4">
-              <div className={`hidden sm:block px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter border shadow-sm ${
-                ambiente === 'oficial' 
-                  ? 'bg-green-600 border-green-400 text-white' 
+              <div className={`hidden sm:block px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter border shadow-sm ${ambiente === 'oficial'
+                  ? 'bg-green-600 border-green-400 text-white'
                   : 'bg-amber-400 border-amber-300 text-amber-900'
-              }`}>
+                }`}>
                 {ambiente}
               </div>
 
@@ -116,7 +115,7 @@ export function Header({ onLocalFileLoaded }: { onLocalFileLoaded: (data: { type
             </div>
           </div>
         </div>
-        
+
         {/* Hidden File Input for Dashboard */}
         <input
           id="local-file-input"

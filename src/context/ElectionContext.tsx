@@ -13,16 +13,16 @@ interface ElectionContextType {
   ea11Data: EA11Response | undefined;
   isEA11Loading: boolean;
   isEA11Fetching: boolean;
-  
+
   // Actions
-  selectEleicao: (eleicao: EleicaoEA11, ciclo: string) => void;
+  selectEleicao: (eleicao: EleicaoEA11, ciclo: string, preserveScope?: boolean) => void;
   selectAbrangencia: (mun: FlatMunicipio) => void;
   setZona: (zona: string) => void;
   clearSelection: () => void;
   switchTurno: () => void;
   refetchEA11: () => Promise<any>;
   updateEA11Data: (data: EA11Response) => void;
-  
+
   // Derived state
   isOrdinary: boolean;
   hasSelection: boolean;
@@ -32,7 +32,7 @@ const ElectionContext = createContext<ElectionContextType | undefined>(undefined
 
 export function ElectionProvider({ children }: { children: ReactNode }) {
   const { ambiente, host } = useEnvironment();
-  
+
   const { data: ea11Data, isLoading: isEA11Loading, isFetching: isEA11Fetching, refetch: refetchEA11 } = useQuery({
     queryKey: ['ea11-config', ambiente, host],
     queryFn: () => fetchEA11(ambiente, host),
@@ -50,16 +50,16 @@ export function ElectionProvider({ children }: { children: ReactNode }) {
     const stored = localStorage.getItem('selected-eleicao');
     return stored ? JSON.parse(stored) : null;
   });
-  
+
   const [selectedAbrangencia, setSelectedAbrangencia] = useState<FlatMunicipio | null>(() => {
     const stored = localStorage.getItem('selected-abrangencia');
     return stored ? JSON.parse(stored) : null;
   });
-  
+
   const [selectedZona, setSelectedZona] = useState<string>(() => {
     return localStorage.getItem('selected-zona') || 'Todas';
   });
-  
+
   const [ciclo, setCiclo] = useState<string>(() => {
     return localStorage.getItem('selected-ciclo') || '';
   });
@@ -82,10 +82,10 @@ export function ElectionProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('selected-ciclo', ciclo);
   }, [ciclo]);
 
-  const selectEleicao = (eleicao: EleicaoEA11, newCiclo: string) => {
+  const selectEleicao = (eleicao: EleicaoEA11, newCiclo: string, preserveScope = false) => {
     setSelectedEleicao(eleicao);
     setCiclo(newCiclo);
-    if (selectedEleicao?.cd !== eleicao.cd) {
+    if (!preserveScope && selectedEleicao?.cd !== eleicao.cd) {
       setSelectedAbrangencia(null);
       setSelectedZona('Todas');
     }
@@ -109,7 +109,7 @@ export function ElectionProvider({ children }: { children: ReactNode }) {
 
   const switchTurno = () => {
     if (!selectedEleicao || !ea11Data) return;
-    
+
     let targetCd: string | undefined;
     if (selectedEleicao.t === '1' && selectedEleicao.cdt2) {
       targetCd = selectedEleicao.cdt2;
@@ -122,7 +122,27 @@ export function ElectionProvider({ children }: { children: ReactNode }) {
     if (targetCd) {
       const targetEleicao = ea11Data.pl.flatMap(p => p.e).find(e => e.cd === targetCd);
       if (targetEleicao) {
-        selectEleicao(targetEleicao, ea11Data.c);
+        // Validation: Verify if the currently selected scope is valid for the target turn
+        let shouldPreserve = false;
+
+        if (selectedAbrangencia) {
+          const isBrasil = selectedAbrangencia.ufCd.toLowerCase() === 'br';
+          const targetAbr = targetEleicao.abr.find(a =>
+            a.cd.toLowerCase() === (isBrasil ? 'br' : selectedAbrangencia.ufCd.toLowerCase())
+          );
+
+          if (targetAbr) {
+            if (selectedAbrangencia.munCdTse === "" || isBrasil) {
+              // National or state-wide scope remains valid if the UF exists in target
+              shouldPreserve = true;
+            } else if (targetAbr.mu?.some(m => m.cd === selectedAbrangencia.munCdTse)) {
+              // Specific municipality remains valid if explicitly listed in target
+              shouldPreserve = true;
+            }
+          }
+        }
+
+        selectEleicao(targetEleicao, ea11Data.c, shouldPreserve);
       }
     }
   };

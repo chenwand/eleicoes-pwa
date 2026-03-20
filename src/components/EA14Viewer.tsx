@@ -100,7 +100,7 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose, relatedElei
     // Fallbacks or special cases
     if (!dict.has('BR')) dict.set('BR', 'Brasil');
     if (!dict.has('ZZ')) dict.set('ZZ', 'Exterior');
-    
+
     return dict;
   }, [ea12Data]);
 
@@ -216,30 +216,30 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose, relatedElei
           </div>
 
           {!selectedEA15Uf && localData && (() => {
-          const paddedCd = eleicaoCd.padStart(6, '0');
-          const jsonUrl = `${host}/${ambiente}/${ciclo}/${eleicaoCd}/dados/br/br-e${paddedCd}-ab.json`;
-          return (
-            <div className="flex flex-col items-end -mt-2 mb-3">
-              <div className="text-xs text-gray-400 dark:text-gray-500 text-right">
-                Arquivo gerado em:{' '}
-                <a
-                  href={jsonUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="font-mono hover:text-blue-500 dark:hover:text-blue-400 underline underline-offset-2 transition-colors"
-                  title="Abrir / baixar JSON EA14"
-                >
-                  {localData.dg} {localData.hg} ↓
-                </a>
-              </div>
-              {isModified && (
-                <div className="mt-1 px-2 py-0.5 bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 text-[10px] font-bold rounded border border-amber-200 dark:border-amber-800 flex items-center gap-1 animate-pulse">
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-                  Dados editados localmente
+            const paddedCd = eleicaoCd.padStart(6, '0');
+            const jsonUrl = `${host}/${ambiente}/${ciclo}/${eleicaoCd}/dados/br/br-e${paddedCd}-ab.json`;
+            return (
+              <div className="flex flex-col items-end -mt-2 mb-3">
+                <div className="text-xs text-gray-400 dark:text-gray-500 text-right">
+                  Arquivo gerado em:{' '}
+                  <a
+                    href={jsonUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="font-mono hover:text-blue-500 dark:hover:text-blue-400 underline underline-offset-2 transition-colors"
+                    title="Abrir / baixar JSON EA14"
+                  >
+                    {localData.dg} {localData.hg} ↓
+                  </a>
                 </div>
-              )}
-            </div>
-          );
+                {isModified && (
+                  <div className="mt-1 px-2 py-0.5 bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 text-[10px] font-bold rounded border border-amber-200 dark:border-amber-800 flex items-center gap-1 animate-pulse">
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                    Dados editados localmente
+                  </div>
+                )}
+              </div>
+            );
           })()}
         </div>
 
@@ -382,8 +382,8 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose, relatedElei
                       };
 
                       return (
-                        <div 
-                          key="br" 
+                        <div
+                          key="br"
                           onClick={() => setIsBrExpanded(!isBrExpanded)}
                           className={`border-l-4 rounded p-4 shadow-sm mb-6 flex flex-col md:flex-row gap-6 cursor-pointer hover:shadow-md transition-all ${hasErrors ? 'bg-red-50 dark:bg-red-900/10 border-red-500' : 'bg-blue-50 dark:bg-blue-900/20 border-blue-500'}`}
                         >
@@ -403,16 +403,16 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose, relatedElei
                                 <span className="text-gray-600 dark:text-gray-400">Seções Totalizadas</span>
                                 <span className="font-semibold text-gray-800 dark:text-gray-200 flex items-center">
                                   {br.s.pst}%
-                                  <TrendIndicator 
-                                    current={br.s.pst} 
-                                    previous={previousData?.abr?.find((a: any) => a.cdabr === 'br')?.s?.pst} 
+                                  <TrendIndicator
+                                    current={br.s.pst}
+                                    previous={previousData?.abr?.find((a: any) => a.cdabr === 'br')?.s?.pst}
                                   />
                                 </span>
                               </div>
                               <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2.5">
                                 <div className="bg-blue-600 h-2.5 rounded-full" style={{ width: `${parseFloat(br.s.pst.replace(',', '.'))}%` }}></div>
                               </div>
-                            <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-1">
+                              <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-1">
                                 <span>{ufsFinalizadas} de {totalUfs} UFs finalizadas</span>
                                 <span>{parseInt(br.s.st).toLocaleString('pt-BR')} de {parseInt(br.s.ts).toLocaleString('pt-BR')} seções</span>
                               </div>
@@ -427,9 +427,9 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose, relatedElei
                                     <span>Comparecimento:</span>
                                     <span className="font-medium text-blue-600 dark:text-blue-400 flex items-center">
                                       {parseInt(br.e.c).toLocaleString('pt-BR')} ({br.e.pc}%)
-                                      <TrendIndicator 
-                                        current={br.e.pc} 
-                                        previous={previousData?.abr?.find((a: any) => a.cdabr === 'br')?.e?.pc} 
+                                      <TrendIndicator
+                                        current={br.e.pc}
+                                        previous={previousData?.abr?.find((a: any) => a.cdabr === 'br')?.e?.pc}
                                       />
                                     </span>
                                   </div>
@@ -437,9 +437,9 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose, relatedElei
                                     <span>Abstenção:</span>
                                     <span className="font-medium text-gray-500 flex items-center">
                                       {parseInt(br.e.a).toLocaleString('pt-BR')} ({br.e.pa}%)
-                                      <TrendIndicator 
-                                        current={br.e.pa} 
-                                        previous={previousData?.abr?.find((a: any) => a.cdabr === 'br')?.e?.pa} 
+                                      <TrendIndicator
+                                        current={br.e.pa}
+                                        previous={previousData?.abr?.find((a: any) => a.cdabr === 'br')?.e?.pa}
                                       />
                                     </span>
                                   </div>
@@ -614,9 +614,9 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose, relatedElei
                                 </div>
                                 <span className={`font-semibold flex items-center ${pctColor}`}>
                                   {uf.s.pst}%
-                                  <TrendIndicator 
-                                    current={uf.s.pst} 
-                                    previous={previousData?.abr?.find((a: any) => a.cdabr === uf.cdabr)?.s?.pst} 
+                                  <TrendIndicator
+                                    current={uf.s.pst}
+                                    previous={previousData?.abr?.find((a: any) => a.cdabr === uf.cdabr)?.s?.pst}
                                   />
                                 </span>
                               </div>
@@ -627,9 +627,9 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose, relatedElei
                                 <span>Eleitores: {parseInt(uf.e.te).toLocaleString('pt-BR')}</span>
                                 <span className="flex items-center">
                                   Comp: {uf.e.pc}%
-                                  <TrendIndicator 
-                                    current={uf.e.pc} 
-                                    previous={previousData?.abr?.find((a: any) => a.cdabr === uf.cdabr)?.e?.pc} 
+                                  <TrendIndicator
+                                    current={uf.e.pc}
+                                    previous={previousData?.abr?.find((a: any) => a.cdabr === uf.cdabr)?.e?.pc}
                                   />
                                 </span>
                               </div>
@@ -665,9 +665,9 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose, relatedElei
                                       <span>Comparecimento:</span>
                                       <span className="font-medium text-blue-600 dark:text-blue-400 flex items-center">
                                         {parseInt(uf.e.c).toLocaleString('pt-BR')} ({uf.e.pc}%)
-                                        <TrendIndicator 
-                                          current={uf.e.pc} 
-                                          previous={previousData?.abr?.find((a: any) => a.cdabr === uf.cdabr)?.e?.pc} 
+                                        <TrendIndicator
+                                          current={uf.e.pc}
+                                          previous={previousData?.abr?.find((a: any) => a.cdabr === uf.cdabr)?.e?.pc}
                                         />
                                       </span>
                                     </div>
@@ -675,9 +675,9 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose, relatedElei
                                       <span>Abstenção:</span>
                                       <span className="font-medium text-gray-500 flex items-center">
                                         {parseInt(uf.e.a).toLocaleString('pt-BR')} ({uf.e.pa}%)
-                                        <TrendIndicator 
-                                          current={uf.e.pa} 
-                                          previous={previousData?.abr?.find((a: any) => a.cdabr === uf.cdabr)?.e?.pa} 
+                                        <TrendIndicator
+                                          current={uf.e.pa}
+                                          previous={previousData?.abr?.find((a: any) => a.cdabr === uf.cdabr)?.e?.pa}
                                         />
                                       </span>
                                     </div>
@@ -701,9 +701,9 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose, relatedElei
                                       <span>Finalizados:</span>
                                       <span className="font-medium text-green-600 dark:text-green-400 flex items-center">
                                         {parseInt(uf.munf).toLocaleString('pt-BR')} ({uf.pmunf}%)
-                                        <TrendIndicator 
-                                          current={uf.pmunf} 
-                                          previous={previousData?.abr?.find((a: any) => a.cdabr === uf.cdabr)?.pmunf} 
+                                        <TrendIndicator
+                                          current={uf.pmunf}
+                                          previous={previousData?.abr?.find((a: any) => a.cdabr === uf.cdabr)?.pmunf}
                                         />
                                       </span>
                                     </div>
@@ -711,9 +711,9 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose, relatedElei
                                       <span>Parciais:</span>
                                       <span className="font-medium text-yellow-600 dark:text-yellow-400 flex items-center">
                                         {parseInt(uf.munpt).toLocaleString('pt-BR')} ({uf.pmunpt}%)
-                                        <TrendIndicator 
-                                          current={uf.pmunpt} 
-                                          previous={previousData?.abr?.find((a: any) => a.cdabr === uf.cdabr)?.pmunpt} 
+                                        <TrendIndicator
+                                          current={uf.pmunpt}
+                                          previous={previousData?.abr?.find((a: any) => a.cdabr === uf.cdabr)?.pmunpt}
                                         />
                                       </span>
                                     </div>
@@ -721,9 +721,9 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose, relatedElei
                                       <span>Não iniciados:</span>
                                       <span className="font-medium text-gray-500 flex items-center">
                                         {parseInt(uf.munnr).toLocaleString('pt-BR')} ({uf.pmunnr}%)
-                                        <TrendIndicator 
-                                          current={uf.pmunnr} 
-                                          previous={previousData?.abr?.find((a: any) => a.cdabr === uf.cdabr)?.pmunnr} 
+                                        <TrendIndicator
+                                          current={uf.pmunnr}
+                                          previous={previousData?.abr?.find((a: any) => a.cdabr === uf.cdabr)?.pmunnr}
                                         />
                                       </span>
                                     </div>

@@ -518,7 +518,7 @@ function CandCard({
 
   // Card layout for majority cargos
   return (
-    <div 
+    <div
       className={`border rounded-lg p-3 shadow-sm transition-all cursor-pointer hover:border-blue-400 dark:hover:border-blue-600 ${borderBg}`}
       onClick={() => setExpanded(!expanded)}
     >
@@ -749,7 +749,7 @@ export function EA20Viewer({
         const sameAbr = localData.cdabr === ea20Data.cdabr;
         const sameCargo = localData.carg?.[0]?.cd === ea20Data.carg?.[0]?.cd;
         const samePerg = localData.perg?.[0]?.cd === ea20Data.perg?.[0]?.cd;
-        
+
         if (sameEle && sameAbr && (sameCargo || samePerg)) {
           setPreviousData(localData);
         }
@@ -899,7 +899,7 @@ export function EA20Viewer({
       const aSeq = parseInt(a.cand.seq, 10) || 0;
       const bSeq = parseInt(b.cand.seq, 10) || 0;
       if (aSeq !== bSeq) return aSeq - bSeq;
-      
+
       return a.cand.nmu.localeCompare(b.cand.nmu);
     });
 
@@ -959,12 +959,14 @@ export function EA20Viewer({
             <div className="flex items-center gap-2">
               <button
                 onClick={() => {
-                  refetch().then(r => { if (r.data) { 
-                    setPreviousData(localData);
-                    setLocalData(r.data); 
-                    setIsModified(false); 
-                    setIsEditing(false); 
-                  } });
+                  refetch().then(r => {
+                    if (r.data) {
+                      setPreviousData(localData);
+                      setLocalData(r.data);
+                      setIsModified(false);
+                      setIsEditing(false);
+                    }
+                  });
                 }}
                 disabled={isFetching}
                 className={`p-1.5 bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 rounded-full transition-colors ${isFetching ? 'opacity-50 cursor-not-allowed' : ''}`}
@@ -977,6 +979,13 @@ export function EA20Viewer({
                 className="px-3 py-1.5 bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-300 rounded text-sm font-medium transition-colors"
               >
                 {showRawJson ? 'Painel Visual' : 'Ver JSON'}
+              </button>
+              <button
+                onClick={handleBack}
+                className="p-1.5 bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-full transition-colors"
+                title="Fechar"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
               </button>
             </div>
           </div>
@@ -1067,14 +1076,16 @@ export function EA20Viewer({
                       </button>
                     ) : (
                       <>
-                        <button onClick={() => { try { 
-                          const parsed = JSON.parse(editValue);
-                          setPreviousData(localData);
-                          setLocalData(parsed); 
-                          setIsModified(true); 
-                          setIsEditing(false); 
-                          setShowRawJson(false); 
-                        } catch { alert('JSON inválido!'); } }}
+                        <button onClick={() => {
+                          try {
+                            const parsed = JSON.parse(editValue);
+                            setPreviousData(localData);
+                            setLocalData(parsed);
+                            setIsModified(true);
+                            setIsEditing(false);
+                            setShowRawJson(false);
+                          } catch { alert('JSON inválido!'); }
+                        }}
                           className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded transition-colors">Salvar</button>
                         <button onClick={() => setIsEditing(false)}
                           className="px-3 py-1 bg-gray-500 hover:bg-gray-600 text-white text-xs font-bold rounded transition-colors">Cancelar</button>
@@ -1281,19 +1292,19 @@ export function EA20Viewer({
                         // ── Majority: cards side-by-side and wrapping ────────
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                           {filteredAndSortedCandidates.map(({ cand, agr }) => (
-                            <CandCard 
-                              key={cand.sqcand} 
-                              cand={cand} 
-                              agr={agr} 
-                              totalVotos={totalVotos} 
-                              ambiente={ambiente} 
-                              ciclo={ciclo || ''} 
-                              eleicaoCd={eleicaoCd || localData?.ele || ''} 
-                              uf={ufForFoto} 
-                              isProportional={false} 
-                              isFavorite={favorites.has(cand.sqcand)} 
-                              onToggleFavorite={() => toggleFavorite(cand.sqcand)} 
-                              host={host} 
+                            <CandCard
+                              key={cand.sqcand}
+                              cand={cand}
+                              agr={agr}
+                              totalVotos={totalVotos}
+                              ambiente={ambiente}
+                              ciclo={ciclo || ''}
+                              eleicaoCd={eleicaoCd || localData?.ele || ''}
+                              uf={ufForFoto}
+                              isProportional={false}
+                              isFavorite={favorites.has(cand.sqcand)}
+                              onToggleFavorite={() => toggleFavorite(cand.sqcand)}
+                              host={host}
                               previousCand={previousData?.carg?.[0]?.agr?.flatMap((a: any) => a.par.flatMap((p: any) => p.cand))?.find((c: any) => c.sqcand === cand.sqcand)}
                             />
                           ))}
@@ -1311,19 +1322,19 @@ export function EA20Viewer({
                             </thead>
                             <tbody>
                               {filteredAndSortedCandidates.map(({ cand, agr }) => (
-                                <CandCard 
-                                  key={cand.sqcand} 
-                                  cand={cand} 
-                                  agr={agr} 
-                                  totalVotos={totalVotos} 
-                                  ambiente={ambiente} 
-                                  ciclo={ciclo || ''} 
-                                  eleicaoCd={eleicaoCd || localData?.ele || ''} 
-                                  uf={ufForFoto} 
-                                  isProportional={true} 
-                                  isFavorite={favorites.has(cand.sqcand)} 
-                                  onToggleFavorite={() => toggleFavorite(cand.sqcand)} 
-                                  host={host} 
+                                <CandCard
+                                  key={cand.sqcand}
+                                  cand={cand}
+                                  agr={agr}
+                                  totalVotos={totalVotos}
+                                  ambiente={ambiente}
+                                  ciclo={ciclo || ''}
+                                  eleicaoCd={eleicaoCd || localData?.ele || ''}
+                                  uf={ufForFoto}
+                                  isProportional={true}
+                                  isFavorite={favorites.has(cand.sqcand)}
+                                  onToggleFavorite={() => toggleFavorite(cand.sqcand)}
+                                  host={host}
                                   previousCand={previousData?.carg?.[0]?.agr?.flatMap((a: any) => a.par.flatMap((p: any) => p.cand))?.find((c: any) => c.sqcand === cand.sqcand)}
                                 />
                               ))}

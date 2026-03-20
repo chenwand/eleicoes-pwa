@@ -11,7 +11,7 @@ interface EnvironmentContextType {
   setAvailableEnvironments: (envs: string[]) => void;
 }
 
-const DEFAULT_ENVIRONMENTS = ['oficial', 'simulado', 'teste', 'formacao'];
+const DEFAULT_ENVIRONMENTS = ['oficial', 'homologacao', 'teste', 'desenvolvimento', 'tdtot'];
 const DEFAULT_HOST = import.meta.env.VITE_TSE_API_HOST || '/tse-api';
 
 const EnvironmentContext = createContext<EnvironmentContextType | undefined>(undefined);
@@ -46,8 +46,8 @@ export function EnvironmentProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <EnvironmentContext.Provider value={{ 
-      ambiente, 
+    <EnvironmentContext.Provider value={{
+      ambiente,
       setAmbiente: handleSetAmbiente,
       host,
       setHost: handleSetHost,
