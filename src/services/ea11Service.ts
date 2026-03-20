@@ -9,11 +9,11 @@ export async function fetchEA11(ambiente: string = DEFAULT_AMBIENTE, host: strin
       'Accept': 'application/json, text/plain, */*',
     }
   });
-  
+
   if (!response.ok) {
     throw new Error(`Failed to fetch EA11: ${response.status} ${response.statusText}`);
   }
-  
+
   return response.json();
 }
 
