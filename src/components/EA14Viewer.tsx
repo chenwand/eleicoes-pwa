@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { fetchEA14 } from '../services/ea14Service';
+import { fetchEA12 } from '../services/ea12Service';
 import { validateEA14 } from '../services/ea14Validator';
 import { useEffect, useRef, useMemo, useState } from 'react';
 import { EA15Viewer } from './EA15Viewer';
@@ -75,6 +76,33 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose, relatedElei
     queryFn: () => fetchEA14(ciclo, eleicaoCd, ambiente, host),
     enabled: !!eleicaoCd && !!ciclo && !initialLocalData,
   });
+
+  const { data: ea12Data } = useQuery({
+    queryKey: ['ea12-data', ciclo, eleicaoCd, ambiente, host],
+    queryFn: () => fetchEA12(ciclo, eleicaoCd, ambiente, host),
+    enabled: !!eleicaoCd && !!ciclo,
+    staleTime: Infinity,
+  });
+
+  const ufDict = useMemo(() => {
+    const dict = new Map<string, string>();
+    if (ea12Data?.abr) {
+      ea12Data.abr.forEach((uf: any) => {
+        if (uf.cd && uf.ds) {
+          // Normalize to uppercase for lookup
+          const code = uf.cd.toUpperCase();
+          // Use a helper for title case if possible, but at least store it
+          const name = uf.ds.charAt(0).toUpperCase() + uf.ds.slice(1).toLowerCase();
+          dict.set(code, name);
+        }
+      });
+    }
+    // Fallbacks or special cases
+    if (!dict.has('BR')) dict.set('BR', 'Brasil');
+    if (!dict.has('ZZ')) dict.set('ZZ', 'Exterior');
+    
+    return dict;
+  }, [ea12Data]);
 
   useEffect(() => {
     if (data) {
@@ -569,7 +597,7 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose, relatedElei
                               <div className="flex justify-between items-center mb-2">
                                 <div className="flex items-center gap-2 font-mono font-bold uppercase text-gray-700 dark:text-gray-300">
                                   <img src={`/flags/${uf.cdabr.toLowerCase()}.svg`} alt={uf.cdabr} className="w-4 h-3 object-contain rounded-sm" onError={(e) => (e.currentTarget.style.display = 'none')} />
-                                  {uf.cdabr}
+                                  <span className="truncate max-w-[150px]">{ufDict.get(uf.cdabr.toUpperCase()) || uf.cdabr}</span>
                                   <button
                                     onClick={(e) => {
                                       e.stopPropagation();

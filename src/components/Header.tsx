@@ -73,7 +73,7 @@ export function Header({ onLocalFileLoaded }: { onLocalFileLoaded: (data: { type
                   </div>
                   
                   {/* Round Switcher */}
-                  {selectedEleicao.cdt2 && (
+                  {(selectedEleicao.cdt2 || selectedEleicao.t === '2') && (
                     <button 
                       className="ml-2 px-2 py-0.5 text-[9px] bg-white/20 hover:bg-white/30 rounded uppercase font-bold transition-colors"
                       title={selectedEleicao.t === '1' ? "Mudar para 2º Turno" : "Mudar para 1º Turno"}

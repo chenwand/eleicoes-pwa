@@ -4,6 +4,7 @@ import { fetchEA12, flattenEA12Municipios } from '../services/ea12Service';
 import { fetchEA20, buildCandidatoFotoUrl } from '../services/ea20Service';
 import { validateEA20 } from '../services/ea20Validator';
 import { useEnvironment } from '../context/EnvironmentContext';
+import { TrendIndicator } from './TrendIndicator';
 import type { EA20Cargo, EA20Candidato, EA20Agrupamento, EA20Response } from '../types/ea20';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -42,7 +43,7 @@ const renderHighlightedJson = (jsonObj: any) => {
   return <pre className="text-xs sm:text-sm text-gray-300 font-mono" dangerouslySetInnerHTML={{ __html: highlighted }} />;
 };
 
-function VoteVisualization({ v, isProportional, isConsultaPopular }: { v: any, isProportional: boolean, isConsultaPopular?: boolean }) {
+function VoteVisualization({ v, previousV, isProportional, isConsultaPopular }: { v: any, previousV?: any, isProportional: boolean, isConsultaPopular?: boolean }) {
   const [expanded, setExpanded] = useState(true);
   const parseNum = (s: string) => parseInt(s || '0', 10);
 
@@ -118,6 +119,7 @@ function VoteVisualization({ v, isProportional, isConsultaPopular }: { v: any, i
                 <span className="flex items-center gap-1">
                   {vvc.toLocaleString('pt-BR')}
                   <span className="text-[10px] font-normal text-gray-400">({getPct(vvc).toFixed(1)}%)</span>
+                  <TrendIndicator current={getPct(vvc).toFixed(1)} previous={previousV ? ((parseInt(previousV.vvc || '0') / (isConsultaPopular ? (parseInt(previousV.vvc || '0') + parseInt(previousV.vb || '0') + parseInt(previousV.tvn || '0')) : parseInt(previousV.tv || '0'))) * 100).toFixed(1) : undefined} />
                   {Math.abs(getPct(vvc) - parsePct(v.pvvc)) > 0.1 && (
                     <span className="text-[9px] text-yellow-600 dark:text-yellow-500" title={`Arquivo: ${v.pvvc}%`}>⚠️</span>
                   )}
@@ -186,6 +188,7 @@ function VoteVisualization({ v, isProportional, isConsultaPopular }: { v: any, i
                 <span className="flex items-center gap-1">
                   {vvc.toLocaleString('pt-BR')}
                   <span className="text-[10px] text-gray-400">({getPct(vvc).toFixed(1)}%)</span>
+                  <TrendIndicator current={getPct(vvc).toFixed(1)} previous={previousV ? ((parseInt(previousV.vvc || '0') / (isConsultaPopular ? (parseInt(previousV.vvc || '0') + parseInt(previousV.vb || '0') + parseInt(previousV.tvn || '0')) : parseInt(previousV.tv || '0'))) * 100).toFixed(1) : undefined} />
                 </span>
               </div>
             </div>
@@ -201,6 +204,7 @@ function VoteVisualization({ v, isProportional, isConsultaPopular }: { v: any, i
               <span className="flex items-center gap-1">
                 {vb.toLocaleString('pt-BR')}
                 <span className="text-[10px] text-gray-400">({getPct(vb).toFixed(1)}%)</span>
+                <TrendIndicator current={getPct(vb).toFixed(1)} previous={previousV ? ((parseInt(previousV.vb || '0') / (isConsultaPopular ? (parseInt(previousV.vvc || '0') + parseInt(previousV.vb || '0') + parseInt(previousV.tvn || '0')) : parseInt(previousV.tv || '0'))) * 100).toFixed(1) : undefined} />
                 {Math.abs(getPct(vb) - parsePct(v.pvb)) > 0.1 && (
                   <span className="text-[9px] text-yellow-600 dark:text-yellow-500" title={`Arquivo: ${v.pvb}%`}>⚠️</span>
                 )}
@@ -214,6 +218,7 @@ function VoteVisualization({ v, isProportional, isConsultaPopular }: { v: any, i
               <span className="flex items-center gap-1">
                 {tvn.toLocaleString('pt-BR')}
                 <span className="text-[10px] text-gray-400">({getPct(tvn).toFixed(1)}%)</span>
+                <TrendIndicator current={getPct(tvn).toFixed(1)} previous={previousV ? ((parseInt(previousV.tvn || '0') / (isConsultaPopular ? (parseInt(previousV.vvc || '0') + parseInt(previousV.vb || '0') + parseInt(previousV.tvn || '0')) : parseInt(previousV.tv || '0'))) * 100).toFixed(1) : undefined} />
                 {Math.abs(getPct(tvn) - parsePct(v.ptvn)) > 0.1 && (
                   <span className="text-[9px] text-yellow-600 dark:text-yellow-500" title={`Arquivo: ${v.ptvn}%`}>⚠️</span>
                 )}
@@ -226,7 +231,7 @@ function VoteVisualization({ v, isProportional, isConsultaPopular }: { v: any, i
   );
 }
 
-function SecoesSummary({ s }: { s: any }) {
+function SecoesSummary({ s, previousS }: { s: any, previousS?: any }) {
   const [expanded, setExpanded] = useState(false);
   const parseNum = (val: string) => parseInt(val, 10) || 0;
   const parsePct = (val: string) => parseFloat((val || '0').replace(',', '.')) || 0;
@@ -247,7 +252,10 @@ function SecoesSummary({ s }: { s: any }) {
       </div>
       <div className="flex justify-between text-sm mb-1">
         <span className="text-gray-600 dark:text-gray-400 text-xs">Totalizadas</span>
-        <span className="font-semibold text-gray-800 dark:text-gray-200">{s.pst}%</span>
+        <span className="font-semibold text-gray-800 dark:text-gray-200 flex items-center">
+          {s.pst}%
+          <TrendIndicator current={s.pst} previous={previousS?.pst} />
+        </span>
       </div>
       <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2 mb-1">
         <div className="h-2 rounded-full bg-blue-600 transition-all" style={{ width: `${parsePct(s.pst)}%` }} />
@@ -306,7 +314,7 @@ function SecoesSummary({ s }: { s: any }) {
   );
 }
 
-function EleitoresSummary({ e }: { e: any }) {
+function EleitoresSummary({ e, previousE }: { e: any, previousE?: any }) {
   const [expanded, setExpanded] = useState(false);
   const parseNum = (val: string) => parseInt(val, 10) || 0;
   const parsePct = (val: string) => parseFloat((val || '0').replace(',', '.')) || 0;
@@ -329,7 +337,10 @@ function EleitoresSummary({ e }: { e: any }) {
       </div>
       <div className="flex justify-between text-sm mb-1">
         <span className="text-gray-600 dark:text-gray-400 text-xs">Comparecimento</span>
-        <span className="font-semibold text-gray-800 dark:text-gray-200">{e.pc}%</span>
+        <span className="font-semibold text-gray-800 dark:text-gray-200 flex items-center">
+          {e.pc}%
+          <TrendIndicator current={e.pc} previous={previousE?.pc} />
+        </span>
       </div>
       <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2 mb-1">
         <div className="h-2 rounded-full bg-green-500 transition-all" style={{ width: `${parsePct(e.pc)}%` }} />
@@ -394,7 +405,7 @@ function EleitoresSummary({ e }: { e: any }) {
 // ── Candidate card component ──────────────────────────────────────────────────
 
 function CandCard({
-  cand, agr, totalVotos, ambiente, ciclo, eleicaoCd, uf, isProportional, isFavorite, onToggleFavorite, host
+  cand, agr, totalVotos, ambiente, ciclo, eleicaoCd, uf, isProportional, isFavorite, onToggleFavorite, host, previousCand
 }: {
   cand: EA20Candidato;
   agr: EA20Agrupamento;
@@ -407,6 +418,7 @@ function CandCard({
   isFavorite: boolean;
   onToggleFavorite: () => void;
   host: string;
+  previousCand?: EA20Candidato;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [fotoError, setFotoError] = useState(false);
@@ -448,7 +460,10 @@ function CandCard({
             <div className="text-[11px] text-gray-400 dark:text-gray-500">{agr.par.find(p => p.cand.some(c => c.sqcand === cand.sqcand))?.sg} · {agr.nm}</div>
           </td>
           <td className="py-2 px-3 text-right">
-            <div className={`font-mono font-bold text-xs ${pctColor}`}>{cand.pvap}%</div>
+            <div className={`font-mono font-bold text-xs flex items-center justify-end ${pctColor}`}>
+              {cand.pvap}%
+              <TrendIndicator current={cand.pvap} previous={previousCand?.pvap} />
+            </div>
             <div className="text-[11px] text-gray-400 dark:text-gray-500">{parseInt(cand.vap).toLocaleString('pt-BR')}</div>
           </td>
         </tr>
@@ -481,7 +496,10 @@ function CandCard({
                     )}
                   </div>
                   <div className="text-right shrink-0">
-                    <div className={`text-lg font-bold font-mono ${pctColor}`}>{cand.pvap}%</div>
+                    <div className={`text-lg font-bold font-mono flex items-center justify-end ${pctColor}`}>
+                      {cand.pvap}%
+                      <TrendIndicator current={cand.pvap} previous={previousCand?.pvap} />
+                    </div>
                     <div className="text-xs text-gray-500 dark:text-gray-400">{parseInt(cand.vap).toLocaleString('pt-BR')} votos</div>
                   </div>
                 </div>
@@ -531,7 +549,10 @@ function CandCard({
               </div>
             </div>
             <div className={`text-right shrink-0`}>
-              <div className={`text-lg font-bold font-mono ${pctColor}`}>{cand.pvap}%</div>
+              <div className={`text-lg font-bold font-mono flex items-center justify-end ${pctColor}`}>
+                {cand.pvap}%
+                <TrendIndicator current={cand.pvap} previous={previousCand?.pvap} />
+              </div>
               <div className="text-[10px] text-gray-500 dark:text-gray-400">{parseInt(cand.vap).toLocaleString('pt-BR')} votos</div>
             </div>
           </div>
@@ -596,7 +617,7 @@ function CandDetail({ cand, agr, ambiente, ciclo, eleicaoCd, uf, fotoError, setF
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
-function RespostaCard({ resp, pctColor }: { resp: any, pctColor: string }) {
+function RespostaCard({ resp, previousResp, pctColor }: { resp: any, previousResp?: any, pctColor: string }) {
   const pct = parseFloat((resp.pvap || '0').replace(',', '.'));
   const isEleito = resp.e === 's';
   const barColor = isEleito ? 'bg-green-500' : 'bg-blue-500';
@@ -615,7 +636,10 @@ function RespostaCard({ resp, pctColor }: { resp: any, pctColor: string }) {
           </div>
         </div>
         <div className={`text-right shrink-0`}>
-          <div className={`text-lg font-bold font-mono ${pctColor}`}>{resp.pvap}%</div>
+          <div className={`text-lg font-bold font-mono flex items-center justify-end ${pctColor}`}>
+            {resp.pvap}%
+            <TrendIndicator current={resp.pvap} previous={previousResp?.pvap} />
+          </div>
           <div className="text-[10px] text-gray-500 dark:text-gray-400">{parseInt(resp.vap).toLocaleString('pt-BR')} votos</div>
         </div>
       </div>
@@ -658,6 +682,7 @@ export function EA20Viewer({
   const [isEditing, setIsEditing] = useState(false);
   const [isModified, setIsModified] = useState(false);
   const [editValue, setEditValue] = useState('');
+  const [previousData, setPreviousData] = useState<any>(null);
 
   // Advanced search/filter/sort state
   const [searchTerm, setSearchTerm] = useState('');
@@ -710,6 +735,9 @@ export function EA20Viewer({
 
   useEffect(() => {
     if (ea20Data) {
+      if (localData && localData !== ea20Data) {
+        setPreviousData(localData);
+      }
       setLocalData(ea20Data);
       setIsModified(false);
       setIsEditing(false);
@@ -851,7 +879,12 @@ export function EA20Viewer({
         const dateB = parseDate(b.cand.dt);
         return dateA.getTime() - dateB.getTime(); // Earlier date = older
       }
-      return 0;
+      // Default: TSE defined order (seq)
+      const aSeq = parseInt(a.cand.seq, 10) || 0;
+      const bSeq = parseInt(b.cand.seq, 10) || 0;
+      if (aSeq !== bSeq) return aSeq - bSeq;
+      
+      return a.cand.nmu.localeCompare(b.cand.nmu);
     });
 
     return list;
@@ -909,7 +942,12 @@ export function EA20Viewer({
             <div className="flex items-center gap-2">
               <button
                 onClick={() => {
-                  refetch().then(r => { if (r.data) { setLocalData(r.data); setIsModified(false); setIsEditing(false); } });
+                  refetch().then(r => { if (r.data) { 
+                    setPreviousData(localData);
+                    setLocalData(r.data); 
+                    setIsModified(false); 
+                    setIsEditing(false); 
+                  } });
                 }}
                 disabled={isFetching}
                 className={`p-1.5 bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 rounded-full transition-colors ${isFetching ? 'opacity-50 cursor-not-allowed' : ''}`}
@@ -1012,7 +1050,14 @@ export function EA20Viewer({
                       </button>
                     ) : (
                       <>
-                        <button onClick={() => { try { setLocalData(JSON.parse(editValue)); setIsModified(true); setIsEditing(false); setShowRawJson(false); } catch { alert('JSON inválido!'); } }}
+                        <button onClick={() => { try { 
+                          const parsed = JSON.parse(editValue);
+                          setPreviousData(localData);
+                          setLocalData(parsed); 
+                          setIsModified(true); 
+                          setIsEditing(false); 
+                          setShowRawJson(false); 
+                        } catch { alert('JSON inválido!'); } }}
                           className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded transition-colors">Salvar</button>
                         <button onClick={() => setIsEditing(false)}
                           className="px-3 py-1 bg-gray-500 hover:bg-gray-600 text-white text-xs font-bold rounded transition-colors">Cancelar</button>
@@ -1075,12 +1120,12 @@ export function EA20Viewer({
 
                   {/* Section + Elector summary */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <SecoesSummary s={localData.s} />
-                    <EleitoresSummary e={localData.e} />
+                    <SecoesSummary s={localData.s} previousS={previousData?.s} />
+                    <EleitoresSummary e={localData.e} previousE={previousData?.e} />
                   </div>
 
                   {/* Votes breakdown */}
-                  <VoteVisualization v={localData.v} isProportional={!isMajority && !isConsultaPopular} isConsultaPopular={isConsultaPopular} />
+                  <VoteVisualization v={localData.v} previousV={previousData?.v} isProportional={!isMajority && !isConsultaPopular} isConsultaPopular={isConsultaPopular} />
 
                   {!isConsultaPopular && (
                     <>
@@ -1195,6 +1240,7 @@ export function EA20Viewer({
                           <RespostaCard
                             key={item.resp.n}
                             resp={item.resp}
+                            previousResp={previousData?.perg?.find((p: any) => p.cd === perguntaData.cd)?.resp?.find((r: any) => r.n === item.resp.n)}
                             pctColor={parseFloat(item.resp.pvap.replace(',', '.')) >= 50 ? 'text-green-600 dark:text-green-400' : 'text-blue-600 dark:text-blue-400'}
                           />
                         ))}
@@ -1231,6 +1277,7 @@ export function EA20Viewer({
                               isFavorite={favorites.has(cand.sqcand)} 
                               onToggleFavorite={() => toggleFavorite(cand.sqcand)} 
                               host={host} 
+                              previousCand={previousData?.carg?.[0]?.agr?.flatMap((a: any) => a.par.flatMap((p: any) => p.cand))?.find((c: any) => c.sqcand === cand.sqcand)}
                             />
                           ))}
                         </div>
@@ -1260,6 +1307,7 @@ export function EA20Viewer({
                                   isFavorite={favorites.has(cand.sqcand)} 
                                   onToggleFavorite={() => toggleFavorite(cand.sqcand)} 
                                   host={host} 
+                                  previousCand={previousData?.carg?.[0]?.agr?.flatMap((a: any) => a.par.flatMap((p: any) => p.cand))?.find((c: any) => c.sqcand === cand.sqcand)}
                                 />
                               ))}
                             </tbody>

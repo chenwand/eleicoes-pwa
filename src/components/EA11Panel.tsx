@@ -77,8 +77,8 @@ export function EA11Panel({ isOpen, onClose, initialEleicaoCd }: EA11PanelProps)
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'fav'>('all');
   const [sortMode, setSortMode] = useState<'default' | 'data' | 'tipo' | 'nome'>('default');
-  const [typeFilter] = useState<'all' | 'ordinaria' | 'suplementar' | 'consulta'>('all');
-  const [scopeFilter] = useState<'all' | 'federal' | 'estadual' | 'municipal'>('all');
+  const [typeFilter, setTypeFilter] = useState<string>('all');
+  const [scopeFilter, setScopeFilter] = useState<'all' | 'federal' | 'estadual' | 'municipal'>('all');
 
   const [showRawJson, setShowRawJson] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -186,18 +186,17 @@ export function EA11Panel({ isOpen, onClose, initialEleicaoCd }: EA11PanelProps)
 
   const t2ElectionCodes = useMemo(() => new Set(allElections.map((e) => e.cdt2).filter(Boolean)), [allElections]);
   const topLevelElections = useMemo(() => allElections.filter((e) => !t2ElectionCodes.has(e.cd)), [allElections, t2ElectionCodes]);
+  
+  const availableTypes = useMemo(() => {
+    const types = new Set(allElections.map(e => e.tp));
+    return Array.from(types).sort();
+  }, [allElections]);
 
   const filteredElections = useMemo(() => {
     return topLevelElections
       .filter((e) => {
         if (statusFilter === 'fav' && !favorites.has(e.cd)) return false;
-        if (typeFilter !== 'all') {
-          const isOrdinaria = ['1', '3', '6'].includes(e.tp);
-          const isSuplementar = ['2', '4'].includes(e.tp);
-          if (typeFilter === 'ordinaria' && !isOrdinaria) return false;
-          if (typeFilter === 'suplementar' && !isSuplementar) return false;
-          if (typeFilter === 'consulta' && e.tp !== '7') return false;
-        }
+        if (typeFilter !== 'all' && e.tp !== typeFilter) return false;
         if (scopeFilter !== 'all') {
           const isFederal = e.abr.some((a) => a.cd === 'br');
           const isMunicipal = e.abr.some((a) => a.mu && a.mu.length > 0);
@@ -239,7 +238,7 @@ export function EA11Panel({ isOpen, onClose, initialEleicaoCd }: EA11PanelProps)
       <div className={`fixed inset-0 bg-black/40 z-40 backdrop-blur-sm ${isClosing ? 'animate-fade-out' : 'animate-fade-in'}`} />
       <div
         ref={panelRef}
-        className={`fixed inset-y-0 right-0 z-50 w-full sm:w-[600px] bg-white dark:bg-slate-900 shadow-2xl overflow-y-auto border-l border-gray-200 dark:border-slate-800 flex flex-col ${isClosing ? 'animate-slide-out-right' : 'animate-slide-in-right'}`}
+        className={`fixed inset-y-0 right-0 z-50 w-full sm:w-[800px] bg-white dark:bg-slate-900 shadow-2xl overflow-y-auto border-l border-gray-200 dark:border-slate-800 flex flex-col ${isClosing ? 'animate-slide-out-right' : 'animate-slide-in-right'}`}
       >
         <div className="sticky top-0 z-10 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-gray-200 dark:border-slate-800 p-4">
           <div className="flex justify-between items-start mb-4">
@@ -407,13 +406,37 @@ export function EA11Panel({ isOpen, onClose, initialEleicaoCd }: EA11PanelProps)
                   />
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <button onClick={() => setStatusFilter('all')} className={`px-3 py-1 rounded-full text-xs font-medium ${statusFilter === 'all' ? 'bg-blue-600 text-white' : 'bg-gray-100 dark:bg-slate-800'}`}>Todas</button>
-                  <button onClick={() => setStatusFilter('fav')} className={`px-3 py-1 rounded-full text-xs font-medium ${statusFilter === 'fav' ? 'bg-pink-500 text-white' : 'bg-gray-100 dark:bg-slate-800'}`}>Favoritas</button>
-                  <select value={sortMode} onChange={(e) => setSortMode(e.target.value as any)} className="text-xs bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg px-2">
-                    <option value="default">Ordenação padrão</option>
-                    <option value="data">Data</option>
-                    <option value="tipo">Tipo</option>
-                    <option value="nome">Nome</option>
+                  <button onClick={() => setStatusFilter('all')} className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase transition-all ${statusFilter === 'all' ? 'bg-blue-600 text-white shadow-md' : 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-400'}`}>Todas</button>
+                  <button onClick={() => setStatusFilter('fav')} className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase transition-all ${statusFilter === 'fav' ? 'bg-pink-500 text-white shadow-md' : 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-400'}`}>Favoritas</button>
+                  
+                  {/* Dynamic Type Filter */}
+                  <select 
+                    value={typeFilter} 
+                    onChange={(e) => setTypeFilter(e.target.value)} 
+                    className="text-[10px] font-bold uppercase bg-gray-100 dark:bg-slate-800 border-none rounded-full px-3 py-1 text-gray-600 dark:text-gray-400 focus:ring-1 focus:ring-blue-500 outline-none"
+                  >
+                    <option value="all">Tipo: Todos</option>
+                    {availableTypes.map(tp => (
+                      <option key={tp} value={tp}>{formatTipoEleicao(tp)}</option>
+                    ))}
+                  </select>
+
+                  <select 
+                    value={scopeFilter} 
+                    onChange={(e) => setScopeFilter(e.target.value as any)} 
+                    className="text-[10px] font-bold uppercase bg-gray-100 dark:bg-slate-800 border-none rounded-full px-3 py-1 text-gray-600 dark:text-gray-400 focus:ring-1 focus:ring-blue-500 outline-none"
+                  >
+                    <option value="all">Abrangência: Todas</option>
+                    <option value="federal">Federal</option>
+                    <option value="estadual">Estadual</option>
+                    <option value="municipal">Municipal</option>
+                  </select>
+
+                  <select value={sortMode} onChange={(e) => setSortMode(e.target.value as any)} className="text-[10px] font-bold uppercase bg-gray-100 dark:bg-slate-800 border-none rounded-full px-3 py-1 text-gray-600 dark:text-gray-400 focus:ring-1 focus:ring-blue-500 outline-none ml-auto">
+                    <option value="default">Ord: Padrão</option>
+                    <option value="data">Ord: Data</option>
+                    <option value="tipo">Ord: Tipo</option>
+                    <option value="nome">Ord: Nome</option>
                   </select>
                 </div>
               </div>
