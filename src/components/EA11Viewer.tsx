@@ -280,8 +280,8 @@ export function EA11Viewer({ isOpen, onClose, initialEleicaoCd }: EA11ViewerProp
         m.munNome.toUpperCase() !== 'BRASIL'
       );
 
-      // If Municipal Supplementary (Type 4), remove UF-wide entries too
-      if (currentEleicao?.tp === '4') {
+      // If Municipal election (Types 3, 4, 7), remove UF-wide entries too
+      if (['3', '4', '7'].includes(currentEleicao?.tp || '')) {
         list = list.filter(m => !m.isUfWide);
       }
     }

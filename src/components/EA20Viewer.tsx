@@ -259,7 +259,7 @@ function SecoesSummary({ s, previousS }: { s: any, previousS?: any }) {
         </span>
       </div>
       <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2 mb-1">
-        <div className="h-2 rounded-full bg-blue-600 transition-all" style={{ width: `${parsePct(s.pst)}%` }} />
+        <div className="h-2 rounded-full bg-green-600 transition-all" style={{ width: `${parsePct(s.pst)}%` }} />
       </div>
       <div className="text-[10px] text-gray-400 dark:text-gray-500">{st.toLocaleString('pt-BR')} de {ts.toLocaleString('pt-BR')}</div>
 
@@ -344,7 +344,7 @@ function EleitoresSummary({ e, previousE }: { e: any, previousE?: any }) {
         </span>
       </div>
       <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2 mb-1">
-        <div className="h-2 rounded-full bg-green-500 transition-all" style={{ width: `${parsePct(e.pc)}%` }} />
+        <div className="h-2 rounded-full bg-blue-600 transition-all" style={{ width: `${parsePct(e.pc)}%` }} />
       </div>
       <div className="text-[10px] text-gray-400 dark:text-gray-500">
         {c.toLocaleString('pt-BR')} de {est.toLocaleString('pt-BR')}
@@ -518,7 +518,10 @@ function CandCard({
 
   // Card layout for majority cargos
   return (
-    <div className={`border rounded-lg p-3 shadow-sm transition-all ${borderBg}`}>
+    <div 
+      className={`border rounded-lg p-3 shadow-sm transition-all cursor-pointer hover:border-blue-400 dark:hover:border-blue-600 ${borderBg}`}
+      onClick={() => setExpanded(!expanded)}
+    >
       <div className="flex gap-3 mb-2">
         {!fotoError && (
           <img
@@ -569,12 +572,6 @@ function CandCard({
         <div className={`h-2 rounded-full ${barColor} transition-all`} style={{ width: `${Math.min(pct, 100)}%` }} />
       </div>
 
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className="text-[11px] text-blue-600 dark:text-blue-400 hover:underline mt-1"
-      >
-        {expanded ? '▲ Ocultar detalhes' : '▼ Ver detalhes'}
-      </button>
 
       {expanded && (
         <div className="mt-3 pt-3 border-t border-gray-200 dark:border-slate-700">
@@ -734,20 +731,32 @@ export function EA20Viewer({
     staleTime: 30000,
   });
 
+  // Robust reset whenever parameters change to prevent cross-context trending
   useEffect(() => {
-    if (ea20Data) {
-      if (localData && localData !== ea20Data) {
-        setPreviousData(localData);
-      }
-      setLocalData(ea20Data);
-      setIsModified(false);
-      setIsEditing(false);
-    } else if (isLoading) {
+    if (!initialLocalData) {
       setLocalData(null);
+      setPreviousData(null);
       setIsModified(false);
       setIsEditing(false);
     }
-  }, [ea20Data, isLoading]);
+  }, [ciclo, eleicaoCd, uf, cdMun, selectedCargoIdx, setSelectedZona, ambiente, host, initialLocalData]);
+
+  useEffect(() => {
+    if (ea20Data) {
+      if (localData && localData !== ea20Data) {
+        // Double check same context before setting previousData (fallback)
+        const sameEle = localData.ele === ea20Data.ele;
+        const sameAbr = localData.cdabr === ea20Data.cdabr;
+        const sameCargo = localData.carg?.[0]?.cd === ea20Data.carg?.[0]?.cd;
+        const samePerg = localData.perg?.[0]?.cd === ea20Data.perg?.[0]?.cd;
+        
+        if (sameEle && sameAbr && (sameCargo || samePerg)) {
+          setPreviousData(localData);
+        }
+      }
+      setLocalData(ea20Data);
+    }
+  }, [ea20Data]);
 
   const validationResults = useMemo(() => {
     if (!localData) return [];
@@ -1269,8 +1278,8 @@ export function EA20Viewer({
                           <button onClick={() => { setSearchTerm(''); setStatusFilter('all'); setPartyFilter('all'); }} className="mt-2 text-sm text-blue-600 dark:text-blue-400 hover:underline">Limpar filtros</button>
                         </div>
                       ) : isMajority ? (
-                        // ── Majority: cards sorted by votes ───────────────────
-                        <div className="space-y-3">
+                        // ── Majority: cards side-by-side and wrapping ────────
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                           {filteredAndSortedCandidates.map(({ cand, agr }) => (
                             <CandCard 
                               key={cand.sqcand} 
