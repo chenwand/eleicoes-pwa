@@ -1,6 +1,7 @@
 import type { EA14Response } from '../types/ea14';
+import { DEFAULT_TSE_HOST, DEFAULT_AMBIENTE } from './config';
 
-export async function fetchEA15(ciclo: string, eleicaoCd: string, uf: string, ambiente: string = 'oficial', host: string = 'https://resultados.tse.jus.br'): Promise<EA14Response> {
+export async function fetchEA15(ciclo: string, eleicaoCd: string, uf: string, ambiente: string = DEFAULT_AMBIENTE, host: string = DEFAULT_TSE_HOST): Promise<EA14Response> {
   const eleicaoFormatted = eleicaoCd.padStart(6, '0');
   const ufLower = uf.toLowerCase();
 

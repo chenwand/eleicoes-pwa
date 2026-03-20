@@ -1,11 +1,12 @@
 import type { EA12Response } from '../types/ea12';
+import { DEFAULT_TSE_HOST, DEFAULT_AMBIENTE } from './config';
 
 // Pad o código da eleição com zeros à esquerda até atingir 6 caracteres
 function formatCodigoEleicao(cd: string): string {
   return cd.padStart(6, '0');
 }
 
-export async function fetchEA12(ciclo: string, cdEleicao: string, ambiente: string = 'oficial', host: string = 'https://resultados.tse.jus.br'): Promise<EA12Response> {
+export async function fetchEA12(ciclo: string, cdEleicao: string, ambiente: string = DEFAULT_AMBIENTE, host: string = DEFAULT_TSE_HOST): Promise<EA12Response> {
   const paddedCd = formatCodigoEleicao(cdEleicao);
   const url = `${host}/${ambiente}/${ciclo}/${cdEleicao}/config/mun-e${paddedCd}-cm.json`;
   

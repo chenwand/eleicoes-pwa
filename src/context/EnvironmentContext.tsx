@@ -12,7 +12,7 @@ interface EnvironmentContextType {
 }
 
 const DEFAULT_ENVIRONMENTS = ['oficial', 'simulado', 'teste', 'formacao'];
-const DEFAULT_HOST = 'https://resultados.tse.jus.br';
+const DEFAULT_HOST = import.meta.env.VITE_TSE_API_HOST || '/tse-api';
 
 const EnvironmentContext = createContext<EnvironmentContextType | undefined>(undefined);
 

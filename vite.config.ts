@@ -32,4 +32,13 @@ export default defineConfig({
       }
     })
   ],
+  server: {
+    proxy: {
+      '/tse-api': {
+        target: 'https://resultados.tse.jus.br',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/tse-api/, '')
+      }
+    }
+  }
 })

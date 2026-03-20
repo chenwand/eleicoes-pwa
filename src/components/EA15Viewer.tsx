@@ -255,7 +255,7 @@ export function EA15Viewer({ ciclo, eleicaoCd, uf, onBack, relatedEleicaoCd, rel
         className={`fixed inset-0 bg-black/40 z-[60] backdrop-blur-sm transition-opacity duration-300 ${isClosing ? 'opacity-0' : 'opacity-100'}`} 
         onClick={handleBack} 
       />
-      <div className={`fixed inset-y-0 right-0 z-[70] w-[95vw] sm:w-[85vw] lg:w-[75vw] xl:w-[65vw] bg-white dark:bg-slate-900 shadow-2xl border-l border-gray-200 dark:border-slate-800 flex flex-col ${isClosing ? 'animate-slide-out-right' : 'animate-slide-in-right'}`}>
+      <div className={`fixed inset-y-0 right-0 z-[70] w-[95vw] sm:w-[90vw] bg-white dark:bg-slate-900 shadow-2xl border-l border-gray-200 dark:border-slate-800 flex flex-col ${isClosing ? 'animate-slide-out-right' : 'animate-slide-in-right'}`}>
       <div className="sticky top-0 z-20 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-gray-200 dark:border-slate-800 p-4">
         <div className="flex items-center justify-between gap-3 mb-4">
           <div className="flex items-center gap-2">

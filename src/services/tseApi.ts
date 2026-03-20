@@ -1,6 +1,7 @@
 import type { ElectionData, UF, Turno, Cargo } from '../types/election';
+import { DEFAULT_TSE_HOST } from './config';
 
-const TSE_BASE_URL = 'https://resultados.tse.jus.br/oficial';
+const TSE_BASE_URL = `${DEFAULT_TSE_HOST}/oficial`;
 
 const CARGO_CODES: Record<Cargo, string> = {
   'presidente': '0001',

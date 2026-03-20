@@ -264,7 +264,7 @@ export function Validator() {
     });
 
   return (
-    <div className={`mx-auto space-y-6 transition-all duration-300 ${selectedEleicaoCd ? 'max-w-[1600px] px-4' : 'max-w-5xl'}`}>
+    <div className={`mx-auto space-y-6 transition-all duration-300 ${selectedEleicaoCd ? 'max-w-5xl px-4' : 'max-w-5xl'}`}>
       <div className="bg-white dark:bg-slate-900 rounded-lg shadow-md p-6 dark:border dark:border-slate-800 transition-colors duration-300">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
           <div className="flex-1">

@@ -1,6 +1,7 @@
 import type { EA14Response } from '../types/ea14';
+import { DEFAULT_TSE_HOST, DEFAULT_AMBIENTE } from './config';
 
-export async function fetchEA14(ciclo: string, eleicaoCd: string, ambiente: string = 'oficial', host: string = 'https://resultados.tse.jus.br'): Promise<EA14Response> {
+export async function fetchEA14(ciclo: string, eleicaoCd: string, ambiente: string = DEFAULT_AMBIENTE, host: string = DEFAULT_TSE_HOST): Promise<EA14Response> {
   // Ajuste do código da eleição com preenchimento de zeros para bater com o padrão de arquivos
   const eleicaoFormatted = eleicaoCd.padStart(6, '0');
 
