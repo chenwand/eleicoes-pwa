@@ -36,6 +36,24 @@ const renderHighlightedJson = (jsonObj: any) => {
   );
 };
 
+const UF_TO_REGION: Record<string, string> = {
+  'AC': 'N', 'AM': 'N', 'AP': 'N', 'PA': 'N', 'RO': 'N', 'RR': 'N', 'TO': 'N',
+  'AL': 'NE', 'BA': 'NE', 'CE': 'NE', 'MA': 'NE', 'PB': 'NE', 'PE': 'NE', 'PI': 'NE', 'RN': 'NE', 'SE': 'NE',
+  'ES': 'SE', 'MG': 'SE', 'RJ': 'SE', 'SP': 'SE',
+  'PR': 'S', 'RS': 'S', 'SC': 'S',
+  'DF': 'CO', 'GO': 'CO', 'MT': 'CO', 'MS': 'CO'
+};
+
+const REGIONS = [
+  { cd: 'BR', nm: 'Brasil', icon: '🇧🇷' },
+  { cd: 'N', nm: 'Norte', icon: '🌲' },
+  { cd: 'NE', nm: 'Nordeste', icon: '🌵' },
+  { cd: 'SE', nm: 'Sudeste', icon: '🏢' },
+  { cd: 'S', nm: 'Sul', icon: '❄️' },
+  { cd: 'CO', nm: 'Centro-Oeste', icon: '🌾' },
+  { cd: 'ZZ', nm: 'Exterior', icon: '🗼' }
+];
+
 interface EA14ViewerProps {
   ciclo: string;
   eleicaoCd: string;
@@ -57,6 +75,7 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose, relatedElei
   const [isClosing, setIsClosing] = useState(false);
   const [previousData, setPreviousData] = useState<any>(null);
   const [isBrExpanded, setIsBrExpanded] = useState(false);
+  const [selectedRegion, setSelectedRegion] = useState('BR');
 
   const handleClose = () => {
     setIsClosing(true);
@@ -113,6 +132,73 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose, relatedElei
       setIsModified(false);
     }
   }, [data]);
+
+  const activeAbr = useMemo(() => {
+    if (!localData?.abr) return null;
+    if (selectedRegion === 'BR') {
+      return localData.abr.find((a: any) => a.cdabr === 'br');
+    }
+
+    if (selectedRegion === 'ZZ') {
+      return localData.abr.find((a: any) => a.cdabr === 'zz');
+    }
+
+    const ufsInRegion = localData.abr.filter((a: any) => 
+      UF_TO_REGION[a.cdabr.toUpperCase()] === selectedRegion
+    );
+
+    if (ufsInRegion.length === 0) return null;
+
+    // Summation of all numeric fields
+    const sum = {
+      cdabr: selectedRegion.toLowerCase(),
+      tpabr: 'regiao',
+      and: ufsInRegion.every((a: any) => a.and === 'f') ? 'f' : 'p',
+      dt: ufsInRegion.sort((a: any, b: any) => {
+        const toSortable = (dt: string, ht: string) => {
+          if (!dt) return '';
+          const [d, m, y] = dt.split('/');
+          return `${y}/${m}/${d} ${ht || ''}`;
+        };
+        return toSortable(b.dt, b.ht).localeCompare(toSortable(a.dt, a.ht));
+      })[0].dt, // Use the latest update date
+      ht: ufsInRegion.sort((a: any, b: any) => {
+        const toSortable = (dt: string, ht: string) => {
+          if (!dt) return '';
+          const [d, m, y] = dt.split('/');
+          return `${y}/${m}/${d} ${ht || ''}`;
+        };
+        return toSortable(b.dt, b.ht).localeCompare(toSortable(a.dt, a.ht));
+      })[0].ht, // Use the latest update hour
+      s: {
+        ts: ufsInRegion.reduce((acc: number, a: any) => acc + (parseInt(a.s.ts) || 0), 0).toString(),
+        st: ufsInRegion.reduce((acc: number, a: any) => acc + (parseInt(a.s.st) || 0), 0).toString(),
+        pst: '', 
+        snt: ufsInRegion.reduce((acc: number, a: any) => acc + (parseInt(a.s.snt) || 0), 0).toString(),
+        si: ufsInRegion.reduce((acc: number, a: any) => acc + (parseInt(a.s.si) || 0), 0).toString(),
+      },
+      e: {
+        te: ufsInRegion.reduce((acc: number, a: any) => acc + (parseInt(a.e.te) || 0), 0).toString(),
+        c: ufsInRegion.reduce((acc: number, a: any) => acc + (parseInt(a.e.c) || 0), 0).toString(),
+        pc: '', 
+        a: ufsInRegion.reduce((acc: number, a: any) => acc + (parseInt(a.e.a) || 0), 0).toString(),
+        pa: '', 
+      },
+      munf: ufsInRegion.reduce((acc: number, a: any) => acc + (parseInt(a.munf) || 0), 0).toString(),
+      munpt: ufsInRegion.reduce((acc: number, a: any) => acc + (parseInt(a.munpt) || 0), 0).toString(),
+      munnr: ufsInRegion.reduce((acc: number, a: any) => acc + (parseInt(a.munnr) || 0), 0).toString(),
+    };
+
+    // Recalculate Percentages
+    const safePct = (val: number, total: number) => 
+      total > 0 ? ((val / total) * 100).toFixed(2).replace('.', ',') : '0,00';
+
+    sum.s.pst = safePct(parseInt(sum.s.st), parseInt(sum.s.ts));
+    sum.e.pc = safePct(parseInt(sum.e.c), parseInt(sum.e.te));
+    sum.e.pa = safePct(parseInt(sum.e.a), parseInt(sum.e.te));
+
+    return sum;
+  }, [localData, selectedRegion]);
 
   const validationResults = useMemo(() => {
     if (!localData) return [];
@@ -351,50 +437,83 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose, relatedElei
                     )}
                   </div>
                 ) : (
-                  <div className="space-y-3">
-                    {/* Find the BR entry to put it at the top if it exists */}
-                    {localData.abr.filter((a: any) => a.cdabr === 'br').map((br: any) => {
-                      const brErrors = getErrorsForAbr('br');
+                  <div className="space-y-4">
+                    {/* Region Selector */}
+                    <div className="flex flex-wrap gap-1 p-1 bg-gray-100 dark:bg-slate-800/50 rounded-lg w-fit">
+                      {REGIONS.map((r) => {
+                        const isZZ = r.cd === 'ZZ';
+                        const hasData = r.cd === 'BR' || localData.abr.some((a: any) => 
+                          isZZ ? a.cdabr === 'zz' : UF_TO_REGION[a.cdabr.toUpperCase()] === r.cd
+                        );
+                        
+                        if (!hasData) return null;
+
+                        return (
+                          <button
+                            key={r.cd}
+                            onClick={() => {
+                              setSelectedRegion(r.cd);
+                              setIsBrExpanded(false);
+                            }}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+                              selectedRegion === r.cd
+                                ? 'bg-blue-600 text-white shadow-sm'
+                                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-slate-700'
+                            }`}
+                          >
+                            <span>{r.icon}</span>
+                            <span>{r.nm}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Summary Card (National or Region) */}
+                    {activeAbr && (() => {
+                      const brErrors = getErrorsForAbr(activeAbr.cdabr);
                       const hasErrors = brErrors.length > 0;
-                      const ufsFinalizadas = localData.abr.filter((a: any) => a.cdabr !== 'br' && a.and === 'f').length;
-                      const ufsParciais = localData.abr.filter((a: any) => a.cdabr !== 'br' && a.and === 'p').length;
-                      const totalUfs = localData.abr.filter((a: any) => a.cdabr !== 'br').length;
+                      
+                      const relevantUfs = selectedRegion === 'BR' 
+                        ? localData.abr.filter((a: any) => a.cdabr !== 'br')
+                        : localData.abr.filter((a: any) => UF_TO_REGION[a.cdabr.toUpperCase()] === selectedRegion);
+
+                      const ufsFinalizadas = relevantUfs.filter((a: any) => a.and === 'f').length;
+                      const ufsParciais = relevantUfs.filter((a: any) => a.and === 'p').length;
+                      const totalUfs = relevantUfs.length;
                       const ufsNaoIniciadas = totalUfs - ufsFinalizadas - ufsParciais;
                       const maxUfs = Math.max(ufsFinalizadas, ufsParciais, ufsNaoIniciadas);
 
                       const getBarHeight = (val: number) => {
                         if (val === 0) return '0%';
                         if (maxUfs === 0) return '0%';
-
-                        const values = [ufsFinalizadas, ufsParciais, ufsNaoIniciadas]
-                          .filter(v => v > 0)
-                          .sort((a, b) => b - a); // descending
-
+                        const values = [ufsFinalizadas, ufsParciais, ufsNaoIniciadas].filter(v => v > 0).sort((a: any, b: any) => b - a);
                         const uniqueValues = Array.from(new Set(values));
-
                         if (val === uniqueValues[0]) return '100%';
-                        if (uniqueValues.length > 1 && val === uniqueValues[1]) {
-                          return uniqueValues.length === 2 ? '60%' : '60%';
-                        }
-                        if (uniqueValues.length > 2 && val === uniqueValues[2]) return '30%';
-
-                        return '30%'; // fallback
+                        if (uniqueValues.length > 1 && val === uniqueValues[1]) return '60%';
+                        return '30%';
                       };
+
+                      const regionName = REGIONS.find(r => r.cd === selectedRegion)?.nm || 'Brasil';
+                      const regionIcon = REGIONS.find(r => r.cd === selectedRegion)?.icon || '🇧🇷';
 
                       return (
                         <div
-                          key="br"
+                          key="summary"
                           onClick={() => setIsBrExpanded(!isBrExpanded)}
-                          className={`border-l-4 rounded p-4 shadow-sm mb-6 flex flex-col md:flex-row gap-6 cursor-pointer hover:shadow-md transition-all ${hasErrors ? 'bg-red-50 dark:bg-red-900/10 border-red-500' : 'bg-blue-50 dark:bg-blue-900/20 border-blue-500'}`}
+                          className={`border-l-4 rounded p-4 shadow-sm flex flex-col md:flex-row gap-6 cursor-pointer hover:shadow-md transition-all ${hasErrors ? 'bg-red-50 dark:bg-red-900/10 border-red-500' : 'bg-blue-50 dark:bg-blue-900/20 border-blue-500'}`}
                         >
                           <div className="flex-1 flex flex-col justify-center">
                             <div className="flex justify-between items-center mb-2">
                               <h3 className="font-bold text-gray-800 dark:text-gray-200 uppercase flex items-center gap-2">
-                                <img src="/flags/br.svg" alt="Brasil" className="w-5 h-4 object-contain rounded-sm" onError={(e) => (e.currentTarget.style.display = 'none')} />
-                                Brasil
+                                {selectedRegion === 'BR' ? (
+                                  <img src="/flags/br.svg" alt="Brasil" className="w-5 h-4 object-contain rounded-sm" onError={(e) => (e.currentTarget.style.display = 'none')} />
+                                ) : (
+                                  <span className="text-xl">{regionIcon}</span>
+                                )}
+                                {regionName}
                               </h3>
-                              <span className={`text-xs font-bold px-2 py-1 rounded-full ${br.and === 'f' ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300'}`}>
-                                {br.and === 'f' ? 'Finalizado' : 'Em andamento'}
+                              <span className={`text-xs font-bold px-2 py-1 rounded-full ${activeAbr.and === 'f' ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300'}`}>
+                                {activeAbr.and === 'f' ? 'Finalizado' : 'Em andamento'}
                               </span>
                             </div>
 
@@ -402,46 +521,56 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose, relatedElei
                               <div className="flex justify-between text-sm mb-1">
                                 <span className="text-gray-600 dark:text-gray-400">Seções Totalizadas</span>
                                 <span className="font-semibold text-gray-800 dark:text-gray-200 flex items-center">
-                                  {br.s.pst}%
-                                  <TrendIndicator
-                                    current={br.s.pst}
-                                    previous={previousData?.abr?.find((a: any) => a.cdabr === 'br')?.s?.pst}
-                                  />
+                                  {activeAbr.s.pst}%
+                                  {selectedRegion === 'BR' && (
+                                    <TrendIndicator
+                                      current={activeAbr.s.pst}
+                                      previous={previousData?.abr?.find((a: any) => a.cdabr === 'br')?.s?.pst}
+                                    />
+                                  )}
                                 </span>
                               </div>
                               <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2.5">
-                                <div className="bg-blue-600 h-2.5 rounded-full" style={{ width: `${parseFloat(br.s.pst.replace(',', '.'))}%` }}></div>
+                                <div className="bg-blue-600 h-2.5 rounded-full" style={{ width: `${parseFloat(activeAbr.s.pst.replace(',', '.'))}%` }}></div>
                               </div>
                               <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-1">
                                 <span>{ufsFinalizadas} de {totalUfs} UFs finalizadas</span>
-                                <span>{parseInt(br.s.st).toLocaleString('pt-BR')} de {parseInt(br.s.ts).toLocaleString('pt-BR')} seções</span>
+                                <span>{parseInt(activeAbr.s.st).toLocaleString('pt-BR')} de {parseInt(activeAbr.s.ts).toLocaleString('pt-BR')} seções</span>
                               </div>
 
                               {isBrExpanded && (
                                 <div className="mt-4 pt-3 border-t border-gray-200 dark:border-slate-700 space-y-2 text-sm text-gray-600 dark:text-gray-400">
                                   <div className="flex justify-between">
                                     <span>Eleitores:</span>
-                                    <span className="font-medium text-gray-700 dark:text-gray-300">{parseInt(br.e.te).toLocaleString('pt-BR')}</span>
+                                    <span className="font-medium text-gray-700 dark:text-gray-300">{parseInt(activeAbr.e.te).toLocaleString('pt-BR')}</span>
                                   </div>
                                   <div className="flex justify-between">
                                     <span>Comparecimento:</span>
                                     <span className="font-medium text-blue-600 dark:text-blue-400 flex items-center">
-                                      {parseInt(br.e.c).toLocaleString('pt-BR')} ({br.e.pc}%)
-                                      <TrendIndicator
-                                        current={br.e.pc}
-                                        previous={previousData?.abr?.find((a: any) => a.cdabr === 'br')?.e?.pc}
-                                      />
+                                      {parseInt(activeAbr.e.c).toLocaleString('pt-BR')} ({activeAbr.e.pc}%)
+                                      {selectedRegion === 'BR' && (
+                                        <TrendIndicator
+                                          current={activeAbr.e.pc}
+                                          previous={previousData?.abr?.find((a: any) => a.cdabr === 'br')?.e?.pc}
+                                        />
+                                      )}
                                     </span>
                                   </div>
                                   <div className="flex justify-between">
                                     <span>Abstenção:</span>
                                     <span className="font-medium text-gray-500 flex items-center">
-                                      {parseInt(br.e.a).toLocaleString('pt-BR')} ({br.e.pa}%)
-                                      <TrendIndicator
-                                        current={br.e.pa}
-                                        previous={previousData?.abr?.find((a: any) => a.cdabr === 'br')?.e?.pa}
-                                      />
+                                      {parseInt(activeAbr.e.a).toLocaleString('pt-BR')} ({activeAbr.e.pa}%)
+                                      {selectedRegion === 'BR' && (
+                                        <TrendIndicator
+                                          current={activeAbr.e.pa}
+                                          previous={previousData?.abr?.find((a: any) => a.cdabr === 'br')?.e?.pa}
+                                        />
+                                      )}
                                     </span>
+                                  </div>
+                                  <div className="flex justify-between text-xs pt-1 opacity-60">
+                                    <span>Última atualização:</span>
+                                    <span>{activeAbr.dt} {activeAbr.ht}</span>
                                   </div>
                                 </div>
                               )}
@@ -454,7 +583,7 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose, relatedElei
                                   Inconsistências Identificadas:
                                 </strong>
                                 <ul className="list-disc pl-5 space-y-1">
-                                  {brErrors.map((err, i) => <li key={i}>{err}</li>)}
+                                  {brErrors.map((err: any, i: number) => <li key={i}>{err}</li>)}
                                 </ul>
                               </div>
                             )}
@@ -485,17 +614,17 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose, relatedElei
                                 <div className="flex-1 w-full relative">
                                   <div className="absolute bottom-0 w-full bg-green-500 dark:bg-green-500 rounded-t transition-all duration-500 group-hover:opacity-80 min-h-[2px]" style={{ height: getBarHeight(ufsFinalizadas) }}></div>
                                 </div>
-                                <div className="text-[10px] text-gray-500 font-medium shrink-0" title="Finalizadas">FI</div>
+                                <div className="text-[10px] text-gray-500 font-medium shrink-0" title="Finalizados">FI</div>
                               </div>
                             </div>
                           </div>
                         </div>
                       )
-                    })}
+                    })()}
 
-                    <div className="flex justify-between items-center border-b border-gray-200 dark:border-slate-700 pb-2 mb-4">
+                    <div className="flex justify-between items-center border-b border-gray-200 dark:border-slate-700 pb-2 mb-4 mt-6">
                       <h3 className="font-medium text-gray-700 dark:text-gray-300">
-                        Por Unidade da Federação
+                        {selectedRegion === 'BR' ? 'Por Unidade da Federação' : `UFs da Região ${REGIONS.find(r => r.cd === selectedRegion)?.nm}`}
                       </h3>
                       <select
                         value={sortMode}
@@ -513,7 +642,12 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose, relatedElei
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                       {localData.abr
-                        .filter((a: any) => a.cdabr !== 'br')
+                        .filter((a: any) => {
+                          if (a.cdabr === 'br') return false;
+                          if (selectedRegion === 'BR') return true;
+                          if (selectedRegion === 'ZZ') return a.cdabr === 'zz';
+                          return UF_TO_REGION[a.cdabr.toUpperCase()] === selectedRegion;
+                        })
                         .sort((aValue: any, bValue: any) => {
                           const a = aValue;
                           const b = bValue;
