@@ -1,8 +1,8 @@
 {
   "rewrites": [
     {
-      "source": "/tse-api/(.*)",
-      "destination": "https://resultados.tse.jus.br/:1"
+      "source": "/tse-api/:path*",
+      "destination": "https://resultados.tse.jus.br/:path*"
     }
   ]
 }
