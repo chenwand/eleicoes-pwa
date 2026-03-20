@@ -4,6 +4,8 @@ import { CargoSelector } from '../components/CargoSelector';
 import { CandidateList } from '../components/CandidateList';
 import { VoteChart } from '../components/VoteChart';
 import { ProgressBar } from '../components/ProgressBar';
+import { useElection } from '../context/ElectionContext';
+import { useEnvironment } from '../context/EnvironmentContext';
 import type { Cargo, Turno } from '../types/election';
 
 interface HomeProps {
@@ -12,7 +14,20 @@ interface HomeProps {
 
 export function Home({ turno }: HomeProps) {
   const [cargo, setCargo] = useState<Cargo>('presidente');
-  const { data, isLoading, isError } = useBRData(turno);
+  const { ciclo, selectedEleicao } = useElection();
+  const { ambiente } = useEnvironment();
+  const { data, isLoading, isError } = useBRData(ciclo, selectedEleicao?.cd || '', ambiente, turno);
+
+
+  if (!selectedEleicao || !ciclo) {
+    return (
+      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-8 text-center">
+        <svg className="w-16 h-16 text-blue-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        <p className="text-blue-700 dark:text-blue-300 font-bold text-lg">Nenhuma eleição selecionada</p>
+        <p className="text-blue-600 dark:text-blue-400 mt-2">Selecione uma eleição no Dashboard para visualizar os resultados nacionais.</p>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (

@@ -1,8 +1,6 @@
 import type { ElectionData, UF, Turno, Cargo } from '../types/election';
 import { DEFAULT_TSE_HOST } from './config';
 
-const TSE_BASE_URL = `${DEFAULT_TSE_HOST}/oficial`;
-
 const CARGO_CODES: Record<Cargo, string> = {
   'presidente': '0001',
   'governador': '0003',
@@ -12,24 +10,26 @@ const CARGO_CODES: Record<Cargo, string> = {
   'vereador': '0015'
 };
 
-const ELEICAO_CODE = '619';
-
 export function buildElectionURL(
+  ciclo: string,
+  eleicaoCd: string,
+  ambiente: string,
   uf: UF,
   cargo: Cargo
 ): string {
   const cargoCode = CARGO_CODES[cargo];
-  const ufCode = uf === 'BR' ? 'br' : uf.toLowerCase();
+  const ufCode = uf.toLowerCase();
+  const paddedCd = eleicaoCd.padStart(6, '0');
   
-  return `${TSE_BASE_URL}/ele${ELEICAO_CODE}/${ufCode}-c${cargoCode}-e000000000-u.json`;
+  return `${DEFAULT_TSE_HOST}/${ambiente}/${ciclo}/${eleicaoCd}/dados/${ufCode}/${ufCode}-c${cargoCode}-e${paddedCd}-u.json`;
 }
 
-export function buildUFURL(uf: UF, _turno?: Turno): string {
-  return buildElectionURL(uf, 'presidente');
+export function buildUFURL(ciclo: string, eleicaoCd: string, ambiente: string, uf: UF, _turno?: Turno): string {
+  return buildElectionURL(ciclo, eleicaoCd, ambiente, uf, 'presidente');
 }
 
-export function buildBRURL(_turno?: Turno): string {
-  return buildElectionURL('BR', 'presidente');
+export function buildBRURL(ciclo: string, eleicaoCd: string, ambiente: string, _turno?: Turno): string {
+  return buildElectionURL(ciclo, eleicaoCd, ambiente, 'BR', 'presidente');
 }
 
 export async function fetchElectionData(url: string): Promise<ElectionData> {
@@ -45,13 +45,14 @@ export async function fetchElectionData(url: string): Promise<ElectionData> {
   return response.json();
 }
 
-export async function fetchBRData(_turno?: Turno): Promise<ElectionData> {
-  return fetchElectionData(buildBRURL(_turno));
+export async function fetchBRData(ciclo: string, eleicaoCd: string, ambiente: string, _turno?: Turno): Promise<ElectionData> {
+  return fetchElectionData(buildBRURL(ciclo, eleicaoCd, ambiente, _turno));
 }
 
-export async function fetchUFData(uf: UF, _turno?: Turno): Promise<ElectionData> {
-  return fetchElectionData(buildUFURL(uf, _turno));
+export async function fetchUFData(uf: UF, ciclo: string, eleicaoCd: string, ambiente: string, _turno?: Turno): Promise<ElectionData> {
+  return fetchElectionData(buildUFURL(ciclo, eleicaoCd, ambiente, uf, _turno));
 }
+
 
 export function getCargoName(cargo: Cargo): string {
   const names: Record<Cargo, string> = {

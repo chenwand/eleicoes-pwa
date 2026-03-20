@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { useBRData, useAllUFData } from '../hooks/useElectionData';
-import { useUFDataByRegion, useRegionAggregation } from '../hooks/useRegionAggregation';
+import { useRegionAggregation, useUFDataByRegion } from '../hooks/useRegionAggregation';
 import { RegionMap } from '../components/RegionMap';
 import { RegionCard } from '../components/RegionCard';
 import { ProgressBar } from '../components/ProgressBar';
+import { useElection } from '../context/ElectionContext';
+import { useEnvironment } from '../context/EnvironmentContext';
 import type { Turno, Region } from '../types/election';
 
 interface ByRegionProps {
@@ -12,22 +14,35 @@ interface ByRegionProps {
 
 export function ByRegion({ turno }: ByRegionProps) {
   const [selectedRegion, setSelectedRegion] = useState<Region | null>(null);
-  const { data: brData, isLoading: brLoading } = useBRData(turno);
+  const { ciclo, selectedEleicao } = useElection();
+  const { ambiente } = useEnvironment();
   
-  const ufQueries = useAllUFData(turno);
+  const { data: brData, isLoading: isBRLoading } = useBRData(ciclo, selectedEleicao?.cd || '', ambiente, turno);
+  
+  const ufQueries = useAllUFData(ciclo, selectedEleicao?.cd || '', ambiente, turno);
   const ufData = ufQueries.map(q => q.data);
-  const isLoading = brLoading;
+  const isLoading = isBRLoading;
   const isError = ufQueries.some(q => q.isError);
   
   const dataByUF = useUFDataByRegion(ufData);
   const regions = useRegionAggregation(dataByUF);
+
+  if (!selectedEleicao || !ciclo) {
+    return (
+      <div className="p-8 text-center bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-2xl">
+        <svg className="w-16 h-16 text-blue-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        <h2 className="text-xl font-bold text-blue-800 dark:text-blue-200 mb-2">Nenhuma Eleição Selecionada</h2>
+        <p className="text-blue-600 dark:text-blue-400">Por favor, selecione uma eleição no Dashboard para visualizar os dados por região.</p>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Carregando dados por região...</p>
+          <p className="text-gray-600">Carregando mapa e dados regionais...</p>
         </div>
       </div>
     );

@@ -1,6 +1,7 @@
 import { useElection } from '../context/ElectionContext';
 import { useState } from 'react';
-import { EA11Panel } from '../components/EA11Panel';
+import { useNavigate } from 'react-router-dom';
+import { EA11Viewer } from '../components/EA11Viewer';
 import { SettingsModal } from '../components/SettingsModal';
 
 interface DashboardButtonProps {
@@ -36,6 +37,7 @@ function DashboardButton({ label, icon, onClick, description, visible = true }: 
 }
 
 export function Dashboard() {
+  const navigate = useNavigate();
   const { hasSelection, isOrdinary, selectedEleicao, selectedAbrangencia } = useElection();
   const [isEA11Open, setIsEA11Open] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -137,9 +139,20 @@ export function Dashboard() {
           }
           onClick={() => setIsSettingsOpen(true)}
         />
+
+        {/* 6. Por Região */}
+        <DashboardButton
+          label="Votação por Região"
+          description="Mapa e dados agregados"
+          visible={isOrdinary}
+          icon={
+            <svg className="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 002 2h1.5a2.5 2.5 0 012.5 2.5v.658m-11 0a2.25 2.25 0 00-.166.348c-.074.232-.014.487.168.669l.407.408a2.25 2.25 0 01.659 1.591v.659M19.5 12h-1.5a2 2 0 00-2 2v1.5a2 2 0 01-2 2h-1.5a2.25 2.25 0 01-2.25-2.25v-1.125a2.25 2.25 0 00-2.25-2.25h-1.125A2.25 2.25 0 0110 5.625V4.5A2.25 2.25 0 0112.25 2.25h1.5A2.25 2.25 0 0116 4.5v.75m3.5 1.5l-1.5 1.5m1.5-1.5l1.5-1.5M10 21h4"></path></svg>
+          }
+          onClick={() => navigate('/regioes')}
+        />
       </div>
 
-      <EA11Panel 
+      <EA11Viewer 
         isOpen={isEA11Open} 
         onClose={() => setIsEA11Open(false)} 
         initialEleicaoCd={ea11InitialCd} 

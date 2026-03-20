@@ -6,7 +6,7 @@ import { useElection } from '../context/ElectionContext';
 import type { EleicaoEA11, EA11Response } from '../types/ea11';
 import type { EA12Response } from '../types/ea12';
 
-interface EA11PanelProps {
+interface EA11ViewerProps {
   isOpen: boolean;
   onClose: () => void;
   initialEleicaoCd?: string | null; // For "Arquivo unificado (EA20)" pre-filtering, or null to force EA11 list
@@ -56,7 +56,7 @@ const renderHighlightedJson = (jsonObj: EA11Response | EA12Response | null | und
   );
 };
 
-export function EA11Panel({ isOpen, onClose, initialEleicaoCd }: EA11PanelProps) {
+export function EA11Viewer({ isOpen, onClose, initialEleicaoCd }: EA11ViewerProps) {
   const { ambiente, host } = useEnvironment();
   const {
     selectEleicao,

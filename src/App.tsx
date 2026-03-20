@@ -1,10 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { Header } from './components/Header';
 import { Home } from './pages/Home';
 import { ByRegion } from './pages/ByRegion';
-import { Timeline } from './pages/Timeline';
 import { Dashboard } from './pages/Dashboard';
 import { EA20Viewer } from './components/EA20Viewer';
 import { EA14Viewer } from './components/EA14Viewer';
@@ -28,6 +27,17 @@ export function AppContent({ onLocalFileLoaded, localFile, setLocalFile, turno }
   const [openEA15, setOpenEA15] = useState(false);
   const [openEA20, setOpenEA20] = useState(false);
 
+  const cargosDisponiveis = useMemo(() => {
+    if (!selectedEleicao?.abr) return [];
+    const allCargos = selectedEleicao.abr.flatMap(a => a.cp || []).map(cp => ({ cd: cp.cd, nm: cp.ds }));
+    const seen = new Set();
+    return allCargos.filter(c => {
+      const duplicate = seen.has(c.cd);
+      seen.add(c.cd);
+      return !duplicate;
+    });
+  }, [selectedEleicao]);
+
   useEffect(() => {
     const handleOpenEA14 = () => setOpenEA14(true);
     const handleOpenEA15 = () => setOpenEA15(true);
@@ -50,7 +60,6 @@ export function AppContent({ onLocalFileLoaded, localFile, setLocalFile, turno }
           <Route path="/" element={<Dashboard />} />
           <Route path="/resultados" element={<Home turno={turno} />} />
           <Route path="/regioes" element={<ByRegion turno={turno} />} />
-          <Route path="/timeline" element={<Timeline turno={turno} />} />
         </Routes>
       </main>
 
@@ -59,7 +68,7 @@ export function AppContent({ onLocalFileLoaded, localFile, setLocalFile, turno }
           ciclo={ciclo} 
           eleicaoCd={selectedEleicao.cd} 
           eleicaoNome={selectedEleicao.nm.replace(/&#186;/g, 'º')} 
-          cargosDisponiveis={selectedEleicao.abr?.flatMap(a => a.cp || []).map(cp => ({ cd: cp.cd, nm: cp.ds })) || []}
+          cargosDisponiveis={cargosDisponiveis}
           onClose={() => setOpenEA14(false)} 
         />
       )}
@@ -68,7 +77,7 @@ export function AppContent({ onLocalFileLoaded, localFile, setLocalFile, turno }
           ciclo={ciclo} 
           eleicaoCd={selectedEleicao.cd} 
           uf={selectedAbrangencia.ufCd} 
-          cargosDisponiveis={selectedEleicao.abr?.flatMap(a => a.cp || []).map(cp => ({ cd: cp.cd, nm: cp.ds })) || []}
+          cargosDisponiveis={cargosDisponiveis}
           onBack={() => setOpenEA15(false)} 
         />
       )}
@@ -79,7 +88,7 @@ export function AppContent({ onLocalFileLoaded, localFile, setLocalFile, turno }
           uf={selectedAbrangencia.ufCd} 
           cdMun={selectedAbrangencia.munCdTse} 
           munNome={selectedAbrangencia.munNome}
-          cargosDisponiveis={selectedEleicao.abr?.flatMap(a => a.cp || []).map(cp => ({ cd: cp.cd, nm: cp.ds })) || []}
+          cargosDisponiveis={cargosDisponiveis}
           onBack={() => setOpenEA20(false)} 
         />
       )}
