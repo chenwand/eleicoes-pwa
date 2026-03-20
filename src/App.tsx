@@ -3,7 +3,6 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { Header } from './components/Header';
 import { Home } from './pages/Home';
-import { ByRegion } from './pages/ByRegion';
 import { Dashboard } from './pages/Dashboard';
 import { EA20Viewer } from './components/EA20Viewer';
 import { EA14Viewer } from './components/EA14Viewer';
@@ -69,7 +68,6 @@ export function AppContent({ onLocalFileLoaded, localFile, setLocalFile, turno }
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/resultados" element={<Home turno={turno} />} />
-          <Route path="/regioes" element={<ByRegion turno={turno} />} />
         </Routes>
       </main>
 

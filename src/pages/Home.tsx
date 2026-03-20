@@ -1,19 +1,13 @@
-import { useState } from 'react';
 import { useBRData } from '../hooks/useElectionData';
-import { CargoSelector } from '../components/CargoSelector';
-import { CandidateList } from '../components/CandidateList';
-import { VoteChart } from '../components/VoteChart';
-import { ProgressBar } from '../components/ProgressBar';
 import { useElection } from '../context/ElectionContext';
 import { useEnvironment } from '../context/EnvironmentContext';
-import type { Cargo, Turno } from '../types/election';
+import type { Turno } from '../types/election';
 
 interface HomeProps {
   turno: Turno;
 }
 
 export function Home({ turno }: HomeProps) {
-  const [cargo, setCargo] = useState<Cargo>('presidente');
   const { ciclo, selectedEleicao } = useElection();
   const { ambiente } = useEnvironment();
   const { data, isLoading, isError } = useBRData(ciclo, selectedEleicao?.cd || '', ambiente, turno);
@@ -49,20 +43,10 @@ export function Home({ turno }: HomeProps) {
     );
   }
 
-  const cargoData = data.carg.find(c => 
-    cargo === 'presidente' && c.cd === 1 ||
-    cargo === 'governador' && c.cd === 3 ||
-    cargo === 'senador' && c.cd === 5 ||
-    cargo === 'deputado-federal' && c.cd === 11 ||
-    cargo === 'deputado-estadual' && c.cd === 13 ||
-    cargo === 'vereador' && c.cd === 15
-  );
-
   return (
     <div className="space-y-6">
       <div className="bg-white dark:bg-slate-900 rounded-lg shadow-md p-6 dark:border dark:border-slate-800 transition-colors duration-300">
         <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-4">Resultados Nacionais</h1>
-        <ProgressBar percentage={data.vp} label="Totalização Nacional" />
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
           <div className="text-center">
             <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{data.s.toLocaleString('pt-BR')}</div>
@@ -83,17 +67,6 @@ export function Home({ turno }: HomeProps) {
         </div>
       </div>
 
-      <CargoSelector cargo={cargo} onCargoChange={setCargo} />
-
-      {cargoData && (
-        <>
-          <div className="grid md:grid-cols-2 gap-6">
-            <VoteChart candidates={cargoData.cand} type="bar" />
-            <VoteChart candidates={cargoData.cand} type="pie" />
-          </div>
-          <CandidateList candidates={cargoData.cand} />
-        </>
-      )}
     </div>
   );
 }
