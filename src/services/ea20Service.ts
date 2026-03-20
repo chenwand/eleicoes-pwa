@@ -55,7 +55,11 @@ export async function fetchEA20(
 ): Promise<EA20Response> {
   const url = buildEA20Url(ambiente, ciclo, eleicaoCd, uf, cdMun, cdCargo, zona, host);
   console.log(`[EA20 Request] ${url}`);
-  const response = await fetch(url);
+  const response = await fetch(url, {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36'
+    }
+  });
   if (!response.ok) {
     if (response.status === 404) {
       throw new Error(`Resultado não encontrado para este cargo/município (EA20). O arquivo pode ainda não ter sido gerado.`);
