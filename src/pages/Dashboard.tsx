@@ -94,7 +94,7 @@ export function Dashboard() {
         <DashboardButton
           label="Acompanhamento UF (EA15)"
           description={`Visualização consolidada de ${selectedAbrangencia?.ufCd || 'UF'}`}
-          visible={isOrdinary && !!selectedAbrangencia && selectedAbrangencia.ufCd.toLowerCase() !== 'br'}
+          visible={isOrdinary && (!selectedAbrangencia || selectedAbrangencia.ufCd.toLowerCase() !== 'br')}
           icon={
             <svg className="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7l5-2.5 5.553 2.776a1 1 0 01.447.894v10.764a1 1 0 01-1.447.894L14 17l-5 3z" /></svg>
           }

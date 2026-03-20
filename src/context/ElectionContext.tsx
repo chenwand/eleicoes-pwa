@@ -127,7 +127,7 @@ export function ElectionProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const isOrdinary = selectedEleicao ? ['1', '3', '6'].includes(selectedEleicao.tp) : false;
+  const isOrdinary = selectedEleicao ? ['1', '3', '8'].includes(selectedEleicao.tp) : false;
   const hasSelection = !!selectedEleicao;
 
   return (

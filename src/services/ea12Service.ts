@@ -34,6 +34,7 @@ export interface FlatMunicipio {
   munCdTse: string;
   munNome: string;
   isCapital: boolean;
+  isUfWide?: boolean;
   z: string[];
 }
 
@@ -41,7 +42,17 @@ export function flattenEA12Municipios(ea12: EA12Response): FlatMunicipio[] {
   const result: FlatMunicipio[] = [];
   
   ea12.abr.forEach(uf => {
-    // Se uf for 'br', 'zz' ou similar, podemos ter tratamentos específicos.
+    // Add the UF itself as a scope (state-wide or national-wide)
+    result.push({
+      ufCd: uf.cd.toUpperCase(),
+      ufNome: uf.ds,
+      munCdTse: "", // UF-wide
+      munNome: uf.ds,
+      isCapital: false,
+      isUfWide: true,
+      z: []
+    });
+
     uf.mu.forEach(mun => {
       result.push({
         ufCd: uf.cd.toUpperCase(),
@@ -49,16 +60,28 @@ export function flattenEA12Municipios(ea12: EA12Response): FlatMunicipio[] {
         munCdTse: mun.cd,
         munNome: mun.nm,
         isCapital: mun.c === 's',
+        isUfWide: false,
         z: mun.z
       });
     });
   });
 
-  // Ordena por Nome da UF e depois Município alfabeticamente
+  // Specialized sort order
   return result.sort((a, b) => {
+    // 1. Brasil (BR) always first
+    if (a.ufCd === 'BR' && b.ufCd !== 'BR') return -1;
+    if (b.ufCd === 'BR' && a.ufCd !== 'BR') return 1;
+
+    // 2. Group by UF/Description alphabetically
     if (a.ufNome !== b.ufNome) {
       return a.ufNome.localeCompare(b.ufNome);
     }
+
+    // 3. Within same UF, the UF-wide entry comes first
+    if (a.isUfWide && !b.isUfWide) return -1;
+    if (!a.isUfWide && b.isUfWide) return 1;
+
+    // 4. Then by municipality name
     return a.munNome.localeCompare(b.munNome);
   });
 }

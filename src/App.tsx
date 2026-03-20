@@ -89,6 +89,7 @@ export function AppContent({ onLocalFileLoaded, localFile, setLocalFile, turno }
           cdMun={selectedAbrangencia.munCdTse} 
           munNome={selectedAbrangencia.munNome}
           cargosDisponiveis={cargosDisponiveis}
+          isFederal={selectedEleicao.abr.some(a => a.cd === 'br')}
           onBack={() => setOpenEA20(false)} 
         />
       )}

@@ -114,7 +114,8 @@ export function EA11Viewer({ isOpen, onClose, initialEleicaoCd }: EA11ViewerProp
       }
       
       if (selectedAbrangencia && (initialEleicaoCd || selectedEleicao?.cd)) {
-        setMunSearchText(`${selectedAbrangencia.munNome} (${selectedAbrangencia.ufCd}) - Cód: ${selectedAbrangencia.munCdTse}`);
+        const munPart = selectedAbrangencia.munCdTse ? ` - Cód: ${selectedAbrangencia.munCdTse}` : '';
+        setMunSearchText(`${selectedAbrangencia.munNome} (${selectedAbrangencia.ufCd})${munPart}`);
       } else {
         setMunSearchText('');
       }
@@ -230,6 +231,29 @@ export function EA11Viewer({ isOpen, onClose, initialEleicaoCd }: EA11ViewerProp
         return 0;
       });
   }, [topLevelElections, statusFilter, favorites, typeFilter, scopeFilter, searchTerm, allElections, sortMode]);
+  
+  const availableScopes = useMemo(() => {
+    if (!ea12Data) return [];
+    let list = flattenEA12Municipios(ea12Data);
+    
+    // For Federal elections, ensure Brasil (BR) is present
+    const currentEleicao = allElections.find(e => e.cd === localSelectedEleicaoCd);
+    const isFederal = currentEleicao?.abr.some(a => a.cd === 'br');
+    
+    if (isFederal && !list.some(m => m.ufCd === 'BR')) {
+      list.unshift({
+        ufCd: 'BR',
+        ufNome: 'BRASIL',
+        munCdTse: '',
+        munNome: 'BRASIL',
+        isCapital: false,
+        isUfWide: true,
+        z: []
+      });
+    }
+    
+    return list;
+  }, [ea12Data, localSelectedEleicaoCd, allElections]);
 
   if (!isOpen) return null;
 
@@ -522,7 +546,7 @@ export function EA11Viewer({ isOpen, onClose, initialEleicaoCd }: EA11ViewerProp
 
                 {isMunDropdownOpen && ea12Data && (
                   <div className="absolute z-20 w-full mt-1 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg shadow-xl max-h-60 overflow-y-auto overflow-x-hidden">
-                    {flattenEA12Municipios(ea12Data)
+                    {availableScopes
                       .filter(m => normalizeString(`${m.munNome} ${m.ufCd}`).includes(normalizeString(munSearchText)))
                       .slice(0, 100)
                       .map((m, idx) => (
@@ -530,15 +554,15 @@ export function EA11Viewer({ isOpen, onClose, initialEleicaoCd }: EA11ViewerProp
                           key={`${m.ufCd}-${m.munCdTse}-${idx}`}
                           className="px-4 py-2 hover:bg-blue-50 dark:hover:bg-blue-900/30 cursor-pointer text-sm border-b border-gray-100 dark:border-slate-700 last:border-0"
                           onClick={() => {
-                            const label = `${m.munNome} (${m.ufCd}) - Cód: ${m.munCdTse}`;
-                            setMunSearchText(label);
-                            setIsMunDropdownOpen(false);
-
                             // Apply selection
                             const eleicaoObj = allElections.find(e => e.cd === localSelectedEleicaoCd);
                             if (eleicaoObj) {
                               selectEleicao(eleicaoObj, ciclo);
                               selectAbrangencia(m);
+                              
+                              // Always set munSearchText correctly
+                              const munPart = m.munCdTse ? ` - Cód: ${m.munCdTse}` : '';
+                              setMunSearchText(`${m.munNome} (${m.ufCd})${munPart}`);
                               
                               // Always open EA20 when a scope is selected
                               window.dispatchEvent(new CustomEvent('open-ea20'));
@@ -547,10 +571,15 @@ export function EA11Viewer({ isOpen, onClose, initialEleicaoCd }: EA11ViewerProp
                             }
                           }}
                         >
-                          <div className="flex items-center gap-2">
+                          <div className={`flex items-center gap-2 ${m.isUfWide ? 'font-bold text-blue-700 dark:text-blue-400' : ''}`}>
                             <img src={`/flags/${m.ufCd.toLowerCase()}.svg`} className="w-4 h-3 rounded-sm shadow-sm" alt={m.ufCd} />
                             <span>{m.munNome} ({m.ufCd})</span>
-                            <span className="text-gray-400 text-xs ml-auto">Cód: {m.munCdTse}</span>
+                            {m.isUfWide && (
+                              <span className="text-[10px] px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/40 rounded uppercase tracking-wider ml-1">
+                                {m.ufCd === 'BR' ? 'País' : 'Estado'}
+                              </span>
+                            )}
+                            {m.munCdTse && <span className="text-gray-400 text-xs ml-auto">Cód: {m.munCdTse}</span>}
                           </div>
                         </div>
                       ))}

@@ -4,6 +4,7 @@ import { fetchEA12, flattenEA12Municipios } from '../services/ea12Service';
 import { fetchEA20, buildCandidatoFotoUrl } from '../services/ea20Service';
 import { validateEA20 } from '../services/ea20Validator';
 import { useEnvironment } from '../context/EnvironmentContext';
+import { useElection } from '../context/ElectionContext';
 import { TrendIndicator } from './TrendIndicator';
 import type { EA20Cargo, EA20Candidato, EA20Agrupamento, EA20Response } from '../types/ea20';
 
@@ -659,7 +660,8 @@ export function EA20Viewer({
   cargosDisponiveis = [],
   initialZona,
   onBack,
-  initialLocalData
+  initialLocalData,
+  isFederal: propIsFederal
 }: {
   ciclo?: string;
   eleicaoCd?: string;
@@ -670,8 +672,15 @@ export function EA20Viewer({
   initialZona?: string;
   onBack: () => void;
   initialLocalData?: EA20Response;
+  isFederal?: boolean;
 }) {
   const { ambiente, host } = useEnvironment();
+  const { selectedEleicao, selectedAbrangencia } = useElection();
+  
+  // Logic for Federal photo override
+  const isFederal = propIsFederal ?? (selectedEleicao?.abr.some((a: any) => a.cd === 'br')) ?? false;
+  const ufForFoto = isFederal ? 'br' : (uf || selectedAbrangencia?.ufCd || '');
+
   const [isClosing, setIsClosing] = useState(false);
   const [selectedCargoIdx, setSelectedCargoIdx] = useState(0);
   const [selectedPerguntaIdx, setSelectedPerguntaIdx] = useState(0);
@@ -729,7 +738,7 @@ export function EA20Viewer({
   const { data: ea20Data, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ['ea20', ciclo, eleicaoCd, uf, cdMun, selectedCargo?.cd, selectedZona, ambiente, host],
     queryFn: () => fetchEA20(ambiente, ciclo!, eleicaoCd!, uf!, cdMun!, selectedCargo!.cd, selectedZona, host),
-    enabled: !!selectedCargo && !!cdMun && !!ciclo && !initialLocalData,
+    enabled: !!selectedCargo && !!ciclo && !initialLocalData && (cdMun === "" || !!cdMun),
     staleTime: 30000,
   });
 
@@ -1272,7 +1281,7 @@ export function EA20Viewer({
                               ambiente={ambiente} 
                               ciclo={ciclo || ''} 
                               eleicaoCd={eleicaoCd || localData?.ele || ''} 
-                              uf={uf || localData?.f || ''} 
+                              uf={ufForFoto} 
                               isProportional={false} 
                               isFavorite={favorites.has(cand.sqcand)} 
                               onToggleFavorite={() => toggleFavorite(cand.sqcand)} 
@@ -1302,7 +1311,7 @@ export function EA20Viewer({
                                   ambiente={ambiente} 
                                   ciclo={ciclo || ''} 
                                   eleicaoCd={eleicaoCd || localData?.ele || ''} 
-                                  uf={uf || localData?.f || ''} 
+                                  uf={ufForFoto} 
                                   isProportional={true} 
                                   isFavorite={favorites.has(cand.sqcand)} 
                                   onToggleFavorite={() => toggleFavorite(cand.sqcand)} 
