@@ -13,13 +13,15 @@ interface EA11ViewerProps {
 }
 
 const TIPO_ELEICAO: Record<string, string> = {
-  '1': 'Ordinária',
-  '2': 'Suplementar',
-  '3': 'Ordinária Municipal',
-  '4': 'Suplementar Municipal',
-  '5': 'Renovação Juntas',
-  '6': 'Ordinária Distrito Estadual',
-  '7': 'Consulta Popular',
+  '1': 'Estadual ordinária',
+  '2': 'Estadual suplementar',
+  '3': 'Municipal ordinária',
+  '4': 'Municipal suplementar',
+  '5': 'Consulta popular nacional',
+  '6': 'Consulta popular estadual',
+  '7': 'Consulta popular municipal',
+  '8': 'Federal ordinária',
+  '9': 'Federal suplementar',
 };
 
 function formatTipoEleicao(tpCode: string): string {
@@ -228,7 +230,24 @@ export function EA11Viewer({ isOpen, onClose, initialEleicaoCd }: EA11ViewerProp
         }
         if (sortMode === 'tipo') return formatTipoEleicao(a.tp).localeCompare(formatTipoEleicao(b.tp));
         if (sortMode === 'nome') return a.nm.localeCompare(b.nm);
-        return 0;
+        
+        // Default: Sort by type priority, then date descending
+        const TIPO_PRIORITY: Record<string, number> = {
+          '8': 1, '1': 2, '3': 3, // Ordinary: Federal > Estadual > Municipal
+          '9': 4, '2': 5, '4': 6, // Supplementary: Federal > Estadual > Municipal
+          '5': 7, '6': 8, '7': 9, // Popular: Nacional > Estadual > Municipal
+        };
+        
+        const prioA = TIPO_PRIORITY[a.tp] || 99;
+        const priob = TIPO_PRIORITY[b.tp] || 99;
+        
+        if (prioA !== priob) return prioA - priob;
+
+        const [dayA, monthA, yearA] = a.pleitoDt.split('/');
+        const dateA = new Date(Number(yearA), Number(monthA) - 1, Number(dayA));
+        const [dayB, monthB, yearB] = b.pleitoDt.split('/');
+        const dateB = new Date(Number(yearB), Number(monthB) - 1, Number(dayB));
+        return dateB.getTime() - dateA.getTime();
       });
   }, [topLevelElections, statusFilter, favorites, typeFilter, scopeFilter, searchTerm, allElections, sortMode]);
   
@@ -236,20 +255,35 @@ export function EA11Viewer({ isOpen, onClose, initialEleicaoCd }: EA11ViewerProp
     if (!ea12Data) return [];
     let list = flattenEA12Municipios(ea12Data);
     
-    // For Federal elections, ensure Brasil (BR) is present
     const currentEleicao = allElections.find(e => e.cd === localSelectedEleicaoCd);
-    const isFederal = currentEleicao?.abr.some(a => a.cd === 'br');
     
-    if (isFederal && !list.some(m => m.ufCd === 'BR')) {
-      list.unshift({
-        ufCd: 'BR',
-        ufNome: 'BRASIL',
-        munCdTse: '',
-        munNome: 'BRASIL',
-        isCapital: false,
-        isUfWide: true,
-        z: []
-      });
+    // Strict Federal check: types 8 (Fed. Ord), 9 (Fed. Sup), 5 (Cons. Pop. Nac)
+    const isFederal = !!currentEleicao && ['8', '9', '5'].includes(currentEleicao.tp);
+    
+    if (isFederal) {
+      if (!list.some(m => m.ufCd.toUpperCase() === 'BR')) {
+        list.unshift({
+          ufCd: 'BR',
+          ufNome: 'BRASIL',
+          munCdTse: '',
+          munNome: 'BRASIL',
+          isCapital: false,
+          isUfWide: true,
+          z: []
+        });
+      }
+    } else {
+      // If NOT federal, strictly remove anything that looks like "Brasil" or "BR" scope
+      list = list.filter(m => 
+        m.ufCd.toUpperCase() !== 'BR' && 
+        m.ufNome.toUpperCase() !== 'BRASIL' && 
+        m.munNome.toUpperCase() !== 'BRASIL'
+      );
+
+      // If Municipal Supplementary (Type 4), remove UF-wide entries too
+      if (currentEleicao?.tp === '4') {
+        list = list.filter(m => !m.isUfWide);
+      }
     }
     
     return list;

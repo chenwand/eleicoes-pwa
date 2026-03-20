@@ -660,8 +660,7 @@ export function EA20Viewer({
   cargosDisponiveis = [],
   initialZona,
   onBack,
-  initialLocalData,
-  isFederal: propIsFederal
+  initialLocalData
 }: {
   ciclo?: string;
   eleicaoCd?: string;
@@ -672,15 +671,8 @@ export function EA20Viewer({
   initialZona?: string;
   onBack: () => void;
   initialLocalData?: EA20Response;
-  isFederal?: boolean;
 }) {
   const { ambiente, host } = useEnvironment();
-  const { selectedEleicao, selectedAbrangencia } = useElection();
-  
-  // Logic for Federal photo override
-  const isFederal = propIsFederal ?? (selectedEleicao?.abr.some((a: any) => a.cd === 'br')) ?? false;
-  const ufForFoto = isFederal ? 'br' : (uf || selectedAbrangencia?.ufCd || '');
-
   const [isClosing, setIsClosing] = useState(false);
   const [selectedCargoIdx, setSelectedCargoIdx] = useState(0);
   const [selectedPerguntaIdx, setSelectedPerguntaIdx] = useState(0);
@@ -774,6 +766,12 @@ export function EA20Viewer({
     if (!localData?.carg?.length) return null;
     return localData.carg[0] ?? null;
   }, [localData]);
+
+  const { selectedAbrangencia } = useElection();
+  // Logic for candidate photo URLs: use 'br' only for President (cargo '1')
+  // For other cargos (even in Federal elections), use the actual state identifier
+  const isPresident = selectedCargo?.cd === '1' || cargoData?.cd === '1';
+  const ufForFoto = isPresident ? 'br' : (uf || selectedAbrangencia?.ufCd || '');
 
   const perguntaData: any | null = useMemo(() => {
     if (!localData?.perg?.length) return null;
@@ -911,8 +909,9 @@ export function EA20Viewer({
     };
   }, [cargoData, favorites, isConsultaPopular, allRespostas]);
 
-  // Is this a majority (1 vaga) or proportional cargo?
-  const isMajority = cargoData ? parseInt(cargoData.nv, 10) <= 2 : false;
+  // Is this a majority (1 or 2 vacancies) or proportional cargo?
+  // Explicitly treat President (1), Governor (3), Senator (5), and Mayor (11) as majority.
+  const isMajority = cargoData ? (['1', '3', '5', '11'].includes(cargoData.cd) || parseInt(cargoData.nv, 10) <= 2) : false;
 
   return (
     <>

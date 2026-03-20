@@ -29,14 +29,24 @@ export function AppContent({ onLocalFileLoaded, localFile, setLocalFile, turno }
 
   const cargosDisponiveis = useMemo(() => {
     if (!selectedEleicao?.abr) return [];
+    const uf = selectedAbrangencia?.ufCd?.toUpperCase() || '';
+    
+    // Flatten all cargos from all abrangências
     const allCargos = selectedEleicao.abr.flatMap(a => a.cp || []).map(cp => ({ cd: cp.cd, nm: cp.ds }));
     const seen = new Set();
+    
     return allCargos.filter(c => {
+      // Rule: Deputado Distrital (8) is DF only. Deputado Estadual (7) is non-DF only.
+      if (uf) {
+        if (c.cd === '8' && uf !== 'DF') return false;
+        if (c.cd === '7' && uf === 'DF') return false;
+      }
+      
       const duplicate = seen.has(c.cd);
       seen.add(c.cd);
       return !duplicate;
     });
-  }, [selectedEleicao]);
+  }, [selectedEleicao, selectedAbrangencia]);
 
   useEffect(() => {
     const handleOpenEA14 = () => setOpenEA14(true);
@@ -89,7 +99,6 @@ export function AppContent({ onLocalFileLoaded, localFile, setLocalFile, turno }
           cdMun={selectedAbrangencia.munCdTse} 
           munNome={selectedAbrangencia.munNome}
           cargosDisponiveis={cargosDisponiveis}
-          isFederal={selectedEleicao.abr.some(a => a.cd === 'br')}
           onBack={() => setOpenEA20(false)} 
         />
       )}
