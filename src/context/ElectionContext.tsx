@@ -2,6 +2,7 @@ import { createContext, useContext, useState, type ReactNode, useEffect } from '
 import { useQuery } from '@tanstack/react-query';
 import { fetchEA11 } from '../services/ea11Service';
 import { useEnvironment } from './EnvironmentContext';
+import { findTargetElectionForTurnoSwitch } from '../utils/electionUtils';
 import type { EleicaoEA11, EA11Response } from '../types/ea11';
 import type { FlatMunicipio } from '../services/ea12Service';
 
@@ -42,7 +43,7 @@ export function ElectionProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (ea11Data) setEditedEA11Data(null);
-  }, [ea11Data]);
+  }, [ea11Data, ambiente, host]);
 
   const displayEA11Data = editedEA11Data || ea11Data;
 
@@ -107,43 +108,26 @@ export function ElectionProvider({ children }: { children: ReactNode }) {
     setCiclo('');
   };
 
+  const [prevEnv, setPrevEnv] = useState(`${ambiente}-${host}`);
+  useEffect(() => {
+    const currentEnv = `${ambiente}-${host}`;
+    if (prevEnv !== currentEnv) {
+      clearSelection();
+      setPrevEnv(currentEnv);
+    }
+  }, [ambiente, host, prevEnv]);
+
   const switchTurno = () => {
     if (!selectedEleicao || !ea11Data) return;
 
-    let targetCd: string | undefined;
-    if (selectedEleicao.t === '1' && selectedEleicao.cdt2) {
-      targetCd = selectedEleicao.cdt2;
-    } else if (selectedEleicao.t === '2') {
-      // Find the T1 election that points to this T2
-      const t1 = ea11Data.pl.flatMap(p => p.e).find(e => e.cdt2 === selectedEleicao.cd);
-      targetCd = t1?.cd;
-    }
+    const { targetEleicao, shouldPreserveScope } = findTargetElectionForTurnoSwitch(
+      selectedEleicao,
+      ea11Data,
+      selectedAbrangencia
+    );
 
-    if (targetCd) {
-      const targetEleicao = ea11Data.pl.flatMap(p => p.e).find(e => e.cd === targetCd);
-      if (targetEleicao) {
-        // Validation: Verify if the currently selected scope is valid for the target turn
-        let shouldPreserve = false;
-
-        if (selectedAbrangencia) {
-          const isBrasil = selectedAbrangencia.ufCd.toLowerCase() === 'br';
-          const targetAbr = targetEleicao.abr.find(a =>
-            a.cd.toLowerCase() === (isBrasil ? 'br' : selectedAbrangencia.ufCd.toLowerCase())
-          );
-
-          if (targetAbr) {
-            if (selectedAbrangencia.munCdTse === "" || isBrasil) {
-              // National or state-wide scope remains valid if the UF exists in target
-              shouldPreserve = true;
-            } else if (targetAbr.mu?.some(m => m.cd === selectedAbrangencia.munCdTse)) {
-              // Specific municipality remains valid if explicitly listed in target
-              shouldPreserve = true;
-            }
-          }
-        }
-
-        selectEleicao(targetEleicao, ea11Data.c, shouldPreserve);
-      }
+    if (targetEleicao) {
+      selectEleicao(targetEleicao, ea11Data.c, shouldPreserveScope);
     }
   };
 

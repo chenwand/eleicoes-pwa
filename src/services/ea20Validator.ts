@@ -1,4 +1,5 @@
 import type { EA20Response } from '../types/ea20';
+import { parseNum, parsePct } from '../utils/parsers';
 
 export interface EA20ValidationResult {
   cargo: string;  // nome ou código do cargo
@@ -7,8 +8,6 @@ export interface EA20ValidationResult {
 
 export function validateEA20(data: EA20Response): EA20ValidationResult[] {
   const results: EA20ValidationResult[] = [];
-  const parseNum = (val: any) => parseInt(val || '0', 10) || 0;
-  const parsePct = (val: any) => parseFloat((val || '0').replace(',', '.')) || 0;
 
   // ─── Section/Elector level (applies to the whole file) ───────────────────
   const globalErrors: string[] = [];

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { Header } from './components/Header';
@@ -8,6 +8,7 @@ import { EA20Viewer } from './components/EA20Viewer';
 import { EA14Viewer } from './components/EA14Viewer';
 import { EA15Viewer } from './components/EA15Viewer';
 import { RegionalSummary } from './components/RegionalSummary';
+import { useAvailableRoles } from './hooks/useAvailableRoles';
 import type { Turno } from './types/election';
 
 import { ThemeProvider } from './context/ThemeContext';
@@ -30,26 +31,7 @@ export function AppContent({ onLocalFileLoaded, localFile, setLocalFile, turno }
   const [initialRegion, setInitialRegion] = useState<string | undefined>();
   const [ea14CameFromRegional, setEa14CameFromRegional] = useState(false);
 
-  const cargosDisponiveis = useMemo(() => {
-    if (!selectedEleicao?.abr) return [];
-    const uf = selectedAbrangencia?.ufCd?.toUpperCase() || '';
-
-    // Flatten all cargos from all abrangências
-    const allCargos = selectedEleicao.abr.flatMap(a => a.cp || []).map(cp => ({ cd: cp.cd, nm: cp.ds }));
-    const seen = new Set();
-
-    return allCargos.filter(c => {
-      // Rule: Deputado Distrital (8) is DF only. Deputado Estadual (7) is non-DF only.
-      if (uf) {
-        if (c.cd === '8' && uf !== 'DF') return false;
-        if (c.cd === '7' && uf === 'DF') return false;
-      }
-
-      const duplicate = seen.has(c.cd);
-      seen.add(c.cd);
-      return !duplicate;
-    });
-  }, [selectedEleicao, selectedAbrangencia]);
+  const cargosDisponiveis = useAvailableRoles(selectedEleicao, selectedAbrangencia);
 
   useEffect(() => {
     const handleOpenEA14 = () => {

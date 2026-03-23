@@ -1,3 +1,8 @@
+import type { UF, Cargo } from '../types/election';
+import type { EleicaoEA11, EA11Response } from '../types/ea11';
+import type { FlatMunicipio } from '../services/ea12Service';
+import { adaptStatsResponse } from './adapters/statsAdapters';
+
 export const UF_TO_REGION: Record<string, string> = {
   'AC': 'N', 'AM': 'N', 'AP': 'N', 'PA': 'N', 'RO': 'N', 'RR': 'N', 'TO': 'N',
   'AL': 'NE', 'BA': 'NE', 'CE': 'NE', 'MA': 'NE', 'PB': 'NE', 'PE': 'NE', 'PI': 'NE', 'RN': 'NE', 'SE': 'NE',
@@ -77,5 +82,79 @@ export function calculateRegionTotals(localData: any, selectedRegion: string) {
   sum.e.pc = safePct(parseInt(sum.e.c), parseInt(sum.e.te));
   sum.e.pa = safePct(parseInt(sum.e.a), parseInt(sum.e.te));
 
-  return sum;
+  // The output of this function goes to the UI. Since the UI assumes Phase 4B `_propNum` wrappers,
+  // we adapt this synthetic region "abr" object as well.
+  const adaptedTemp = adaptStatsResponse({ abr: [sum] });
+  return adaptedTemp.abr[0];
+}
+
+export function getCargoName(cargo: Cargo): string {
+  const names: Record<Cargo, string> = {
+    'presidente': 'Presidente',
+    'governador': 'Governador',
+    'senador': 'Senador',
+    'deputado-federal': 'Deputado Federal',
+    'deputado-estadual': 'Deputado Estadual',
+    'vereador': 'Vereador'
+  };
+  return names[cargo];
+}
+
+export function getUFName(uf: UF): string {
+  const names: Record<UF, string> = {
+    AC: 'Acre', AM: 'Amazonas', AP: 'Amapá', PA: 'Pará', RO: 'Rondônia', RR: 'Roraima', TO: 'Tocantins',
+    AL: 'Alagoas', BA: 'Bahia', CE: 'Ceará', MA: 'Maranhão', PB: 'Paraíba', PE: 'Pernambuco', PI: 'Piauí', RN: 'Rio Grande do Norte', SE: 'Sergipe',
+    ES: 'Espírito Santo', MG: 'Minas Gerais', RJ: 'Rio de Janeiro', SP: 'São Paulo',
+    PR: 'Paraná', RS: 'Rio Grande do Sul', SC: 'Santa Catarina',
+    DF: 'Distrito Federal', GO: 'Goiás', MT: 'Mato Grosso', MS: 'Mato Grosso do Sul',
+    BR: 'Brasil', ZZ: 'Exterior'
+  };
+  return names[uf];
+}
+
+export function findTargetElectionForTurnoSwitch(
+  selectedEleicao: EleicaoEA11,
+  ea11Data: EA11Response,
+  selectedAbrangencia: FlatMunicipio | null
+): { targetEleicao: EleicaoEA11 | undefined; shouldPreserveScope: boolean } {
+  let targetCd: string | undefined;
+  if (selectedEleicao.t === '1' && selectedEleicao.cdt2) {
+    targetCd = selectedEleicao.cdt2;
+  } else if (selectedEleicao.t === '2') {
+    // Find the T1 election that points to this T2
+    const t1 = ea11Data.pl.flatMap(p => p.e).find(e => e.cdt2 === selectedEleicao.cd);
+    targetCd = t1?.cd;
+  }
+
+  let shouldPreserveScope = false;
+  let targetEleicao: EleicaoEA11 | undefined;
+
+  if (targetCd) {
+    targetEleicao = ea11Data.pl.flatMap(p => p.e).find(e => e.cd === targetCd);
+    if (targetEleicao) {
+      if (selectedAbrangencia) {
+        const isBrasil = selectedAbrangencia.ufCd.toLowerCase() === 'br';
+        const targetAbr = targetEleicao.abr.find(a =>
+          a.cd.toLowerCase() === (isBrasil ? 'br' : selectedAbrangencia.ufCd.toLowerCase())
+        );
+
+        if (targetAbr) {
+          // If our current selection is state-wide ("Todas" as municipality) or National
+          if (!selectedAbrangencia.munCdTse || isBrasil) {
+            shouldPreserveScope = true;
+          } else if (targetAbr.mu?.some(m => m.cd === selectedAbrangencia.munCdTse)) {
+            // Specific municipality remains valid if explicitly listed in target
+            shouldPreserveScope = true;
+          } else if (['1', '2', '5', '6', '8', '9'].includes(targetEleicao.tp)) {
+             // For Federal/Estadual elections, the entire UF is covered.
+             // TSE often omits 'mu' lists for 1st round state-wide elections.
+             // If targetAbr matches our UF, we can safely preserve the municipality scope.
+             shouldPreserveScope = true;
+          }
+        }
+      }
+    }
+  }
+
+  return { targetEleicao, shouldPreserveScope };
 }

@@ -3,10 +3,12 @@ import { fetchEA14 } from '../services/ea14Service';
 import { fetchEA12 } from '../services/ea12Service';
 import { validateEA14 } from '../services/ea14Validator';
 import { useEffect, useRef, useMemo, useState } from 'react';
+import { adaptStatsResponse } from '../utils/adapters/statsAdapters';
 import { EA15Viewer } from './EA15Viewer';
 import { useEnvironment } from '../context/EnvironmentContext';
 import { TrendIndicator } from './TrendIndicator';
 import { UF_TO_REGION, REGIONS, calculateRegionTotals } from '../utils/electionUtils';
+import { useElection } from '../context/ElectionContext';
 
 const renderHighlightedJson = (jsonObj: any) => {
   const json = JSON.stringify(jsonObj, null, 2).replace(/[&<>]/g, (c) => {
@@ -42,16 +44,13 @@ interface EA14ViewerProps {
   eleicaoCd: string;
   eleicaoNome: string;
   onClose: () => void;
-  relatedEleicaoCd?: string;
-  relatedEleicaoTurno?: '1' | '2';
-  onChangeEleicao?: (cd: string) => void;
   cargosDisponiveis?: { cd: string; nm: string }[];
   initialLocalData?: any;
   initialRegion?: string;
   onBack?: () => void;
 }
 
-export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose, relatedEleicaoCd, relatedEleicaoTurno, onChangeEleicao, cargosDisponiveis = [], initialLocalData, initialRegion, onBack }: EA14ViewerProps) {
+export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose, cargosDisponiveis = [], initialLocalData, initialRegion, onBack }: EA14ViewerProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const [expandedUf, setExpandedUf] = useState<string | null>(null);
   const [showRawJson, setShowRawJson] = useState(false);
@@ -79,6 +78,7 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose, relatedElei
   };
 
   const { ambiente, host } = useEnvironment();
+  const { selectedEleicao, switchTurno } = useElection();
   const [localData, setLocalData] = useState<any>(initialLocalData || null);
   const [isEditing, setIsEditing] = useState(false);
   const [isModified, setIsModified] = useState(false);
@@ -87,6 +87,7 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose, relatedElei
   const { data, isLoading, isError, error, refetch: refetchEA14, isFetching: isEA14Fetching } = useQuery({
     queryKey: ['ea14-data', ciclo, eleicaoCd, ambiente, host],
     queryFn: () => fetchEA14(ciclo, eleicaoCd, ambiente, host),
+    select: adaptStatsResponse,
     enabled: !!eleicaoCd && !!ciclo && !initialLocalData,
   });
 
@@ -192,13 +193,13 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose, relatedElei
                   <p className="text-sm text-gray-500 dark:text-gray-400">
                     {eleicaoNome}
                   </p>
-                  {relatedEleicaoCd && onChangeEleicao && (
+                  {selectedEleicao && (selectedEleicao.cdt2 || selectedEleicao.t === '2') && (
                     <button
-                      onClick={() => onChangeEleicao(relatedEleicaoCd)}
+                      onClick={switchTurno}
                       className="flex items-center gap-1.5 px-2 py-0.5 text-xs font-semibold bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 rounded border border-blue-200 dark:border-blue-800 hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors"
                     >
                       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
-                      Ir para {relatedEleicaoTurno}º Turno
+                      Ir para {selectedEleicao.t === '1' ? '2º' : '1º'} Turno
                     </button>
                   )}
                 </div>
@@ -280,9 +281,6 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose, relatedElei
                 eleicaoCd={eleicaoCd}
                 uf={selectedEA15Uf}
                 onBack={() => setSelectedEA15Uf(null)}
-                relatedEleicaoCd={relatedEleicaoCd}
-                relatedEleicaoTurno={relatedEleicaoTurno}
-                onChangeEleicao={onChangeEleicao}
                 ea14dg={ufEntry?.dt}
                 ea14hg={ufEntry?.ht}
                 cargosDisponiveis={cargosDisponiveis}
@@ -398,8 +396,8 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose, relatedElei
                               setIsBrExpanded(false);
                             }}
                             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${selectedRegion === r.cd
-                                ? 'bg-blue-600 text-white shadow-sm'
-                                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-slate-700'
+                              ? 'bg-blue-600 text-white shadow-sm'
+                              : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-slate-700'
                               }`}
                           >
                             <span>{r.icon}</span>
@@ -472,23 +470,23 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose, relatedElei
                                 </span>
                               </div>
                               <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2.5">
-                                <div className="bg-blue-600 h-2.5 rounded-full" style={{ width: `${parseFloat(activeAbr.s.pst.replace(',', '.'))}%` }}></div>
+                                <div className="bg-blue-600 h-2.5 rounded-full" style={{ width: `${activeAbr.s._pstNum}%` }}></div>
                               </div>
                               <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-1">
                                 <span>{ufsFinalizadas} de {totalUfs} UFs finalizadas</span>
-                                <span>{parseInt(activeAbr.s.st).toLocaleString('pt-BR')} de {parseInt(activeAbr.s.ts).toLocaleString('pt-BR')} seções</span>
+                                <span>{activeAbr.s._stNum.toLocaleString('pt-BR')} de {activeAbr.s._tsNum.toLocaleString('pt-BR')} seções</span>
                               </div>
 
                               {isBrExpanded && (
                                 <div className="mt-4 pt-3 border-t border-gray-200 dark:border-slate-700 space-y-2 text-sm text-gray-600 dark:text-gray-400">
                                   <div className="flex justify-between">
                                     <span>Eleitores:</span>
-                                    <span className="font-medium text-gray-700 dark:text-gray-300">{parseInt(activeAbr.e.te).toLocaleString('pt-BR')}</span>
+                                    <span className="font-medium text-gray-700 dark:text-gray-300">{activeAbr.e._teNum.toLocaleString('pt-BR')}</span>
                                   </div>
                                   <div className="flex justify-between">
                                     <span>Comparecimento:</span>
                                     <span className="font-medium text-blue-600 dark:text-blue-400 flex items-center">
-                                      {parseInt(activeAbr.e.c).toLocaleString('pt-BR')} ({activeAbr.e.pc}%)
+                                      {activeAbr.e._cNum.toLocaleString('pt-BR')} ({activeAbr.e.pc}%)
                                       {selectedRegion === 'BR' && (
                                         <TrendIndicator
                                           current={activeAbr.e.pc}
@@ -500,7 +498,7 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose, relatedElei
                                   <div className="flex justify-between">
                                     <span>Abstenção:</span>
                                     <span className="font-medium text-gray-500 flex items-center">
-                                      {parseInt(activeAbr.e.a).toLocaleString('pt-BR')} ({activeAbr.e.pa}%)
+                                      {activeAbr.e._aNum.toLocaleString('pt-BR')} ({activeAbr.e.pa}%)
                                       {selectedRegion === 'BR' && (
                                         <TrendIndicator
                                           current={activeAbr.e.pa}
@@ -611,28 +609,28 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose, relatedElei
                           if (aErrors !== bErrors) return bErrors - aErrors;
 
                           if (sortMode === 'pst') {
-                            const pctA = parseFloat(a.s.pst.replace(',', '.'));
-                            const pctB = parseFloat(b.s.pst.replace(',', '.'));
+                            const pctA = a.s._pstNum;
+                            const pctB = b.s._pstNum;
                             return pctB - pctA;
                           }
                           if (sortMode === 'eleitores') {
-                            return parseInt(b.e.te) - parseInt(a.e.te);
+                            return b.e._teNum - a.e._teNum;
                           }
                           if (sortMode === 'comparecimento') {
-                            return parseFloat(b.e.pc.replace(',', '.')) - parseFloat(a.e.pc.replace(',', '.'));
+                            return b.e._pcNum - a.e._pcNum;
                           }
                           if (sortMode === 'abstencao') {
-                            return parseFloat(b.e.pa.replace(',', '.')) - parseFloat(a.e.pa.replace(',', '.'));
+                            return b.e._paNum - a.e._paNum;
                           }
 
                           // Default: % seções descending, then alphabetical
-                          const pctA = parseFloat(a.s.pst.replace(',', '.'));
-                          const pctB = parseFloat(b.s.pst.replace(',', '.'));
+                          const pctA = a.s._pstNum;
+                          const pctB = b.s._pstNum;
                           if (pctA !== pctB) return pctB - pctA;
                           return a.cdabr.localeCompare(b.cdabr);
                         })
                         .map((uf: any) => {
-                          const pct = parseFloat(uf.s.pst.replace(',', '.'));
+                          const pct = uf.s._pstNum;
                           const isDone = uf.and === 'f';
                           const isPartial = uf.and === 'p';
                           const ufErrors = getErrorsForAbr(uf.cdabr);
@@ -699,7 +697,7 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose, relatedElei
                                 <div className={`h-1.5 rounded-full ${barColor}`} style={{ width: `${pct}%` }}></div>
                               </div>
                               <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400">
-                                <span>Eleitores: {parseInt(uf.e.te).toLocaleString('pt-BR')}</span>
+                                <span>Eleitores: {uf.e._teNum.toLocaleString('pt-BR')}</span>
                                 <span className="flex items-center">
                                   Comp: {uf.e.pc}%
                                   <TrendIndicator
@@ -734,12 +732,12 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose, relatedElei
                                     <div className="font-semibold mb-1 text-gray-700 dark:text-gray-300">Eleitores</div>
                                     <div className="flex justify-between">
                                       <span>Total:</span>
-                                      <span className="font-medium">{parseInt(uf.e.te).toLocaleString('pt-BR')}</span>
+                                      <span className="font-medium">{uf.e._teNum.toLocaleString('pt-BR')}</span>
                                     </div>
                                     <div className="flex justify-between">
                                       <span>Comparecimento:</span>
                                       <span className="font-medium text-blue-600 dark:text-blue-400 flex items-center">
-                                        {parseInt(uf.e.c).toLocaleString('pt-BR')} ({uf.e.pc}%)
+                                        {uf.e._cNum.toLocaleString('pt-BR')} ({uf.e.pc}%)
                                         <TrendIndicator
                                           current={uf.e.pc}
                                           previous={previousData?.abr?.find((a: any) => a.cdabr === uf.cdabr)?.e?.pc}
@@ -749,7 +747,7 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose, relatedElei
                                     <div className="flex justify-between">
                                       <span>Abstenção:</span>
                                       <span className="font-medium text-gray-500 flex items-center">
-                                        {parseInt(uf.e.a).toLocaleString('pt-BR')} ({uf.e.pa}%)
+                                        {uf.e._aNum.toLocaleString('pt-BR')} ({uf.e.pa}%)
                                         <TrendIndicator
                                           current={uf.e.pa}
                                           previous={previousData?.abr?.find((a: any) => a.cdabr === uf.cdabr)?.e?.pa}
@@ -762,7 +760,7 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose, relatedElei
                                     <div className="font-semibold mb-1 text-gray-700 dark:text-gray-300">Seções</div>
                                     <div className="flex justify-between">
                                       <span>Totalizadas:</span>
-                                      <span className="font-medium text-green-600 dark:text-green-400">{parseInt(uf.s.st).toLocaleString('pt-BR')} de {parseInt(uf.s.ts).toLocaleString('pt-BR')}</span>
+                                      <span className="font-medium text-green-600 dark:text-green-400">{uf.s._stNum.toLocaleString('pt-BR')} de {uf.s._tsNum.toLocaleString('pt-BR')}</span>
                                     </div>
                                     <div className="flex justify-between">
                                       <span>Não totalizadas:</span>

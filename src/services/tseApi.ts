@@ -52,28 +52,3 @@ export async function fetchBRData(ciclo: string, eleicaoCd: string, ambiente: st
 export async function fetchUFData(uf: UF, ciclo: string, eleicaoCd: string, ambiente: string, _turno?: Turno): Promise<ElectionData> {
   return fetchElectionData(buildUFURL(ciclo, eleicaoCd, ambiente, uf, _turno));
 }
-
-
-export function getCargoName(cargo: Cargo): string {
-  const names: Record<Cargo, string> = {
-    'presidente': 'Presidente',
-    'governador': 'Governador',
-    'senador': 'Senador',
-    'deputado-federal': 'Deputado Federal',
-    'deputado-estadual': 'Deputado Estadual',
-    'vereador': 'Vereador'
-  };
-  return names[cargo];
-}
-
-export function getUFName(uf: UF): string {
-  const names: Record<UF, string> = {
-    AC: 'Acre', AM: 'Amazonas', AP: 'Amapá', PA: 'Pará', RO: 'Rondônia', RR: 'Roraima', TO: 'Tocantins',
-    AL: 'Alagoas', BA: 'Bahia', CE: 'Ceará', MA: 'Maranhão', PB: 'Paraíba', PE: 'Pernambuco', PI: 'Piauí', RN: 'Rio Grande do Norte', SE: 'Sergipe',
-    ES: 'Espírito Santo', MG: 'Minas Gerais', RJ: 'Rio de Janeiro', SP: 'São Paulo',
-    PR: 'Paraná', RS: 'Rio Grande do Sul', SC: 'Santa Catarina',
-    DF: 'Distrito Federal', GO: 'Goiás', MT: 'Mato Grosso', MS: 'Mato Grosso do Sul',
-    BR: 'Brasil', ZZ: 'Exterior'
-  };
-  return names[uf];
-}

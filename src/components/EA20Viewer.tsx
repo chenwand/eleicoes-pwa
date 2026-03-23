@@ -1,652 +1,19 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchEA12, flattenEA12Municipios } from '../services/ea12Service';
-import { fetchEA20, buildCandidatoFotoUrl } from '../services/ea20Service';
+import { fetchEA20 } from '../services/ea20Service';
 import { validateEA20 } from '../services/ea20Validator';
 import { useEnvironment } from '../context/EnvironmentContext';
 import { useElection } from '../context/ElectionContext';
-import { TrendIndicator } from './TrendIndicator';
-import type { EA20Cargo, EA20Candidato, EA20Agrupamento, EA20Response } from '../types/ea20';
 
-// ── helpers ──────────────────────────────────────────────────────────────────
+import type { EA20Response } from '../types/ea20';
+import { adaptEA20Response, type UI_EA20Response, type UI_EA20Cargo, type UI_EA20Candidato, type UI_EA20Agrupamento, type UI_EA20Partido } from '../utils/adapters/ea20Adapters';
 
-const DVT_COLORS: Record<string, string> = {
-  'Válido': '',
-  'Anulado': 'text-orange-600 dark:text-orange-400',
-  'Sub-Judice': 'text-purple-600 dark:text-purple-400',
-  'Nulo': 'text-red-500 dark:text-red-400',
-};
-
-function dvtBadge(dvt: string) {
-  if (!dvt || dvt === 'Válido') return null;
-  const cls = DVT_COLORS[dvt] || 'text-gray-500';
-  return (
-    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${cls} border-current ml-1 shrink-0`}>
-      {dvt}
-    </span>
-  );
-}
-
-const renderHighlightedJson = (jsonObj: any) => {
-  const json = JSON.stringify(jsonObj, null, 2).replace(/[&<>]/g, (c) => (
-    { '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c] || c
-  ));
-  const highlighted = json.replace(
-    /(\"(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*\"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
-    (match) => {
-      let cls = 'text-blue-400';
-      if (/^"/.test(match)) cls = /:$/.test(match) ? 'text-purple-400 font-semibold' : 'text-green-400 break-all whitespace-pre-wrap';
-      else if (/true|false/.test(match)) cls = 'text-orange-400 font-medium';
-      else if (/null/.test(match)) cls = 'text-red-400 font-medium';
-      return `<span class="${cls}">${match}</span>`;
-    }
-  );
-  return <pre className="text-xs sm:text-sm text-gray-300 font-mono" dangerouslySetInnerHTML={{ __html: highlighted }} />;
-};
-
-function VoteVisualization({ v, previousV, isProportional, isConsultaPopular }: { v: any, previousV?: any, isProportional: boolean, isConsultaPopular?: boolean }) {
-  const [expanded, setExpanded] = useState(true);
-  const parseNum = (s: string) => parseInt(s || '0', 10);
-
-  const tv = parseNum(v.tv);
-  const vvc = parseNum(v.vvc);
-  const vv = parseNum(v.vv);
-  const vnom = parseNum(v.vnom);
-  const vl = parseNum(v.vl);
-  const vb = parseNum(v.vb);
-  const van = parseNum(v.van);
-  const vansj = parseNum(v.vansj);
-  const tvn = parseNum(v.tvn);
-
-  const segmentsTotal = isConsultaPopular ? (vvc + vb + tvn) : tv;
-  const getPct = (val: number) => segmentsTotal > 0 ? (val / segmentsTotal) * 100 : 0;
-  const parsePct = (val: string) => parseFloat((val || '0').replace(',', '.')) || 0;
-
-  const segments = isConsultaPopular
-    ? [
-      { label: 'Válidos', val: vvc, pct: getPct(vvc), color: 'bg-blue-600', text: 'text-blue-600' },
-      { label: 'Brancos', val: vb, pct: getPct(vb), color: 'bg-gray-400', text: 'text-gray-500' },
-      { label: 'Nulos', val: tvn, pct: getPct(tvn), color: 'bg-gray-600', text: 'text-gray-700' },
-    ]
-    : [
-      { label: 'Válidos', val: vv, pct: getPct(vv), color: 'bg-blue-600', text: 'text-blue-600' },
-      { label: 'Anulados', val: van, pct: getPct(van), color: 'bg-yellow-500', text: 'text-yellow-600' },
-      { label: 'Sub Judice', val: vansj, pct: getPct(vansj), color: 'bg-red-600', text: 'text-red-600' },
-      { label: 'Brancos', val: vb, pct: getPct(vb), color: 'bg-gray-400', text: 'text-gray-500' },
-      { label: 'Nulos', val: tvn, pct: getPct(tvn), color: 'bg-gray-600', text: 'text-gray-700' },
-    ];
-
-  return (
-    <div className="bg-gray-50 dark:bg-slate-800/60 rounded-lg p-4 border border-gray-200 dark:border-slate-700 shadow-sm cursor-pointer" onClick={() => setExpanded(!expanded)}>
-      <div className="flex justify-between items-center mb-4">
-        <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Distribuição de Votos</div>
-        <svg className={`w-4 h-4 text-gray-400 transition-transform ${expanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
-      </div>
-
-      {/* Stake Bar Chart */}
-      <div className="w-full h-4 flex rounded-full overflow-hidden mb-2 bg-gray-200 dark:bg-slate-700 shadow-inner">
-        {segments.map((seg, i) => seg.pct > 0 && (
-          <div
-            key={i}
-            style={{ width: `${seg.pct}%` }}
-            className={`${seg.color} h-full transition-all hover:brightness-110 relative group`}
-            title={`${seg.label}: ${seg.pct.toFixed(2)}%`}
-          >
-            {seg.pct > 5 && (
-              <span className="absolute inset-0 flex items-center justify-center text-[8px] font-bold text-white opacity-0 group-hover:opacity-100 transition-opacity">
-                {seg.pct.toFixed(0)}%
-              </span>
-            )}
-          </div>
-        ))}
-      </div>
-
-      {expanded && (
-        <div className="mt-6 space-y-1.5 text-sm transition-all animate-fade-in" onClick={e => e.stopPropagation()}>
-          {/* Total */}
-          <div className="flex justify-between items-center font-bold text-gray-800 dark:text-slate-100">
-            <span>Total de Votos (tv)</span>
-            <span>{tv.toLocaleString('pt-BR')}</span>
-          </div>
-
-          {/* VVC Level (Hidden for Popular Consultations) */}
-          {!isConsultaPopular && (
-            <div className="pl-4 border-l-2 border-gray-200 dark:border-slate-700 space-y-1.5 mt-1">
-              <div className="flex justify-between items-center font-semibold text-gray-700 dark:text-slate-300">
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-gray-300"></span>
-                  <span>Votos a Votáveis Concorrentes (vvc)</span>
-                </div>
-                <span className="flex items-center gap-1">
-                  {vvc.toLocaleString('pt-BR')}
-                  <span className="text-[10px] font-normal text-gray-400">({getPct(vvc).toFixed(1)}%)</span>
-                  <TrendIndicator current={getPct(vvc).toFixed(1)} previous={previousV ? ((parseInt(previousV.vvc || '0') / (isConsultaPopular ? (parseInt(previousV.vvc || '0') + parseInt(previousV.vb || '0') + parseInt(previousV.tvn || '0')) : parseInt(previousV.tv || '0'))) * 100).toFixed(1) : undefined} />
-                  {Math.abs(getPct(vvc) - parsePct(v.pvvc)) > 0.1 && (
-                    <span className="text-[9px] text-yellow-600 dark:text-yellow-500" title={`Arquivo: ${v.pvvc}%`}>⚠️</span>
-                  )}
-                </span>
-              </div>
-
-              {/* VV, VAN, VANSJ Level */}
-              <div className="pl-4 border-l-2 border-gray-100 dark:border-slate-800 space-y-1 mt-1">
-                <div className="flex justify-between items-center text-gray-600 dark:text-slate-400">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-blue-600"></span>
-                    <span>Válidos (vv)</span>
-                  </div>
-                  <span className="flex items-center gap-1">
-                    {vv.toLocaleString('pt-BR')}
-                  </span>
-                </div>
-
-                {/* VNOM, VL (Proportional only) */}
-                {isProportional && (
-                  <div className="pl-6 text-[11px] text-gray-500 dark:text-slate-500 space-y-0.5">
-                    <div className="flex justify-between items-center">
-                      <span>Nominais (vnom)</span>
-                      <span className="flex items-center gap-1">
-                        {vnom.toLocaleString('pt-BR')}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span>Legenda (vl)</span>
-                      <span className="flex items-center gap-1">
-                        {vl.toLocaleString('pt-BR')}
-                      </span>
-                    </div>
-                  </div>
-                )}
-
-                <div className="flex justify-between items-center text-gray-600 dark:text-slate-400">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-yellow-500"></span>
-                    <span>Anulados (van)</span>
-                  </div>
-                  <span className="flex items-center gap-1">
-                    {van.toLocaleString('pt-BR')}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center text-gray-600 dark:text-slate-400">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-red-600"></span>
-                    <span>Anulados Sub Judice (vansj)</span>
-                  </div>
-                  <span className="flex items-center gap-1">
-                    {vansj.toLocaleString('pt-BR')}
-                  </span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {isConsultaPopular && (
-            <div className="pl-4 border-l-2 border-transparent space-y-1.5 mt-1">
-              <div className="flex justify-between items-center text-gray-700 dark:text-slate-300 font-semibold">
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-blue-600"></span>
-                  <span>Válidos (vvc)</span>
-                </div>
-                <span className="flex items-center gap-1">
-                  {vvc.toLocaleString('pt-BR')}
-                  <span className="text-[10px] text-gray-400">({getPct(vvc).toFixed(1)}%)</span>
-                  <TrendIndicator current={getPct(vvc).toFixed(1)} previous={previousV ? ((parseInt(previousV.vvc || '0') / (isConsultaPopular ? (parseInt(previousV.vvc || '0') + parseInt(previousV.vb || '0') + parseInt(previousV.tvn || '0')) : parseInt(previousV.tv || '0'))) * 100).toFixed(1) : undefined} />
-                </span>
-              </div>
-            </div>
-          )}
-
-          {/* VB and TVN Level */}
-          <div className="pl-4 border-l-2 border-transparent space-y-1.5 mt-2">
-            <div className="flex justify-between items-center text-gray-600 dark:text-slate-400">
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-gray-400"></span>
-                <span>Brancos (vb)</span>
-              </div>
-              <span className="flex items-center gap-1">
-                {vb.toLocaleString('pt-BR')}
-                <span className="text-[10px] text-gray-400">({getPct(vb).toFixed(1)}%)</span>
-                <TrendIndicator current={getPct(vb).toFixed(1)} previous={previousV ? ((parseInt(previousV.vb || '0') / (isConsultaPopular ? (parseInt(previousV.vvc || '0') + parseInt(previousV.vb || '0') + parseInt(previousV.tvn || '0')) : parseInt(previousV.tv || '0'))) * 100).toFixed(1) : undefined} />
-                {Math.abs(getPct(vb) - parsePct(v.pvb)) > 0.1 && (
-                  <span className="text-[9px] text-yellow-600 dark:text-yellow-500" title={`Arquivo: ${v.pvb}%`}>⚠️</span>
-                )}
-              </span>
-            </div>
-            <div className="flex justify-between items-center text-gray-600 dark:text-slate-400">
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-gray-600"></span>
-                <span>Nulos (tvn)</span>
-              </div>
-              <span className="flex items-center gap-1">
-                {tvn.toLocaleString('pt-BR')}
-                <span className="text-[10px] text-gray-400">({getPct(tvn).toFixed(1)}%)</span>
-                <TrendIndicator current={getPct(tvn).toFixed(1)} previous={previousV ? ((parseInt(previousV.tvn || '0') / (isConsultaPopular ? (parseInt(previousV.vvc || '0') + parseInt(previousV.vb || '0') + parseInt(previousV.tvn || '0')) : parseInt(previousV.tv || '0'))) * 100).toFixed(1) : undefined} />
-                {Math.abs(getPct(tvn) - parsePct(v.ptvn)) > 0.1 && (
-                  <span className="text-[9px] text-yellow-600 dark:text-yellow-500" title={`Arquivo: ${v.ptvn}%`}>⚠️</span>
-                )}
-              </span>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function SecoesSummary({ s, previousS }: { s: any, previousS?: any }) {
-  const [expanded, setExpanded] = useState(false);
-  const parseNum = (val: string) => parseInt(val, 10) || 0;
-  const parsePct = (val: string) => parseFloat((val || '0').replace(',', '.')) || 0;
-
-  const ts = parseNum(s.ts);
-  const st = parseNum(s.st);
-  const snt = parseNum(s.snt);
-  const si = parseNum(s.si);
-  const sni = parseNum(s.sni);
-  const sa = parseNum(s.sa);
-  const sna = parseNum(s.sna);
-
-  return (
-    <div className="bg-gray-50 dark:bg-slate-800/60 rounded-lg p-3 border border-gray-200 dark:border-slate-700 cursor-pointer" onClick={() => setExpanded(!expanded)}>
-      <div className="flex justify-between items-center mb-2">
-        <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Seções</div>
-        <svg className={`w-3.5 h-3.5 text-gray-400 transition-transform ${expanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
-      </div>
-      <div className="flex justify-between text-sm mb-1">
-        <span className="text-gray-600 dark:text-gray-400 text-xs">Totalizadas</span>
-        <span className="font-semibold text-gray-800 dark:text-gray-200 flex items-center">
-          {s.pst}%
-          <TrendIndicator current={s.pst} previous={previousS?.pst} />
-        </span>
-      </div>
-      <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2 mb-1">
-        <div className="h-2 rounded-full bg-green-600 transition-all" style={{ width: `${parsePct(s.pst)}%` }} />
-      </div>
-      <div className="text-[10px] text-gray-400 dark:text-gray-500">{st.toLocaleString('pt-BR')} de {ts.toLocaleString('pt-BR')}</div>
-
-      {expanded && (
-        <div className="mt-4 space-y-2 text-xs border-t border-gray-100 dark:border-slate-700 pt-3 animate-fade-in" onClick={e => e.stopPropagation()}>
-          <div className="space-y-1">
-            <div className="flex justify-between font-medium text-gray-700 dark:text-gray-300">
-              <span>Total de Seções (ts)</span>
-              <span>{ts.toLocaleString('pt-BR')}</span>
-            </div>
-            <div className="pl-4 border-l border-gray-200 dark:border-slate-700 space-y-1">
-              <div className="flex justify-between text-gray-700 dark:text-gray-300 font-medium">
-                <span>Totalizadas (st)</span>
-                <span className="flex items-center gap-1">
-                  {st.toLocaleString('pt-BR')}
-                  <span className="text-[10px] font-normal text-gray-400">
-                    ({(ts > 0 ? (st / ts) * 100 : 0).toFixed(1)}%)
-                  </span>
-                  {Math.abs((ts > 0 ? (st / ts) * 100 : 0) - parsePct(s.pst)) > 0.1 && (
-                    <span className="text-[9px] text-yellow-600 dark:text-yellow-500" title={`Arquivo: ${s.pst}%`}>⚠️</span>
-                  )}
-                </span>
-              </div>
-              <div className="pl-4 border-l border-gray-100 dark:border-slate-800 space-y-1">
-                <div className="flex justify-between text-gray-600 dark:text-gray-400 font-medium">
-                  <span>Instaladas (si)</span>
-                  <span>{si.toLocaleString('pt-BR')} <span className="text-[10px] font-normal text-gray-400">({(st > 0 ? (si / st) * 100 : 0).toFixed(1)}%)</span></span>
-                </div>
-                <div className="pl-4 border-l border-gray-50 dark:border-slate-900 space-y-1">
-                  <div className="flex justify-between text-gray-500">
-                    <span>Apuradas (sa)</span>
-                    <span>{sa.toLocaleString('pt-BR')} <span className="text-[10px] text-gray-400">({(si > 0 ? (sa / si) * 100 : 0).toFixed(1)}%)</span></span>
-                  </div>
-                  <div className="flex justify-between text-gray-500">
-                    <span>Não Apuradas (sna)</span>
-                    <span>{sna.toLocaleString('pt-BR')} <span className="text-[10px] text-gray-400">({(si > 0 ? (sna / si) * 100 : 0).toFixed(1)}%)</span></span>
-                  </div>
-                </div>
-                <div className="flex justify-between text-gray-500">
-                  <span>Não Instaladas (sni)</span>
-                  <span>{sni.toLocaleString('pt-BR')} <span className="text-[10px] text-gray-400">({(st > 0 ? (sni / st) * 100 : 0).toFixed(1)}%)</span></span>
-                </div>
-              </div>
-              <div className="flex justify-between text-gray-500">
-                <span>Não Totalizadas (snt)</span>
-                <span>{snt.toLocaleString('pt-BR')} <span className="text-[10px] text-gray-400">({(ts > 0 ? (snt / ts) * 100 : 0).toFixed(1)}%)</span></span>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function EleitoresSummary({ e, previousE }: { e: any, previousE?: any }) {
-  const [expanded, setExpanded] = useState(false);
-  const parseNum = (val: string) => parseInt(val, 10) || 0;
-  const parsePct = (val: string) => parseFloat((val || '0').replace(',', '.')) || 0;
-
-  const te = parseNum(e.te);
-  const est = parseNum(e.est);
-  const esnt = parseNum(e.esnt);
-  const c = parseNum(e.c);
-  // a is not used in the detail view as per user request
-  const esi = parseNum(e.esi);
-  const esni = parseNum(e.esni);
-  const esa = parseNum(e.esa);
-  const esna = parseNum(e.esna);
-
-  return (
-    <div className="bg-gray-50 dark:bg-slate-800/60 rounded-lg p-3 border border-gray-200 dark:border-slate-700 cursor-pointer" onClick={() => setExpanded(!expanded)}>
-      <div className="flex justify-between items-center mb-2">
-        <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Eleitores</div>
-        <svg className={`w-3.5 h-3.5 text-gray-400 transition-transform ${expanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
-      </div>
-      <div className="flex justify-between text-sm mb-1">
-        <span className="text-gray-600 dark:text-gray-400 text-xs">Comparecimento</span>
-        <span className="font-semibold text-gray-800 dark:text-gray-200 flex items-center">
-          {e.pc}%
-          <TrendIndicator current={e.pc} previous={previousE?.pc} />
-        </span>
-      </div>
-      <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2 mb-1">
-        <div className="h-2 rounded-full bg-blue-600 transition-all" style={{ width: `${parsePct(e.pc)}%` }} />
-      </div>
-      <div className="text-[10px] text-gray-400 dark:text-gray-500">
-        {c.toLocaleString('pt-BR')} de {est.toLocaleString('pt-BR')}
-      </div>
-
-      {expanded && (
-        <div className="mt-4 space-y-2 text-xs border-t border-gray-100 dark:border-slate-700 pt-3 animate-fade-in" onClick={evt => evt.stopPropagation()}>
-          <div className="flex justify-between font-medium text-gray-700 dark:text-gray-300">
-            <span>Total de Eleitores (te)</span>
-            <span>{te.toLocaleString('pt-BR')}</span>
-          </div>
-
-          <div className="space-y-1">
-            <div className="flex justify-between font-medium text-gray-700 dark:text-gray-300">
-              <span>Em seções totalizadas (est)</span>
-              <span className="flex items-center gap-1">
-                {est.toLocaleString('pt-BR')}
-                <span className="text-[10px] font-normal text-gray-400">
-                  ({(te > 0 ? (est / te) * 100 : 0).toFixed(1)}%)
-                </span>
-                {Math.abs((te > 0 ? (est / te) * 100 : 0) - parsePct(e.pest)) > 0.1 && (
-                  <span className="text-[9px] text-yellow-600 dark:text-yellow-500" title={`Arquivo: ${e.pest}%`}>⚠️</span>
-                )}
-              </span>
-            </div>
-            <div className="pl-4 border-l border-gray-200 dark:border-slate-700 space-y-1">
-              <div className="flex justify-between text-gray-700 dark:text-gray-300 font-medium">
-                <span>Em seções instaladas (esi)</span>
-                <span>{esi.toLocaleString('pt-BR')} <span className="text-[10px] font-normal text-gray-400">({(est > 0 ? (esi / est) * 100 : 0).toFixed(1)}%)</span></span>
-              </div>
-              <div className="pl-4 border-l border-gray-100 dark:border-slate-800 space-y-1">
-                <div className="flex justify-between text-gray-600 dark:text-gray-400 font-medium">
-                  <span>Em seções apuradas (esa)</span>
-                  <span>{esa.toLocaleString('pt-BR')} <span className="text-[10px] font-normal text-gray-400">({(esi > 0 ? (esa / esi) * 100 : 0).toFixed(1)}%)</span></span>
-                </div>
-                {/* c and a are intentionally omitted here as they are in the card header bar */}
-                <div className="flex justify-between text-gray-500">
-                  <span>Em seções não apuradas (esna)</span>
-                  <span>{esna.toLocaleString('pt-BR')} <span className="text-[10px] text-gray-400">({(esi > 0 ? (esna / esi) * 100 : 0).toFixed(1)}%)</span></span>
-                </div>
-              </div>
-              <div className="flex justify-between text-gray-500">
-                <span>Em seções não instaladas (esni)</span>
-                <span>{esni.toLocaleString('pt-BR')} <span className="text-[10px] text-gray-400">({(est > 0 ? (esni / est) * 100 : 0).toFixed(1)}%)</span></span>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex justify-between text-gray-500">
-            <span>Em seções não totalizadas (esnt)</span>
-            <span>{esnt.toLocaleString('pt-BR')} <span className="text-[10px] text-gray-400">({(te > 0 ? (esnt / te) * 100 : 0).toFixed(1)}%)</span></span>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ── Candidate card component ──────────────────────────────────────────────────
-
-function CandCard({
-  cand, agr, totalVotos, ambiente, ciclo, eleicaoCd, uf, isProportional, isFavorite, onToggleFavorite, host, previousCand
-}: {
-  cand: EA20Candidato;
-  agr: EA20Agrupamento;
-  totalVotos: number;
-  ambiente: string;
-  ciclo: string;
-  eleicaoCd: string;
-  uf: string;
-  isProportional: boolean;
-  isFavorite: boolean;
-  onToggleFavorite: () => void;
-  host: string;
-  previousCand?: EA20Candidato;
-}) {
-  const [expanded, setExpanded] = useState(false);
-  const [fotoError, setFotoError] = useState(false);
-  const vap = parseInt(cand.vap, 10) || 0;
-  const pct = totalVotos > 0 ? (vap / totalVotos) * 100 : 0;
-  const isEleito = cand.e === 's';
-  const dvtNaoValido = cand.dvt && cand.dvt !== 'Válido';
-
-  const borderBg = isEleito
-    ? 'border-green-400 dark:border-green-600 bg-green-50/50 dark:bg-green-900/10'
-    : dvtNaoValido
-      ? 'border-orange-300 dark:border-orange-700 bg-orange-50/30 dark:bg-orange-900/10'
-      : 'border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800/40';
-
-  const barColor = isEleito ? 'bg-green-500' : dvtNaoValido ? 'bg-orange-400' : 'bg-blue-500';
-  const pctColor = isEleito ? 'text-green-700 dark:text-green-400' : dvtNaoValido ? 'text-orange-600 dark:text-orange-400' : 'text-blue-700 dark:text-blue-400';
-
-  if (isProportional) {
-    // Compact table row for proportional cargos
-    return (
-      <>
-        <tr
-          className={`border-b border-gray-100 dark:border-slate-800 cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-800/60 transition-colors ${isEleito ? 'bg-green-50/40 dark:bg-green-900/10' : ''}`}
-          onClick={() => setExpanded(!expanded)}
-        >
-          <td className="py-2 px-3 font-mono text-xs text-gray-500 w-10">{cand.n}</td>
-          <td className="py-2 px-2">
-            <div className="flex items-center gap-1.5">
-              <button
-                onClick={(e) => { e.stopPropagation(); onToggleFavorite(); }}
-                className={`transition-colors ${isFavorite ? 'text-amber-400' : 'text-gray-300 dark:text-slate-600 hover:text-amber-400'}`}
-              >
-                <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
-              </button>
-              <span className="text-sm font-medium text-gray-800 dark:text-gray-200">{cand.nmu}</span>
-              {dvtBadge(cand.dvt)}
-              {isEleito && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300 font-bold">✓ {cand.st}</span>}
-            </div>
-            <div className="text-[11px] text-gray-400 dark:text-gray-500">{agr.par.find(p => p.cand.some(c => c.sqcand === cand.sqcand))?.sg} · {agr.nm}</div>
-          </td>
-          <td className="py-2 px-3 text-right">
-            <div className={`font-mono font-bold text-xs flex items-center justify-end ${pctColor}`}>
-              {cand.pvap}%
-              <TrendIndicator current={cand.pvap} previous={previousCand?.pvap} />
-            </div>
-            <div className="text-[11px] text-gray-400 dark:text-gray-500">{parseInt(cand.vap).toLocaleString('pt-BR')}</div>
-          </td>
-        </tr>
-        {expanded && (
-          <tr>
-            <td colSpan={3} className="bg-gray-50 dark:bg-slate-900/50 p-2">
-              <div className={`border rounded-lg p-3 shadow-sm transition-all ${borderBg}`}>
-                <div className="flex justify-between items-start gap-2 mb-2">
-                  <div className="flex flex-col gap-0.5">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); onToggleFavorite(); }}
-                        className={`transition-colors ${isFavorite ? 'text-amber-400' : 'text-gray-300 dark:text-slate-600 hover:text-amber-400'}`}
-                      >
-                        <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
-                      </button>
-                      <span className="font-mono text-xs text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-slate-700 px-1.5 py-0.5 rounded">{cand.n}</span>
-                      <span className="font-bold text-gray-800 dark:text-gray-100">{cand.nmu}</span>
-                      {dvtBadge(cand.dvt)}
-                      {isEleito && <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300 font-bold">✓ {cand.st}</span>}
-                    </div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">
-                      {agr.par.find(p => p.cand.some(c => c.sqcand === cand.sqcand))?.sg} · <span className="truncate">{agr.nm}</span>
-                    </div>
-                    {cand.vs && cand.vs.length > 0 && (
-                      <div className="text-xs text-gray-400 dark:text-gray-500">
-                        Vice: <span className="font-medium text-gray-600 dark:text-gray-300">{cand.vs[0].nmu}</span>
-                        {cand.vs[0].sgp ? ` (${cand.vs[0].sgp})` : ''}
-                      </div>
-                    )}
-                  </div>
-                  <div className="text-right shrink-0">
-                    <div className={`text-lg font-bold font-mono flex items-center justify-end ${pctColor}`}>
-                      {cand.pvap}%
-                      <TrendIndicator current={cand.pvap} previous={previousCand?.pvap} />
-                    </div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">{parseInt(cand.vap).toLocaleString('pt-BR')} votos</div>
-                  </div>
-                </div>
-                <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-1.5 mb-3">
-                  <div className={`h-1.5 rounded-full ${barColor} transition-all`} style={{ width: `${Math.min(pct, 100)}%` }} />
-                </div>
-                <CandDetail cand={cand} agr={agr} ambiente={ambiente} ciclo={ciclo} eleicaoCd={eleicaoCd} uf={uf} fotoError={fotoError} setFotoError={setFotoError} host={host} isProportional={isProportional} />
-              </div>
-            </td>
-          </tr>
-        )}
-      </>
-    );
-  }
-
-  // Card layout for majority cargos
-  return (
-    <div
-      className={`border rounded-lg p-3 shadow-sm transition-all cursor-pointer hover:border-blue-400 dark:hover:border-blue-600 ${borderBg}`}
-      onClick={() => setExpanded(!expanded)}
-    >
-      <div className="flex gap-3 mb-2">
-        {!fotoError && (
-          <img
-            src={buildCandidatoFotoUrl(ambiente, ciclo, eleicaoCd, uf, cand.sqcand, host)}
-            alt={cand.nmu}
-            className="w-12 h-14 object-cover rounded shadow-sm border border-gray-200 dark:border-slate-700 shrink-0"
-            onError={() => setFotoError(true)}
-          />
-        )}
-        <div className="flex-1 min-w-0">
-          <div className="flex justify-between items-start gap-2 mb-1">
-            <div className="flex flex-col gap-0.5 min-w-0 flex-1">
-              <div className="flex items-center gap-2 flex-wrap text-sm">
-                <button
-                  onClick={(e) => { e.stopPropagation(); onToggleFavorite(); }}
-                  className={`transition-colors shrink-0 ${isFavorite ? 'text-amber-400' : 'text-gray-300 dark:text-slate-600 hover:text-amber-400'}`}
-                >
-                  <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
-                </button>
-                <span className="font-mono text-[10px] text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-slate-700 px-1.5 py-0.5 rounded shrink-0">{cand.n}</span>
-                <span className="font-bold text-gray-800 dark:text-gray-100 truncate">{cand.nmu}</span>
-                {dvtBadge(cand.dvt)}
-                {isEleito && (
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300 font-bold shrink-0">✓ Eleito</span>
-                )}
-              </div>
-              <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                {agr.par.find(p => p.cand.some(c => c.sqcand === cand.sqcand))?.sg} · <span className="truncate">{agr.nm}</span>
-              </div>
-            </div>
-            <div className={`text-right shrink-0`}>
-              <div className={`text-lg font-bold font-mono flex items-center justify-end ${pctColor}`}>
-                {cand.pvap}%
-                <TrendIndicator current={cand.pvap} previous={previousCand?.pvap} />
-              </div>
-              <div className="text-[10px] text-gray-500 dark:text-gray-400">{parseInt(cand.vap).toLocaleString('pt-BR')} votos</div>
-            </div>
-          </div>
-          {cand.vs && cand.vs.length > 0 && (
-            <div className="text-[10px] text-gray-400 dark:text-gray-500 truncate mt-1">
-              Vice: <span className="font-medium text-gray-600 dark:text-gray-300">{cand.vs[0].nmu}</span>
-              {cand.vs[0].sgp ? ` (${cand.vs[0].sgp})` : ''}
-            </div>
-          )}
-        </div>
-      </div>
-      <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2 mb-2">
-        <div className={`h-2 rounded-full ${barColor} transition-all`} style={{ width: `${Math.min(pct, 100)}%` }} />
-      </div>
-
-
-      {expanded && (
-        <div className="mt-3 pt-3 border-t border-gray-200 dark:border-slate-700">
-          <CandDetail cand={cand} agr={agr} ambiente={ambiente} ciclo={ciclo} eleicaoCd={eleicaoCd} uf={uf} fotoError={fotoError} setFotoError={setFotoError} host={host} isProportional={isProportional} />
-        </div>
-      )}
-    </div>
-  );
-}
-
-function CandDetail({ cand, agr, ambiente, ciclo, eleicaoCd, uf, fotoError, setFotoError, host, isProportional }: any) {
-  const fotoUrl = buildCandidatoFotoUrl(ambiente, ciclo, eleicaoCd, uf, cand.sqcand, host);
-  const partido = agr.par.find((p: any) => p.cand.some((c: any) => c.sqcand === cand.sqcand));
-  const showPhotoInDetail = isProportional; // Only show in detail if not already in card
-
-  return (
-    <div className="flex gap-3">
-      {showPhotoInDetail && !fotoError && (
-        <img
-          src={fotoUrl}
-          alt={cand.nmu}
-          className="w-16 h-20 object-cover rounded shadow border border-gray-200 dark:border-slate-600 shrink-0"
-          onError={() => setFotoError(true)}
-        />
-      )}
-      <div className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
-        <div><span className="font-medium text-gray-700 dark:text-gray-300">Nome completo:</span> {cand.nm}</div>
-        {cand.dt && <div><span className="font-medium text-gray-700 dark:text-gray-300">Nascimento:</span> {cand.dt}</div>}
-        {partido && <div><span className="font-medium text-gray-700 dark:text-gray-300">Partido:</span> {partido.nm} ({partido.sg})</div>}
-        <div><span className="font-medium text-gray-700 dark:text-gray-300">Sequencial:</span> {cand.sqcand}</div>
-        <div><span className="font-medium text-gray-700 dark:text-gray-300">Destino do voto:</span> <span className={(cand.dvt && DVT_COLORS[cand.dvt]) || ''}>{cand.dvt}</span></div>
-        <div><span className="font-medium text-gray-700 dark:text-gray-300">Status:</span> {cand.st}</div>
-        {cand.vs && cand.vs.length > 0 && (
-          <div><span className="font-medium text-gray-700 dark:text-gray-300">Vice(s):</span>{' '}
-            {cand.vs.map((v: any) => `${v.nmu} (${v.sgp})`).join(', ')}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ── Main component ────────────────────────────────────────────────────────────
-function RespostaCard({ resp, previousResp, pctColor }: { resp: any, previousResp?: any, pctColor: string }) {
-  const pct = parseFloat((resp.pvap || '0').replace(',', '.'));
-  const isEleito = resp.e === 's';
-  const barColor = isEleito ? 'bg-green-500' : 'bg-blue-500';
-  const borderBg = isEleito ? 'border-green-200 bg-green-50/30 dark:border-green-900/40 dark:bg-green-900/10' : 'border-gray-200 dark:border-slate-800';
-
-  return (
-    <div className={`border rounded-lg p-3 shadow-sm transition-all ${borderBg}`}>
-      <div className="flex justify-between items-start gap-2 mb-2">
-        <div className="flex flex-col gap-0.5 min-w-0 flex-1">
-          <div className="flex items-center gap-2 flex-wrap text-sm">
-            <span className="font-mono text-[10px] text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-slate-700 px-1.5 py-0.5 rounded shrink-0">{resp.n}</span>
-            <span className="font-bold text-gray-800 dark:text-gray-100 truncate">{resp.ds}</span>
-            {isEleito && (
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300 font-bold shrink-0">✓ Eleito</span>
-            )}
-          </div>
-        </div>
-        <div className={`text-right shrink-0`}>
-          <div className={`text-lg font-bold font-mono flex items-center justify-end ${pctColor}`}>
-            {resp.pvap}%
-            <TrendIndicator current={resp.pvap} previous={previousResp?.pvap} />
-          </div>
-          <div className="text-[10px] text-gray-500 dark:text-gray-400">{parseInt(resp.vap).toLocaleString('pt-BR')} votos</div>
-        </div>
-      </div>
-      <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2">
-        <div className={`h-2 rounded-full ${barColor} transition-all`} style={{ width: `${Math.min(pct, 100)}%` }} />
-      </div>
-    </div>
-  );
-}
+import { renderHighlightedJson } from './ea20/utils';
+import { VoteVisualization } from './ea20/VoteVisualization';
+import { SecoesSummary, EleitoresSummary } from './ea20/SummaryCards';
+import { CandCard } from './ea20/CandidateCards';
+import { RespostaCard } from './ea20/RespostaCard';
 
 export function EA20Viewer({
   ciclo,
@@ -676,11 +43,11 @@ export function EA20Viewer({
   const [showZonaSelector, setShowZonaSelector] = useState(false);
   const [selectedZona, setSelectedZona] = useState<string | undefined>(initialZona);
   const [showRawJson, setShowRawJson] = useState(false);
-  const [localData, setLocalData] = useState<any>(initialLocalData || null);
+  const [localData, setLocalData] = useState<UI_EA20Response | null>(initialLocalData ? adaptEA20Response(initialLocalData) : null);
   const [isEditing, setIsEditing] = useState(false);
   const [isModified, setIsModified] = useState(false);
   const [editValue, setEditValue] = useState('');
-  const [previousData, setPreviousData] = useState<any>(null);
+  const [previousData, setPreviousData] = useState<UI_EA20Response | null>(null);
 
   // Advanced search/filter/sort state
   const [searchTerm, setSearchTerm] = useState('');
@@ -727,6 +94,7 @@ export function EA20Viewer({
   const { data: ea20Data, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ['ea20', ciclo, eleicaoCd, uf, cdMun, selectedCargo?.cd, selectedZona, ambiente, host],
     queryFn: () => fetchEA20(ambiente, ciclo!, eleicaoCd!, uf!, cdMun!, selectedCargo!.cd, selectedZona, host),
+    select: adaptEA20Response,
     enabled: !!selectedCargo && !!ciclo && !initialLocalData && (cdMun === "" || !!cdMun),
     staleTime: 30000,
   });
@@ -771,12 +139,12 @@ export function EA20Viewer({
   // Derive allCandidates for the selected cargo in localData
   const isConsultaPopular = !!localData?.perg;
 
-  const cargoData: EA20Cargo | null = useMemo(() => {
+  const cargoData: UI_EA20Cargo | null = useMemo(() => {
     if (!localData?.carg?.length) return null;
     return localData.carg[0] ?? null;
   }, [localData]);
 
-  const { selectedAbrangencia } = useElection();
+  const { selectedAbrangencia, selectedEleicao, switchTurno } = useElection();
   // Logic for candidate photo URLs: use 'br' only for President (cargo '1')
   // For other cargos (even in Federal elections), use the actual state identifier
   const isPresident = selectedCargo?.cd === '1' || cargoData?.cd === '1';
@@ -789,7 +157,7 @@ export function EA20Viewer({
 
   const allCandidates = useMemo(() => {
     if (!cargoData) return [];
-    return cargoData.agr.flatMap(agr => agr.par.flatMap(par => par.cand));
+    return cargoData.agr.flatMap((agr: UI_EA20Agrupamento) => agr.par.flatMap((par: UI_EA20Partido) => par.cand));
   }, [cargoData]);
 
   const allRespostas = useMemo(() => {
@@ -799,16 +167,16 @@ export function EA20Viewer({
 
   const totalVotos = useMemo(() => {
     if (isConsultaPopular) {
-      return allRespostas.reduce((sum: number, r: any) => sum + (parseInt(r.vap, 10) || 0), 0);
+      return allRespostas.reduce((sum: number, r: any) => sum + r._vapNum, 0);
     }
-    return allCandidates.reduce((sum, c) => sum + (parseInt(c.vap, 10) || 0), 0);
+    return allCandidates.reduce((sum: number, c: UI_EA20Candidato) => sum + c._vapNum, 0);
   }, [isConsultaPopular, allCandidates, allRespostas]);
 
   // Derived list of unique parties for the filter
   const parties = useMemo(() => {
-    const list = cargoData?.agr.flatMap(a => a.par.map(p => ({ sg: p.sg, nm: p.nm }))) || [];
+    const list = cargoData?.agr.flatMap((a: UI_EA20Agrupamento) => a.par.map((p: UI_EA20Partido) => ({ sg: p.sg, nm: p.nm }))) || [];
     // Unique by sg
-    return Array.from(new Map(list.map(p => [p.sg, p])).values()).sort((a: any, b: any) => a.sg.localeCompare(b.sg));
+    return Array.from(new Map(list.map((p: { sg: string; nm: string }) => [p.sg, p])).values()).sort((a: { sg: string; nm: string }, b: { sg: string; nm: string }) => a.sg.localeCompare(b.sg));
   }, [cargoData]);
 
   const filteredAndSortedRespostas = useMemo(() => {
@@ -824,21 +192,21 @@ export function EA20Viewer({
       );
     }
 
-    list.sort((a: any, b: any) => (parseInt(b.resp.vap, 10) || 0) - (parseInt(a.resp.vap, 10) || 0));
+    list.sort((a: any, b: any) => b.resp._vapNum - a.resp._vapNum);
     return list;
   }, [perguntaData, searchTerm]);
 
   const filteredAndSortedCandidates = useMemo(() => {
     if (!cargoData) return [];
 
-    let list = cargoData.agr.flatMap(agr =>
-      agr.par.flatMap(par => par.cand.map(cand => ({ cand, agr, partido: par })))
+    let list = cargoData.agr.flatMap((agr: UI_EA20Agrupamento) =>
+      agr.par.flatMap((par: UI_EA20Partido) => par.cand.map((cand: UI_EA20Candidato) => ({ cand, agr, partido: par })))
     );
 
     // 1. Search (Name, Number, Party)
     if (searchTerm) {
       const lowSearch = searchTerm.toLowerCase();
-      list = list.filter(item =>
+      list = list.filter((item: any) =>
         item.cand.nm.toLowerCase().includes(lowSearch) ||
         item.cand.nmu.toLowerCase().includes(lowSearch) ||
         item.cand.n.includes(searchTerm) ||
@@ -848,7 +216,7 @@ export function EA20Viewer({
 
     // 2. Status Filter
     if (statusFilter !== 'all') {
-      list = list.filter(item => {
+      list = list.filter((item: any) => {
         if (statusFilter === 'fav') return favorites.has(item.cand.sqcand);
         if (statusFilter === 'eleitos') return item.cand.e === 's';
         if (statusFilter === 'legenda') return item.cand.dvt === 'Válidos (legenda)';
@@ -861,18 +229,18 @@ export function EA20Viewer({
 
     // 3. Party Filter
     if (partyFilter !== 'all') {
-      list = list.filter(item => item.partido.sg === partyFilter);
+      list = list.filter((item: any) => item.partido.sg === partyFilter);
     }
 
     // 4. Sort
-    list.sort((a, b) => {
+    list.sort((a: any, b: any) => {
       // Favorites ALWAYS on top
       const aFav = favorites.has(a.cand.sqcand) ? 1 : 0;
       const bFav = favorites.has(b.cand.sqcand) ? 1 : 0;
       if (aFav !== bFav) return bFav - aFav;
 
       if (sortMode === 'votos') {
-        return (parseInt(b.cand.vap, 10) || 0) - (parseInt(a.cand.vap, 10) || 0);
+        return b.cand._vapNum - a.cand._vapNum;
       }
       if (sortMode === 'nome') {
         return a.cand.nmu.localeCompare(b.cand.nmu);
@@ -882,7 +250,7 @@ export function EA20Viewer({
       }
       if (sortMode === 'eleito') {
         if (a.cand.e !== b.cand.e) return a.cand.e === 's' ? -1 : 1;
-        return (parseInt(b.cand.vap, 10) || 0) - (parseInt(a.cand.vap, 10) || 0);
+        return b.cand._vapNum - a.cand._vapNum;
       }
       if (sortMode === 'idade') {
         // Nascimento: older (most idosos) first. Date format DD/MM/YYYY
@@ -907,14 +275,14 @@ export function EA20Viewer({
   }, [cargoData, searchTerm, statusFilter, partyFilter, sortMode, favorites]);
 
   const filterCounts = useMemo(() => {
-    const raw = cargoData?.agr.flatMap(a => a.par.flatMap(p => p.cand)) || [];
+    const raw = cargoData?.agr.flatMap((a: UI_EA20Agrupamento) => a.par.flatMap((p: UI_EA20Partido) => p.cand)) || [];
     return {
       all: isConsultaPopular ? allRespostas.length : raw.length,
-      fav: raw.filter(c => favorites.has(c.sqcand)).length,
-      eleitos: raw.filter(c => c.e === 's').length,
-      legenda: raw.filter(c => c.dvt === 'Válidos (legenda)').length,
-      anulado: raw.filter(c => c.dvt === 'Anulado').length,
-      subjudice: raw.filter(c => c.dvt === 'Sub-Judice').length,
+      fav: raw.filter((c: any) => favorites.has(c.sqcand)).length,
+      eleitos: raw.filter((c: any) => c.e === 's').length,
+      legenda: raw.filter((c: any) => c.dvt === 'Válidos (legenda)').length,
+      anulado: raw.filter((c: any) => c.dvt === 'Anulado').length,
+      subjudice: raw.filter((c: any) => c.dvt === 'Sub-Judice').length,
     };
   }, [cargoData, favorites, isConsultaPopular, allRespostas]);
 
@@ -939,6 +307,17 @@ export function EA20Viewer({
                   <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
                   Resultados (EA20) — {munNome || localData?.cdabr || 'Arquivo Local'} {selectedZona ? ` — Zona ${selectedZona}` : ''}
                 </h2>
+                {selectedEleicao && (selectedEleicao.cdt2 || selectedEleicao.t === '2') && (
+                  <div className="mt-1 mb-1">
+                    <button
+                      onClick={switchTurno}
+                      className="flex items-center gap-1.5 px-2 py-0.5 text-xs font-semibold bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 rounded border border-blue-200 dark:border-blue-800 hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors inline-flex"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
+                      Ir para {selectedEleicao.t === '1' ? '2º' : '1º'} Turno
+                    </button>
+                  </div>
+                )}
                 {localData && (
                   <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
                     Gerado em: <span className="font-mono">{localData.dg} {localData.hg}</span>
@@ -1235,7 +614,7 @@ export function EA20Viewer({
                       >
                         Todos
                       </button>
-                      {parties.map(p => (
+                      {parties.map((p: any) => (
                         <button
                           key={p.sg}
                           onClick={() => setPartyFilter(p.sg)}
@@ -1291,9 +670,9 @@ export function EA20Viewer({
                       ) : isMajority ? (
                         // ── Majority: cards side-by-side and wrapping ────────
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                          {filteredAndSortedCandidates.map(({ cand, agr }) => (
+                          {filteredAndSortedCandidates.map(({ cand, agr }: { cand: UI_EA20Candidato; agr: UI_EA20Agrupamento; partido: UI_EA20Partido }, idx: number) => (
                             <CandCard
-                              key={cand.sqcand}
+                              key={`${cand.sqcand}-${idx}`}
                               cand={cand}
                               agr={agr}
                               totalVotos={totalVotos}
@@ -1321,9 +700,9 @@ export function EA20Viewer({
                               </tr>
                             </thead>
                             <tbody>
-                              {filteredAndSortedCandidates.map(({ cand, agr }) => (
+                              {filteredAndSortedCandidates.map(({ cand, agr }: { cand: UI_EA20Candidato; agr: UI_EA20Agrupamento; partido: UI_EA20Partido }, idx: number) => (
                                 <CandCard
-                                  key={cand.sqcand}
+                                  key={`${cand.sqcand}-${idx}`}
                                   cand={cand}
                                   agr={agr}
                                   totalVotos={totalVotos}

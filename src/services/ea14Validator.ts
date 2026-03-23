@@ -1,4 +1,5 @@
 import type { EA14Response } from '../types/ea14';
+import { parseNum, parsePct } from '../utils/parsers';
 
 export interface EA14ValidationResult {
   cdabr: string;
@@ -7,12 +8,6 @@ export interface EA14ValidationResult {
 
 export function validateEA14(data: EA14Response): EA14ValidationResult[] {
   const results: EA14ValidationResult[] = [];
-
-  // Helper to parse numbers
-  const parseNum = (val: any) => parseInt(val || '0', 10) || 0;
-
-  // Helper to parse percentages that come securely with commands like "100,00"
-  const parsePct = (val: any) => parseFloat((val || '0').replace(',', '.')) || 0;
 
   // Track finished UFs for the BR validation rule
   let finishedUFsCount = 0;

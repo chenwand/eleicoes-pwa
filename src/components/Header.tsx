@@ -4,6 +4,8 @@ import { useEnvironment } from '../context/EnvironmentContext';
 import { useElection } from '../context/ElectionContext';
 import { SettingsModal } from './SettingsModal';
 import { useState, useRef } from 'react';
+import { adaptEA20Response } from '../utils/adapters/ea20Adapters';
+import { adaptStatsResponse } from '../utils/adapters/statsAdapters';
 
 export function Header({ onLocalFileLoaded }: { onLocalFileLoaded: (data: { type: 'EA11' | 'EA14' | 'EA15' | 'EA20', data: any }) => void }) {
   const { theme, toggleTheme } = useTheme();
@@ -35,7 +37,15 @@ export function Header({ onLocalFileLoaded }: { onLocalFileLoaded: (data: { type
           alert('Tipo de arquivo não reconhecido (não é EA11, EA14, EA15 ou EA20).');
           return;
         }
-        onLocalFileLoaded({ type, data: json });
+
+        let adaptedJson = json;
+        if (type === 'EA20') {
+          adaptedJson = adaptEA20Response(json);
+        } else if (type === 'EA14' || type === 'EA15') {
+          adaptedJson = adaptStatsResponse(json);
+        }
+
+        onLocalFileLoaded({ type, data: adaptedJson });
         if (fileInputRef.current) fileInputRef.current.value = '';
       } catch (err) {
         alert('Erro ao processar arquivo JSON: ' + (err instanceof Error ? err.message : 'Arquivo inválido'));

@@ -4,8 +4,10 @@ import { fetchEA12, flattenEA12Municipios } from '../services/ea12Service';
 import { useMemo, useState, useEffect } from 'react';
 import { useEnvironment } from '../context/EnvironmentContext';
 import { validateEA15, getEA15ErrorsForAbr } from '../services/ea15Validator';
+import { adaptStatsResponse } from '../utils/adapters/statsAdapters';
 import { EA20Viewer } from './EA20Viewer';
 import { TrendIndicator } from './TrendIndicator';
+import { useElection } from '../context/ElectionContext';
 
 const renderHighlightedJson = (jsonObj: any) => {
   const json = JSON.stringify(jsonObj, null, 2).replace(/[&<>]/g, (c) => {
@@ -30,9 +32,6 @@ interface EA15ViewerProps {
   eleicaoCd: string;
   uf: string;
   onBack: () => void;
-  relatedEleicaoCd?: string;
-  relatedEleicaoTurno?: '1' | '2';
-  onChangeEleicao?: (cd: string) => void;
   ea14dg?: string;
   ea14hg?: string;
   /** Cargos from EA11 to pass to EA20Viewer */
@@ -40,7 +39,7 @@ interface EA15ViewerProps {
   initialLocalData?: any;
 }
 
-export function EA15Viewer({ ciclo, eleicaoCd, uf, onBack, relatedEleicaoCd, relatedEleicaoTurno, onChangeEleicao, ea14dg, ea14hg, cargosDisponiveis = [], initialLocalData }: EA15ViewerProps) {
+export function EA15Viewer({ ciclo, eleicaoCd, uf, onBack, ea14dg, ea14hg, cargosDisponiveis = [], initialLocalData }: EA15ViewerProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [showRawJson, setShowRawJson] = useState(false);
   const [expandedMun, setExpandedMun] = useState<string | null>(null);
@@ -48,6 +47,7 @@ export function EA15Viewer({ ciclo, eleicaoCd, uf, onBack, relatedEleicaoCd, rel
   const [sortMode, setSortMode] = useState<'default' | 'recent' | 'eleitores' | 'comparecimento' | 'abstencao' | 'pst'>('default');
   const [isClosing, setIsClosing] = useState(false);
   const { ambiente, host } = useEnvironment();
+  const { selectedEleicao, switchTurno } = useElection();
   const [localData, setLocalData] = useState<any>(initialLocalData || null);
   const [isEditing, setIsEditing] = useState(false);
   const [isModified, setIsModified] = useState(false);
@@ -86,6 +86,7 @@ export function EA15Viewer({ ciclo, eleicaoCd, uf, onBack, relatedEleicaoCd, rel
   const { data: ea15Data, isLoading: isEA15Loading, isError: isEA15Error, error: ea15Error, refetch: refetchEA15, isFetching: isEA15Fetching } = useQuery({
     queryKey: ['ea15-data', ciclo, eleicaoCd, uf, ambiente, host],
     queryFn: () => fetchEA15(ciclo, eleicaoCd, uf, ambiente, host),
+    select: adaptStatsResponse,
     enabled: !!eleicaoCd && !!ciclo && !!uf && !initialLocalData,
     staleTime: 30000,
   });
@@ -172,17 +173,17 @@ export function EA15Viewer({ ciclo, eleicaoCd, uf, onBack, relatedEleicaoCd, rel
         const bFav = favorites.has(b.cdabr) ? 0 : 1;
         if (aFav !== bFav) return aFav - bFav;
 
-        if (sortMode === 'eleitores') return parseInt(b.e.te) - parseInt(a.e.te);
-        if (sortMode === 'comparecimento') return parseFloat(b.e.pc.replace(',', '.')) - parseFloat(a.e.pc.replace(',', '.'));
-        if (sortMode === 'abstencao') return parseFloat(b.e.pa.replace(',', '.')) - parseFloat(a.e.pa.replace(',', '.'));
-        if (sortMode === 'pst') return parseFloat(b.s.pst.replace(',', '.')) - parseFloat(a.s.pst.replace(',', '.'));
+        if (sortMode === 'eleitores') return b.e._teNum - a.e._teNum;
+        if (sortMode === 'comparecimento') return b.e._pcNum - a.e._pcNum;
+        if (sortMode === 'abstencao') return b.e._paNum - a.e._paNum;
+        if (sortMode === 'pst') return b.s._pstNum - a.s._pstNum;
 
         const aErrors = getEA15ErrorsForAbr(validationResults, a.cdabr).length;
         const bErrors = getEA15ErrorsForAbr(validationResults, b.cdabr).length;
         if (aErrors !== bErrors) return bErrors - aErrors;
 
-        const pctA = parseFloat(a.s.pst.replace(',', '.'));
-        const pctB = parseFloat(b.s.pst.replace(',', '.'));
+        const pctA = a.s._pstNum;
+        const pctB = b.s._pstNum;
         if (pctA !== pctB) return pctB - pctA;
 
         const nameA = munDict.get(a.cdabr) || a.cdabr;
@@ -278,14 +279,14 @@ export function EA15Viewer({ ciclo, eleicaoCd, uf, onBack, relatedEleicaoCd, rel
                   <span>Acompanhamento UF (EA15)</span>
                   <span className="uppercase text-gray-500 dark:text-gray-400 text-base font-semibold">· {uf}</span>
                 </h2>
-                {relatedEleicaoCd && onChangeEleicao && (
+                {selectedEleicao && (selectedEleicao.cdt2 || selectedEleicao.t === '2') && (
                   <div className="mt-1">
                     <button
-                      onClick={() => onChangeEleicao(relatedEleicaoCd)}
+                      onClick={switchTurno}
                       className="flex items-center gap-1.5 px-2 py-0.5 text-xs font-semibold bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 rounded border border-blue-200 dark:border-blue-800 hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors inline-flex"
                     >
                       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
-                      Ir para {relatedEleicaoTurno}º Turno
+                      Ir para {selectedEleicao.t === '1' ? '2º' : '1º'} Turno
                     </button>
                   </div>
                 )}
@@ -413,22 +414,22 @@ export function EA15Viewer({ ciclo, eleicaoCd, uf, onBack, relatedEleicaoCd, rel
                       </span>
                     </div>
                     <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2.5">
-                      <div className={`h-2.5 rounded-full ${isDone ? 'bg-green-500' : 'bg-blue-600'}`} style={{ width: `${parseFloat(ufStats.s.pst.replace(',', '.'))}%` }}></div>
+                      <div className={`h-2.5 rounded-full ${isDone ? 'bg-green-500' : 'bg-blue-600'}`} style={{ width: `${ufStats.s._pstNum}%` }}></div>
                     </div>
                     <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-1">
-                      <span>{parseInt(ufStats.s.st).toLocaleString('pt-BR')} de {parseInt(ufStats.s.ts).toLocaleString('pt-BR')} seções</span>
+                      <span>{ufStats.s._stNum.toLocaleString('pt-BR')} de {ufStats.s._tsNum.toLocaleString('pt-BR')} seções</span>
                     </div>
 
                     {isUfExpanded && (
                       <div className="mt-4 pt-3 border-t border-gray-200 dark:border-slate-700 space-y-2 text-sm text-gray-600 dark:text-gray-400">
                         <div className="flex justify-between">
                           <span>Eleitores:</span>
-                          <span className="font-medium text-gray-700 dark:text-gray-300">{parseInt(ufStats.e.te).toLocaleString('pt-BR')}</span>
+                          <span className="font-medium text-gray-700 dark:text-gray-300">{ufStats.e._teNum.toLocaleString('pt-BR')}</span>
                         </div>
                         <div className="flex justify-between">
                           <span>Comparecimento:</span>
                           <span className="font-medium text-blue-600 dark:text-blue-400 flex items-center">
-                            {parseInt(ufStats.e.c).toLocaleString('pt-BR')} ({ufStats.e.pc}%)
+                            {ufStats.e._cNum.toLocaleString('pt-BR')} ({ufStats.e.pc}%)
                             <TrendIndicator
                               current={ufStats.e.pc}
                               previous={previousData?.abr?.find((a: any) => a.cdabr === uf.toLowerCase())?.e?.pc}
@@ -438,7 +439,7 @@ export function EA15Viewer({ ciclo, eleicaoCd, uf, onBack, relatedEleicaoCd, rel
                         <div className="flex justify-between">
                           <span>Abstenção:</span>
                           <span className="font-medium text-gray-500 flex items-center">
-                            {parseInt(ufStats.e.a).toLocaleString('pt-BR')} ({ufStats.e.pa}%)
+                            {ufStats.e._aNum.toLocaleString('pt-BR')} ({ufStats.e.pa}%)
                             <TrendIndicator
                               current={ufStats.e.pa}
                               previous={previousData?.abr?.find((a: any) => a.cdabr === uf.toLowerCase())?.e?.pa}
@@ -642,7 +643,7 @@ export function EA15Viewer({ ciclo, eleicaoCd, uf, onBack, relatedEleicaoCd, rel
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
               {filteredMuns.map((mun: any) => {
-                const pct = parseFloat(mun.s.pst.replace(',', '.'));
+                const pct = mun.s._pstNum;
                 const isDone = mun.and === 'f';
                 const isPartial = mun.and === 'p';
                 const munErrors = getErrorsForMun(mun.cdabr);
@@ -731,7 +732,7 @@ export function EA15Viewer({ ciclo, eleicaoCd, uf, onBack, relatedEleicaoCd, rel
                       </div>
 
                       <div className="flex justify-between items-center text-xs text-gray-500 dark:text-gray-400">
-                        <span>Eleitores: <strong className="text-gray-700 dark:text-gray-300">{parseInt(mun.e.te).toLocaleString('pt-BR')}</strong></span>
+                        <span>Eleitores: <strong className="text-gray-700 dark:text-gray-300">{mun.e._teNum.toLocaleString('pt-BR')}</strong></span>
                         <span className="flex items-center">
                           Comp: <strong className="text-blue-600 dark:text-blue-400">{mun.e.pc}%</strong>
                           <TrendIndicator
@@ -773,12 +774,12 @@ export function EA15Viewer({ ciclo, eleicaoCd, uf, onBack, relatedEleicaoCd, rel
                             <div className="font-semibold mb-1 text-gray-700 dark:text-gray-300">Eleitores</div>
                             <div className="flex justify-between">
                               <span>Total:</span>
-                              <span className="font-medium">{parseInt(mun.e.te).toLocaleString('pt-BR')}</span>
+                              <span className="font-medium">{mun.e._teNum.toLocaleString('pt-BR')}</span>
                             </div>
                             <div className="flex justify-between">
                               <span>Comparecimento:</span>
                               <span className="font-medium text-blue-600 dark:text-blue-400 flex items-center">
-                                {parseInt(mun.e.c).toLocaleString('pt-BR')} ({mun.e.pc}%)
+                                {mun.e._cNum.toLocaleString('pt-BR')} ({mun.e.pc}%)
                                 <TrendIndicator
                                   current={mun.e.pc}
                                   previous={previousData?.abr?.find((a: any) => a.cdabr === mun.cdabr)?.e?.pc}
@@ -788,7 +789,7 @@ export function EA15Viewer({ ciclo, eleicaoCd, uf, onBack, relatedEleicaoCd, rel
                             <div className="flex justify-between">
                               <span>Abstenção:</span>
                               <span className="font-medium text-gray-500 flex items-center">
-                                {parseInt(mun.e.a).toLocaleString('pt-BR')} ({mun.e.pa}%)
+                                {mun.e._aNum.toLocaleString('pt-BR')} ({mun.e.pa}%)
                                 <TrendIndicator
                                   current={mun.e.pa}
                                   previous={previousData?.abr?.find((a: any) => a.cdabr === mun.cdabr)?.e?.pa}
@@ -800,7 +801,7 @@ export function EA15Viewer({ ciclo, eleicaoCd, uf, onBack, relatedEleicaoCd, rel
                             <div className="font-semibold mb-1 text-gray-700 dark:text-gray-300">Seções</div>
                             <div className="flex justify-between">
                               <span>Totalizadas:</span>
-                              <span className="font-medium text-green-600 dark:text-green-400">{parseInt(mun.s.st).toLocaleString('pt-BR')} de {parseInt(mun.s.ts).toLocaleString('pt-BR')}</span>
+                              <span className="font-medium text-green-600 dark:text-green-400">{mun.s._stNum.toLocaleString('pt-BR')} de {mun.s._tsNum.toLocaleString('pt-BR')}</span>
                             </div>
                             <div className="flex justify-between">
                               <span>Não totalizadas:</span>
