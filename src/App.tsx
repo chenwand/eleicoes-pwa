@@ -7,7 +7,6 @@ import { Dashboard } from './pages/Dashboard';
 import { EA20Viewer } from './components/EA20Viewer';
 import { EA14Viewer } from './components/EA14Viewer';
 import { EA15Viewer } from './components/EA15Viewer';
-import { RegionalSummary } from './components/RegionalSummary';
 import { useAvailableRoles } from './hooks/useAvailableRoles';
 import type { Turno } from './types/election';
 
@@ -27,32 +26,24 @@ export function AppContent({ onLocalFileLoaded, localFile, setLocalFile, turno }
   const [openEA14, setOpenEA14] = useState(false);
   const [openEA15, setOpenEA15] = useState(false);
   const [openEA20, setOpenEA20] = useState(false);
-  const [openRegionalSummary, setOpenRegionalSummary] = useState(false);
-  const [initialRegion, setInitialRegion] = useState<string | undefined>();
-  const [ea14CameFromRegional, setEa14CameFromRegional] = useState(false);
 
   const cargosDisponiveis = useAvailableRoles(selectedEleicao, selectedAbrangencia);
 
   useEffect(() => {
     const handleOpenEA14 = () => {
-      setInitialRegion(undefined);
-      setEa14CameFromRegional(false);
       setOpenEA14(true);
     };
     const handleOpenEA15 = () => setOpenEA15(true);
     const handleOpenEA20 = () => setOpenEA20(true);
-    const handleOpenRegionalSummary = () => setOpenRegionalSummary(true);
 
     window.addEventListener('open-ea14', handleOpenEA14);
     window.addEventListener('open-ea15', handleOpenEA15);
     window.addEventListener('open-ea20', handleOpenEA20);
-    window.addEventListener('open-regional-summary', handleOpenRegionalSummary);
 
     return () => {
       window.removeEventListener('open-ea14', handleOpenEA14);
       window.removeEventListener('open-ea15', handleOpenEA15);
       window.removeEventListener('open-ea20', handleOpenEA20);
-      window.removeEventListener('open-regional-summary', handleOpenRegionalSummary);
     };
   }, []);
 
@@ -72,17 +63,9 @@ export function AppContent({ onLocalFileLoaded, localFile, setLocalFile, turno }
           eleicaoCd={selectedEleicao.cd}
           eleicaoNome={selectedEleicao.nm.replace(/&#186;/g, 'º')}
           cargosDisponiveis={cargosDisponiveis}
-          initialRegion={initialRegion}
           onClose={() => {
             setOpenEA14(false);
-            setInitialRegion(undefined);
-            setEa14CameFromRegional(false);
           }}
-          onBack={ea14CameFromRegional ? () => {
-            setOpenEA14(false);
-            setOpenRegionalSummary(true);
-            setEa14CameFromRegional(false);
-          } : undefined}
         />
       )}
       {openEA15 && selectedEleicao && selectedAbrangencia && (
@@ -106,20 +89,7 @@ export function AppContent({ onLocalFileLoaded, localFile, setLocalFile, turno }
         />
       )}
 
-      {openRegionalSummary && selectedEleicao && (
-        <RegionalSummary
-          ciclo={ciclo}
-          eleicaoCd={selectedEleicao.cd}
-          eleicaoNome={selectedEleicao.nm.replace(/&#186;/g, 'º')}
-          onClose={() => setOpenRegionalSummary(false)}
-          onViewRegion={(regionCd) => {
-            setOpenRegionalSummary(false);
-            setInitialRegion(regionCd);
-            setEa14CameFromRegional(true);
-            setOpenEA14(true);
-          }}
-        />
-      )}
+    
 
       {localFile?.type === 'EA20' && (
         <EA20Viewer

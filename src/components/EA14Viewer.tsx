@@ -46,11 +46,9 @@ interface EA14ViewerProps {
   onClose: () => void;
   cargosDisponiveis?: { cd: string; nm: string }[];
   initialLocalData?: any;
-  initialRegion?: string;
-  onBack?: () => void;
 }
 
-export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose, cargosDisponiveis = [], initialLocalData, initialRegion, onBack }: EA14ViewerProps) {
+export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose, cargosDisponiveis = [], initialLocalData }: EA14ViewerProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const [expandedUf, setExpandedUf] = useState<string | null>(null);
   const [showRawJson, setShowRawJson] = useState(false);
@@ -59,7 +57,15 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose, cargosDispo
   const [isClosing, setIsClosing] = useState(false);
   const [previousData, setPreviousData] = useState<any>(null);
   const [isBrExpanded, setIsBrExpanded] = useState(false);
-  const [selectedRegion, setSelectedRegion] = useState(initialRegion || 'BR');
+  const [selectedRegion, setSelectedRegion] = useState('BR');
+  const [viewMode, setViewMode] = useState<'regions' | 'ufs'>('regions');
+
+  // Ensure predictable behavior when returning to BR
+  useEffect(() => {
+    if (selectedRegion === 'BR') {
+      setViewMode('regions');
+    }
+  }, [selectedRegion]);
 
   const handleClose = () => {
     setIsClosing(true);
@@ -68,14 +74,7 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose, cargosDispo
     }, 300); // Match slide-out duration
   };
 
-  const handleBack = () => {
-    if (onBack) {
-      setIsClosing(true);
-      setTimeout(() => {
-        onBack();
-      }, 300);
-    }
-  };
+
 
   const { ambiente, host } = useEnvironment();
   const { selectedEleicao, switchTurno } = useElection();
@@ -141,6 +140,48 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose, cargosDispo
     return validationResults.find(r => r.cdabr === cdabr)?.errors || [];
   };
 
+  const regionDataList = useMemo(() => {
+    if (!localData || selectedRegion !== 'BR') return [];
+    const list = REGIONS.map(r => ({
+      ...r,
+      data: calculateRegionTotals(localData, r.cd)
+    })).filter(r => !!r.data && r.cd !== 'BR');
+
+    return list.sort((aValue, bValue) => {
+      const a = aValue.data;
+      const b = bValue.data;
+
+      // Sort by most recently updated
+      if (sortMode === 'recent') {
+        const toSortable = (dt: string, ht: string) => {
+          if (!dt) return '';
+          const [d, m, y] = dt.split('/');
+          return `${y}/${m}/${d} ${ht || ''}`;
+        };
+        const tsA = toSortable(a.dt, a.ht);
+        const tsB = toSortable(b.dt, b.ht);
+        return tsB.localeCompare(tsA);
+      }
+
+      if (sortMode === 'pst') {
+        return b.s._pstNum - a.s._pstNum;
+      }
+      if (sortMode === 'eleitores') {
+        return b.e._teNum - a.e._teNum;
+      }
+      if (sortMode === 'comparecimento') {
+        return b.e._pcNum - a.e._pcNum;
+      }
+      if (sortMode === 'abstencao') {
+        return b.e._paNum - a.e._paNum;
+      }
+
+      // Default: % seções descending, then alphabetical
+      if (b.s._pstNum !== a.s._pstNum) return b.s._pstNum - a.s._pstNum;
+      return aValue.nm.localeCompare(bValue.nm);
+    });
+  }, [localData, selectedRegion, sortMode]);
+
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (panelRef.current && !panelRef.current.contains(event.target as Node)) {
@@ -175,15 +216,7 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose, cargosDispo
         <div className="sticky top-0 z-10 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-gray-200 dark:border-slate-800 p-4">
           <div className="flex justify-between items-center mb-4">
             <div className="flex items-center gap-3">
-              {onBack && (
-                <button
-                  onClick={handleBack}
-                  className="p-1.5 bg-gray-100 hover:bg-gray-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-full transition-colors flex items-center justify-center shadow-sm"
-                  title="Voltar"
-                >
-                  <svg className="w-5 h-5 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
-                </button>
-              )}
+
               <div>
                 <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
                   <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
@@ -443,7 +476,7 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose, cargosDispo
                         >
                           <div className="flex-1 flex flex-col justify-center">
                             <div className="flex justify-between items-center mb-2">
-                              <h3 className="font-bold text-gray-800 dark:text-gray-200 uppercase flex items-center gap-2">
+                              <h3 className="font-bold text-gray-800 dark:text-gray-200 uppercase flex items-center gap-2 mb-0">
                                 {selectedRegion === 'BR' ? (
                                   <img src="/flags/br.svg" alt="Brasil" className="w-5 h-4 object-contain rounded-sm" onError={(e) => (e.currentTarget.style.display = 'none')} />
                                 ) : (
@@ -561,26 +594,100 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose, cargosDispo
                       )
                     })()}
 
-                    <div className="flex justify-between items-center border-b border-gray-200 dark:border-slate-700 pb-2 mb-4 mt-6">
-                      <h3 className="font-medium text-gray-700 dark:text-gray-300">
-                        {selectedRegion === 'BR' ? 'Por Unidade da Federação' : `UFs da Região ${REGIONS.find(r => r.cd === selectedRegion)?.nm}`}
-                      </h3>
-                      <select
-                        value={sortMode}
-                        onChange={(e) => setSortMode(e.target.value as typeof sortMode)}
-                        className="text-xs bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-gray-300 rounded-lg px-2 py-1.5 transition-colors focus:ring-1 focus:ring-blue-500 outline-none"
-                      >
-                        <option value="default">Ordenar: Padrão</option>
-                        <option value="recent">↓ Mais recentes</option>
-                        <option value="pst">↓ % Seções totalizadas</option>
-                        <option value="eleitores">↓ Eleitores</option>
-                        <option value="comparecimento">↓ % Comparecimento</option>
-                        <option value="abstencao">↓ % Abstenção</option>
-                      </select>
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-gray-200 dark:border-slate-700 pb-3 mb-4 mt-6 gap-3">
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full sm:w-auto">
+                        <h3 className="font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                          {selectedRegion === 'BR' && viewMode === 'regions' ? 'Por Macrorregião' : selectedRegion === 'BR' ? 'Por Unidade da Federação' : `UFs da Região ${REGIONS.find(r => r.cd === selectedRegion)?.nm}`}
+                        </h3>
+                        {selectedRegion === 'BR' && (
+                          <div className="flex items-center bg-gray-100 dark:bg-slate-800 p-1 rounded-lg shrink-0">
+                            <button
+                              onClick={() => setViewMode('regions')}
+                              className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${viewMode === 'regions' ? 'bg-white dark:bg-slate-700 shadow text-blue-600 dark:text-blue-400' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}`}
+                            >
+                              Visão Macro (Regiões)
+                            </button>
+                            <button
+                              onClick={() => setViewMode('ufs')}
+                              className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${viewMode === 'ufs' ? 'bg-white dark:bg-slate-700 shadow text-blue-600 dark:text-blue-400' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}`}
+                            >
+                              Todos os Estados
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      {(!selectedRegion || selectedRegion !== 'BR' || viewMode === 'ufs' || viewMode === 'regions') && (
+                        <select
+                          value={sortMode}
+                          onChange={(e) => setSortMode(e.target.value as typeof sortMode)}
+                          className="text-xs bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-gray-300 rounded-lg px-2 py-1.5 transition-colors focus:ring-1 focus:ring-blue-500 outline-none w-full sm:w-auto"
+                        >
+                          <option value="default">Ordenar: Padrão</option>
+                          <option value="recent">↓ Mais recentes</option>
+                          <option value="pst">↓ % Seções totalizadas</option>
+                          <option value="eleitores">↓ Eleitores</option>
+                          <option value="comparecimento">↓ % Comparecimento</option>
+                          <option value="abstencao">↓ % Abstenção</option>
+                        </select>
+                      )}
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-                      {localData.abr
+                    {selectedRegion === 'BR' && viewMode === 'regions' ? (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 pb-8">
+                        {regionDataList.map((r) => (
+                          <div
+                            key={r.cd}
+                            className="bg-white dark:bg-slate-800 rounded-xl p-3.5 shadow-sm border border-gray-100 dark:border-slate-700 hover:border-blue-500/40 hover:shadow-lg group cursor-pointer transition-all duration-300 relative overflow-hidden"
+                            onClick={() => setSelectedRegion(r.cd)}
+                          >
+                            <div className="flex justify-between items-start mb-3">
+                              <div className="flex items-center gap-2.5">
+                                <span className="text-2xl filter drop-shadow-sm transform group-hover:scale-110 transition-transform duration-300">{r.icon}</span>
+                                <div>
+                                  <h4 className="font-black text-gray-900 dark:text-white uppercase text-xs tracking-tighter leading-tight">{r.nm}</h4>
+                                  <span className={`text-[7px] font-black uppercase tracking-widest ${r.data.and === 'f' ? 'text-green-600 dark:text-green-400' : 'text-yellow-600 dark:text-yellow-400'
+                                    }`}>
+                                    {r.data.and === 'f' ? 'Finalizado' : 'Em andamento'}
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="p-1.5 bg-gray-50 dark:bg-slate-700 rounded-lg text-blue-600 dark:text-blue-400 group-hover:bg-blue-600 group-hover:text-white transition-all shadow-sm">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                              </div>
+                            </div>
+
+                            <div className="space-y-3">
+                              <div>
+                                <div className="flex justify-between items-baseline mb-1">
+                                  <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Totalizado</span>
+                                  <span className="font-black text-lg text-blue-600 dark:text-blue-400 tracking-tighter font-mono">{r.data.s.pst}%</span>
+                                </div>
+                                <div className="h-2 bg-gray-100 dark:bg-slate-700 rounded-full overflow-hidden p-0.5 shadow-inner">
+                                  <div
+                                    className="bg-blue-600 h-full rounded-full transition-all duration-700"
+                                    style={{ width: `${r.data.s.pst.replace(',', '.')}%` }}
+                                  />
+                                </div>
+                              </div>
+
+                              <div className="flex justify-between items-center bg-gray-50/80 dark:bg-slate-900/40 p-2 rounded-lg border border-gray-100/50 dark:border-slate-700/50">
+                                <div className="flex flex-col">
+                                  <span className="uppercase font-black text-[7px] tracking-widest text-gray-400">Comparecimento</span>
+                                  <span className="text-gray-900 dark:text-white font-black text-xs tracking-tighter font-mono">{r.data.e.pc}%</span>
+                                </div>
+                                <div className="w-px h-5 bg-gray-200 dark:bg-slate-700" />
+                                <div className="flex flex-col items-end">
+                                  <span className="uppercase font-black text-[7px] tracking-widest text-gray-400">Abstenção</span>
+                                  <span className="text-gray-900 dark:text-white font-black text-xs tracking-tighter font-mono">{r.data.e.pa}%</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                        {localData.abr
                         .filter((a: any) => {
                           if (a.cdabr === 'br') return false;
                           if (selectedRegion === 'BR') return true;
@@ -707,13 +814,13 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose, cargosDispo
                                 </span>
                               </div>
 
-                              {hasErrors && (
-                                <div className="mt-2 bg-red-100 dark:bg-red-900/30 border border-red-200 dark:border-red-800/50 rounded p-1.5 text-xs text-red-700 dark:text-red-300">
-                                  <ul className="list-disc pl-4 space-y-0.5">
-                                    {ufErrors.map((err, i) => <li key={i}>{err}</li>)}
-                                  </ul>
-                                </div>
-                              )}
+                                  {hasErrors && (
+                                    <div className="mt-2 bg-red-100 dark:bg-red-900/30 border border-red-200 dark:border-red-800/50 rounded p-1.5 text-xs text-red-700 dark:text-red-300">
+                                      <ul className="list-disc pl-4 space-y-0.5">
+                                        {ufErrors.map((err: any, i: number) => <li key={i}>{err}</li>)}
+                                      </ul>
+                                    </div>
+                                  )}
 
                               {isExpanded && (
                                 <div className="mt-3 pt-3 border-t border-gray-200 dark:border-slate-700 space-y-1.5 text-xs text-gray-600 dark:text-gray-400 cursor-default" onClick={(e) => e.stopPropagation()}>
@@ -820,6 +927,7 @@ export function EA14Viewer({ ciclo, eleicaoCd, eleicaoNome, onClose, cargosDispo
                           )
                         })}
                     </div>
+                  )}
                   </div>
                 )}
               </div>
