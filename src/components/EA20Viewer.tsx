@@ -5,6 +5,7 @@ import { fetchEA20 } from '../services/ea20Service';
 import { validateEA20 } from '../services/ea20Validator';
 import { useEnvironment } from '../context/EnvironmentContext';
 import { useElection } from '../context/ElectionContext';
+import { getTurnoSwitchEligibility } from '../utils/electionUtils';
 
 import type { EA20Response } from '../types/ea20';
 import { adaptEA20Response, type UI_EA20Response, type UI_EA20Cargo, type UI_EA20Candidato, type UI_EA20Agrupamento, type UI_EA20Partido } from '../utils/adapters/ea20Adapters';
@@ -144,7 +145,20 @@ export function EA20Viewer({
     return localData.carg[0] ?? null;
   }, [localData]);
 
-  const { selectedAbrangencia, selectedEleicao, switchTurno, turnoSwitchAllowed } = useElection();
+  const { selectedAbrangencia, selectedEleicao, switchTurno, ea11Data } = useElection();
+
+  // Cargo-aware turno eligibility: uses selectedCargo to check if the cargo
+  // exists in the target election's cp[]. Falls back to geography-only when
+  // no cargo is selected (e.g., consulta popular).
+  const ea20TurnoAllowed = useMemo(() => {
+    return getTurnoSwitchEligibility(
+      selectedEleicao,
+      ea11Data,
+      selectedAbrangencia,
+      selectedCargo?.cd
+    ).allowed;
+  }, [selectedEleicao, ea11Data, selectedAbrangencia, selectedCargo]);
+
   // Logic for candidate photo URLs: use 'br' only for President (cargo '1')
   // For other cargos (even in Federal elections), use the actual state identifier
   const isPresident = selectedCargo?.cd === '1' || cargoData?.cd === '1';
@@ -307,7 +321,7 @@ export function EA20Viewer({
                   <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
                   Resultados (EA20) — {munNome || localData?.cdabr || 'Arquivo Local'} {selectedZona ? ` — Zona ${selectedZona}` : ''}
                 </h2>
-                {turnoSwitchAllowed && (
+                {ea20TurnoAllowed && (
                   <div className="mt-1 mb-1">
                     <button
                       onClick={switchTurno}
@@ -325,6 +339,33 @@ export function EA20Viewer({
                       ? <span className="ml-2 px-1.5 py-0.5 bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300 rounded text-[10px] font-bold">✓ Finalizado</span>
                       : <span className="ml-2 px-1.5 py-0.5 bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300 rounded text-[10px] font-bold">⟳ Em andamento</span>
                     }
+                  </div>
+                )}
+                {localData?.md === 'e' && localData?.tf !== 's' && (
+                  <div className="mt-1 flex items-center gap-1.5 px-2 py-0.5 text-[10px] font-bold bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300 rounded border border-indigo-200 dark:border-indigo-800 w-fit leading-tight animate-pulse">
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    Eleição matematicamente definida (Eleito)
+                  </div>
+                )}
+                {localData?.md === 's' && localData?.tf !== 's' && (
+                  <div className="mt-1 flex items-center gap-1.5 px-2 py-0.5 text-[10px] font-bold bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300 rounded border border-indigo-200 dark:border-indigo-800 w-fit leading-tight animate-pulse">
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    Eleição matematicamente definida (Segundo turno)
+                  </div>
+                )}
+                {localData?.esae === 's' && (
+                  <div className="mt-2 p-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg text-amber-800 dark:text-amber-200 animate-pulse">
+                    <div className="flex items-center gap-2 mb-1">
+                      <svg className="w-4 h-4 text-amber-600 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                      <span className="text-xs font-bold uppercase tracking-wider">Eleição sem atribuição de eleitos</span>
+                    </div>
+                    {localData.mnae && localData.mnae.length > 0 && (
+                      <ul className="text-xs space-y-1 list-disc list-inside ml-1">
+                        {localData.mnae.map((msg, idx) => (
+                          <li key={idx} className="leading-snug">{msg}</li>
+                        ))}
+                      </ul>
+                    )}
                   </div>
                 )}
                 {isModified && (

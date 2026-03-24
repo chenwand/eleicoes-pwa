@@ -22,17 +22,40 @@ Este documento documenta precisamente todas as lógicas essenciais enraizadas na
 - **Prioridade:** Regra vital na Auditoria Forense transparente visual, engatilhando tarjas vermelhas proeminentes na UI se falharem os pacotes Json injetados locais pelas mesas apuradoras.
 
 ## Regra 4: Retenção de Escopo em Troca Semântica de Tempo (Turnos)
-- **Nome:** Navegação Contextual entre Turnos Geográficos
-- **Descrição:** Lógica que decide se a coordenada geográfica e o nível de visualização sobrevivem à troca entre turnos (1º e 2º) da mesma eleição.
+- **Nome:** Navegação Contextual entre Turnos com Elegibilidade Geográfica e por Cargo
+- **Descrição:** Lógica que decide se a troca entre turnos (1º e 2º) é permitida, baseada na elegibilidade geográfica e de cargo definida pelo EA11 da eleição alvo.
+- **Fonte de Verdade:** `EA11.abr[]` e `EA11.abr[].cp[]` da eleição alvo (2º turno).
 - **Comportamento Lógico:**
-  - **Troca T2 -> T1:** Sempre permitida. Assume-se que a abrangência geográfica do 2º turno é obrigatoriamente um subconjunto válido do 1º turno, preservando o escopo (Município/UF) e o visualizador atual (ex.: EA20).
-  - **Troca T1 -> T2:** Permitida apenas se a eleição alvo existir (`cdt2`) e se a abrangência geográfica atual (UF ou Município) estiver listada como elegível nos dados da eleição de 2º turno (`EA11.abr[]`).
-- **Localização:** `src/context/ElectionContext.tsx` e utilitários `src/utils/electionUtils.ts` (especificamente `canSwitchTurno` e `findTargetElectionForTurnoSwitch`).
 
-## Pendências Técnicas Conhecidas
-- **Elegibilidade por Cargo no 2º Turno:** Existe uma falha conhecida onde o botão de troca para o 2º turno permanece visível mesmo para cargos proporcionais (Vereador, Deputados) que não possuem segundo turno. 
-  - **Status:** Uma tentativa de resolver isso via sincronização de estado global de cargo introduziu regressões em cenários majoritários válidos e foi revertida.
-  - **Recomendação Futura:** Implementar a restrição de cargo de forma puramente localizada nos visualizadores (como o `EA20Viewer`), evitando o superacoplamento com o estado global do `ElectionContext` ou do `Header`.
+  ### T2 → T1: Sempre permitido
+  A abrangência geográfica do 2º turno é obrigatoriamente um subconjunto válido do 1º turno. O escopo (UF/Município) e o visualizador são preservados.
+
+  ### T1 → T2: Condições cumulativas
+  1. **Existência do turno alvo:** `selectedEleicao.cdt2` deve existir
+  2. **Existência da eleição alvo no EA11:** a eleição referenciada por `cdt2` deve constar em `EA11.pl[].e[]`
+  3. **Elegibilidade geográfica:**
+     - Escopo Brasil (BR): permitido se a eleição alvo existir
+     - Escopo UF: a UF deve existir em `targetEleicao.abr[].cd`
+     - Escopo Município: o município deve existir em `targetEleicao.abr[].mu[].cd`, ou ser implicitamente coberto em eleições federais/estaduais onde o TSE omite a lista `mu`
+  4. **Elegibilidade por cargo (quando aplicável):**
+     - Se há cargo selecionado (ex.: no EA20Viewer), esse cargo deve existir em `targetAbr.cp[].cd`
+     - Se o cargo não existe no turno alvo, o botão é ocultado
+     - Se não há cargo selecionado (Header, EA14, EA15), a verificação de cargo é omitida — o botão segue apenas a regra geográfica
+     - Exemplo: Vereador (cd=13) existe no 1T municipal mas não no 2T → botão oculto no EA20Viewer quando Vereador está selecionado
+
+- **Arquitetura de dois níveis:**
+  - **Nível global (`ElectionContext`):** `turnoSwitchAllowed` valida apenas geografia. Usado por Header, EA14Viewer, EA15Viewer.
+  - **Nível local (`EA20Viewer`):** `ea20TurnoAllowed` valida geografia + cargo via `getTurnoSwitchEligibility()`. Usa o `selectedCargo.cd` local.
+
+- **Proteção defensiva:** `switchTurno()` no `ElectionContext` executa `getTurnoSwitchEligibility()` antes da troca. Se inelegível, bloqueia a troca e registra o motivo no console.
+
+- **Helper retorna motivo estruturado:**
+  ```typescript
+  getTurnoSwitchEligibility(...) → { allowed: boolean, reason: string }
+  ```
+  Motivos possíveis: `t2-to-t1`, `no-cdt2`, `target-election-not-found`, `uf-not-in-target`, `municipio-not-in-target`, `cargo-not-in-target-turno`, `eligible`.
+
+- **Localização:** `src/utils/electionUtils.ts` (`getTurnoSwitchEligibility`, `canSwitchTurno`), `src/context/ElectionContext.tsx`, `src/components/EA20Viewer.tsx`.
 
 ## Regra 5: Visibilidade e Restrição Legal Geográfica de Filtro (Cargos)
 - **Nome:** Filtro Dinâmico Discriminador Territorial Unificado
@@ -41,6 +64,25 @@ Este documento documenta precisamente todas as lógicas essenciais enraizadas na
   - Deputado Estadual (Cargo Num. '7') varrido da listagem do Brasilia/DF e garantido nos demais escopos estaduais nativos.
   - Concatena e dedupera a grade exibitiva da árvore.
 - **Localização:** Transfundido nativamente limpo por fora no módulo de Custom Hook Puro: `src/hooks/useAvailableRoles.ts`.
+
+## Regra 6: Status de Definição Matemática (EA20)
+- **Nome:** Sinalização de Resultados Matematicamente Garantidos
+- **Descrição:** Exibe alertas proeminentes quando o TSE sinaliza que a eleição já está decidida em nível matemático, mesmo antes da totalização de 100% das seções.
+- **Fonte de Verdade:** Campo `md` (matematicamente definido) do JSON EA20.
+- **Comportamento:**
+  - `md === "e" && tf !== "s"`: Exibe "Eleição matematicamente definida (Eleito)".
+  - `md === "s" && tf !== "s"`: Exibe "Eleição matematicamente definida (Segundo turno)".
+  - Se `tf === "s"` (totalizado), a mensagem é omitida pois o resultado final já é definitivo.
+- **Localização:** Cabeçalho do `EA20Viewer.tsx`.
+
+## Regra 7: Eleição sem atribuição de eleitos (EA20)
+- **Nome:** Aviso de Ausência de Proclamação de Resultados
+- **Descrição:** Notifica o usuário quando a eleição, por motivos legais ou técnicos, não possui atribuição de eleitos no momento da geração do arquivo.
+- **Fonte de Verdade:** Campo `esae` ("s") e array de mensagens `mnae` do JSON EA20.
+- **Comportamento:**
+  - Se `esae === "s"`, exibe um bloco de aviso "Eleição sem atribuição de eleitos".
+  - Lista todas as mensagens contidas no array `mnae` para explicar o motivo (ex: "A atribuição dos eleitos será realizada após o julgamento dos recursos").
+- **Localização:** Cabeçalho do `EA20Viewer.tsx` (abaixo de status geográficos).
 
 ## Adendos Arquiteturais Essenciais da Refatoração
 **Não confundir Parsing com Regra de Negócio**

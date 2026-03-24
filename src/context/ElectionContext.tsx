@@ -2,7 +2,7 @@ import { createContext, useContext, useState, type ReactNode, useEffect } from '
 import { useQuery } from '@tanstack/react-query';
 import { fetchEA11 } from '../services/ea11Service';
 import { useEnvironment } from './EnvironmentContext';
-import { findTargetElectionForTurnoSwitch, canSwitchTurno as checkCanSwitchTurno } from '../utils/electionUtils';
+import { findTargetElectionForTurnoSwitch, canSwitchTurno as checkCanSwitchTurno, getTurnoSwitchEligibility } from '../utils/electionUtils';
 import type { EleicaoEA11, EA11Response } from '../types/ea11';
 import type { FlatMunicipio } from '../services/ea12Service';
 
@@ -120,6 +120,13 @@ export function ElectionProvider({ children }: { children: ReactNode }) {
 
   const switchTurno = () => {
     if (!selectedEleicao || !ea11Data) return;
+
+    // Defensive guard: block switch if eligibility check fails
+    const eligibility = getTurnoSwitchEligibility(selectedEleicao, ea11Data, selectedAbrangencia);
+    if (!eligibility.allowed) {
+      console.warn('[switchTurno] Switch blocked:', eligibility.reason);
+      return;
+    }
 
     const { targetEleicao, shouldPreserveScope } = findTargetElectionForTurnoSwitch(
       selectedEleicao,

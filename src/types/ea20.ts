@@ -139,9 +139,10 @@ export interface EA20Response {
   ht: string;
   tf: string;      // totalizado? "s"/"n"
   and: string;     // andamento: "f" | "p"
+  md?: string;      // matematicamente definido: "e" (eleito) | "s" (segundo turno)
   dv: string;
   esae: string;
-  mnae: any[];
+  mnae: string[];
   carg?: EA20Cargo[];
   perg?: EA20Pergunta[];
   s: EA20Secoes;
