@@ -102,3 +102,13 @@ As conversões automáticas pré-computadas baseadas nos sufixos `Num` que perco
 - **Comportamento de Erro:** Se o link for inválido ou a eleição (`e`) não existir no `EA11` do ambiente receptor, um alerta é exibido e a restauração é abortada. **Não há fallback silencioso** para níveis superiores.
 - **Isolamento de Ambiente:** O ambiente/host NÃO é transportado na URL; o link restaura a eleição dentro do ambiente atual do receptor.
 - **Localização:** `src/utils/deepLink.ts`, `src/hooks/useDeepLinkRestore.ts`.
+
+## Regra 9: Favoritos (V1)
+- **Nome:** Persistência e Restauração de Atalhos de Contexto
+- **Descrição:** Permite salvar e retornar rapidamente a um cenário específico de visualização.
+- **Definição de Dados:** Persiste em `localStorage` incluindo: ambiente/host, eleição, abrangência (BR/UF/Município) e zona.
+- **Comportamento Lógico:**
+  - **Validação:** Um favorito é marcado como "indisponível" se a eleição não constar no `EA11` do ambiente atual.
+  - **Restauração:** Depende obrigatoriamente do carregamento dos dados de configuração (`ea11Data`).
+- **Limitação Conhecida:** O processo de restauração entre ambientes (cross-environment) pode apresentar inconsistência visual transitória (flash de estado vazio) no Header/Dashboard durante a transição.
+- **Localização:** `src/hooks/useFavorites.ts`, `src/utils/favoritesStorage.ts`.

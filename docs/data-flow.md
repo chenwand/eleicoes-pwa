@@ -56,3 +56,10 @@ A aplicação agora suporta restauração de estado via URL (Query Params).
 3. **Orquestração:** O hook `useDeepLinkRestore.ts` (em `AppContent`) aguarda o carregamento do `ea11Data` do ambiente atual.
 4. **Restauração:** Se a eleição existir no ambiente, dispara `selectEleicao`, `selectAbrangencia` e `setZona` de forma síncrona, sobrescrevendo qualquer estado anterior.
 5. **Limpeza:** A URL é limpa imediatamente via `history.replaceState` para evitar re-restaurações indesejadas em recarregamentos (roda uma vez no boot).
+
+### 6. Sistema de Favoritos (V1)
+- **Salvar:** Header → `useFavorites` → `localStorage`.
+- **Sincronização:** Sistema Pub/Sub (`favoritesStorage.ts`) mantém múltiplos hooks e instâncias da UI sincronizados sem Context global.
+- **Restauração:**
+  - **Mesmo ambiente:** Aplica o contexto imediatamente.
+  - **Ambiente diferente:** Armazena em `pendingFavorite` → Alterna ambiente/host → Aguarda `ea11Data` → Aplica contexto.
