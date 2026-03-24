@@ -17,7 +17,7 @@ interface ElectionContextType {
 
   // Actions
   selectEleicao: (eleicao: EleicaoEA11, ciclo: string, preserveScope?: boolean) => void;
-  selectAbrangencia: (mun: FlatMunicipio) => void;
+  selectAbrangencia: (mun: FlatMunicipio | null) => void;
   setZona: (zona: string) => void;
   clearSelection: () => void;
   switchTurno: () => void;
@@ -93,7 +93,7 @@ export function ElectionProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const selectAbrangencia = (mun: FlatMunicipio) => {
+  const selectAbrangencia = (mun: FlatMunicipio | null) => {
     setSelectedAbrangencia(mun);
     setSelectedZona('Todas');
   };
