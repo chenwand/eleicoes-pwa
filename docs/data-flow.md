@@ -48,3 +48,11 @@ A aplicação lida estritamente seu Estado Ativo nas coordernadas espaciais na A
 
 ### 4. Fragmentação Visual na Renderização Final (Fase 4A)
 - Nenhuma View Componente tenta decifrar lógicas massivas de Layout por conta própria. "EA20Viewer" apenas centraliza a aba do input e sort de botões. Repassa as matrizes filtradas aos escopos de Card localizados na respectiva ramificação de render do layout, eliminando a poluição do motor DOM da Single Page Application.
+
+### 5. Entrada de Dados Externa: Deep Link (Fase 5)
+A aplicação agora suporta restauração de estado via URL (Query Params).
+1. **Entrada:** O navegador detecta params `?e=`, `uf=`, `m=`, `z=`.
+2. **Parsing:** `utils/deepLink.ts` valida a hierarquia e integridade dos parâmetros.
+3. **Orquestração:** O hook `useDeepLinkRestore.ts` (em `AppContent`) aguarda o carregamento do `ea11Data` do ambiente atual.
+4. **Restauração:** Se a eleição existir no ambiente, dispara `selectEleicao`, `selectAbrangencia` e `setZona` de forma síncrona, sobrescrevendo qualquer estado anterior.
+5. **Limpeza:** A URL é limpa imediatamente via `history.replaceState` para evitar re-restaurações indesejadas em recarregamentos (roda uma vez no boot).

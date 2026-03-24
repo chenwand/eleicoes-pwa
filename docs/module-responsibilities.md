@@ -7,6 +7,7 @@ Arquivos que executam deduções de alta densidade eleitoral. Inteiramente test�
 - **`src/services/*Validator.ts`**: Conjunto de Auditores. Retornam Arrays tipados declarando se uma asserção crua sobre seções não repousa em bases lícitas (`ea14Validator`, `ea15Validator`, `ea20Validator`).
 - **`src/hooks/useAvailableRoles.ts`**: Domínio territorial restrito que blinda acesso a tipos errôneos de cargos em UFs ou em 1st escrutínios indevidos na montagem das guias (Tabs) de Viewers Globais.
 - **`src/utils/electionUtils.ts`**: Utilitário abstrato de retenção orgânica comportamental da geografia elegível do eleitor ao realizar transições no tempo/turnos.
+- **`src/utils/deepLink.ts`**: Lógica atômica de serialização e parsing de URLs, garantindo integridade dos parâmetros `e`, `uf`, `m`, `z`.
 
 ## 2. A Barreira de Contrato da Fila e de Interceptadores (Cache Nativos)
 Lidam passivamente convertendo "Bases externas para Internas" centralizados na orquestração de leitura e parsing global, blindando o consumo confuso e mitigando O(N) nas renderizações densas.
@@ -16,6 +17,7 @@ Lidam passivamente convertendo "Bases externas para Internas" centralizados na o
 ## 3. Ponto Neutro Abstrato Central (Context)
 Desacoplado de Regras Eleitorais de negócios duras, é a espinha dorsal de Redirecionamento da navegação por memórias do aplicativo global.
 - **`src/context/ElectionContext.tsx`**: Apenas coordena a "Visita do Eleitor" nas UFs / Pleito Ativo via `localStorage`. Fornece dispatchers para limpar ou alternar cenários em um nível puramente macro geográfico.
+- **`src/hooks/useDeepLinkRestore.ts`**: Hook de efeito colateral único que orquestra a restauração do estado no boot do app, dependente estritamente do carregamento do `ea11Data`.
 
 ## 4. Pastas de Apresentação Divididas Hierarquicamente
 Responsabilidades estritamente de visual de cores, espaçamentos, HTML Tables ordenadoras da vida final (Sem parsing matemático ou extrações lógicas profundas, puramente consumo de states globais puros).

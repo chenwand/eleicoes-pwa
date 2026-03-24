@@ -76,7 +76,7 @@ Foram revisados e inteiramente atualizados:
 
 ## 6. Limites da Validação Realizada
 
-- O foco da validação final manual circundou as regressões identificadas na transição 4A/4B (troca de turnos, tela preta em EA14, leitura de dropzone local via FileReader, state locks no ElectionContext). 
+- O foco da validação final manual circundou as regressões identificadas na transição 4A/4B (troca de turnos, tela preta em EA14, leitura de dropzone local via FileReader, state locks no ElectionContext).
 - A cobertura de testes do comportamento sob cargas anômalas severas no parse textual dependeu fortemente de testes iterativos ad-hoc na UI, por ausência de Jest/Vitest emulados no CI. Limites estritos do JavaScript Float em contagens estratosféricas ainda precisam ser atestados se extrapolados bilhões nas agremiações somadas por loop.
 
 ---

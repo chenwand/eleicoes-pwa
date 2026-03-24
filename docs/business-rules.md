@@ -87,3 +87,18 @@ Este documento documenta precisamente todas as lógicas essenciais enraizadas na
 ## Adendos Arquiteturais Essenciais da Refatoração
 **Não confundir Parsing com Regra de Negócio**
 As conversões automáticas pré-computadas baseadas nos sufixos `Num` que percorrem o React inteiramente sob instâncias Float geradas pelas máscaras Brasileiras (Ex.: `parseNum()` do `"13.567"`) **não são regras de contabilidade ou hierarquia TSE**, são simplesmente regras técnicas linguísticas do software agora isoladas firmes nas fronteiras limpas das pastas `adapters/` via TanStack Caching Selectors. Toda regra puramente contábil que a Urna eletrônica faz repousa sem mácula nos `Validators`.
+
+## Regra 8: Deep Link (V1)
+- **Nome:** Restauração de Contexto via Parâmetros de URL
+- **Fonte de Verdade:** Query parameters: `e` (eleicaoCd), `uf` (ufCd), `m` (munCdTse), `z` (zona).
+- **Descrição:** Garante a portabilidade de um cenário de visualização entre usuários.
+- **Condições de Validação:**
+  - `e` é **obrigatório**. Se ausente, a lógica de entrada é ignorada (não é um deep link).
+  - **Inferência de Escopo:** O nível da abrangência é definido pela presença de parâmetros:
+    - Somente `e` → Abrangência Brasil (BR).
+    - `e` + `uf` → Abrangência UF.
+    - `e` + `uf` + `m` → Abrangência Município.
+  - **Integridade Hierárquica:** `m` sem `uf` ou `z` sem `m` são considerados **inválidos**.
+- **Comportamento de Erro:** Se o link for inválido ou a eleição (`e`) não existir no `EA11` do ambiente receptor, um alerta é exibido e a restauração é abortada. **Não há fallback silencioso** para níveis superiores.
+- **Isolamento de Ambiente:** O ambiente/host NÃO é transportado na URL; o link restaura a eleição dentro do ambiente atual do receptor.
+- **Localização:** `src/utils/deepLink.ts`, `src/hooks/useDeepLinkRestore.ts`.

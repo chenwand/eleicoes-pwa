@@ -8,6 +8,7 @@ import { EA20Viewer } from './components/EA20Viewer';
 import { EA14Viewer } from './components/EA14Viewer';
 import { EA15Viewer } from './components/EA15Viewer';
 import { useAvailableRoles } from './hooks/useAvailableRoles';
+import { useDeepLinkRestore } from './hooks/useDeepLinkRestore';
 import type { Turno } from './types/election';
 
 import { ThemeProvider } from './context/ThemeContext';
@@ -28,6 +29,14 @@ export function AppContent({ onLocalFileLoaded, localFile, setLocalFile, turno }
   const [openEA20, setOpenEA20] = useState(false);
 
   const cargosDisponiveis = useAvailableRoles(selectedEleicao, selectedAbrangencia);
+  const { deepLinkError } = useDeepLinkRestore();
+
+  useEffect(() => {
+    if (deepLinkError) {
+      const timer = setTimeout(() => alert(deepLinkError), 500);
+      return () => clearTimeout(timer);
+    }
+  }, [deepLinkError]);
 
   useEffect(() => {
     const handleOpenEA14 = () => {

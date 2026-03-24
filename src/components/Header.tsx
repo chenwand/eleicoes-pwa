@@ -7,6 +7,7 @@ import { SettingsModal } from './SettingsModal';
 import { useState, useRef, useEffect } from 'react';
 import { adaptEA20Response } from '../utils/adapters/ea20Adapters';
 import { adaptStatsResponse } from '../utils/adapters/statsAdapters';
+import { buildDeepLinkUrl } from '../utils/deepLink';
 
 const TIPO_MACRO: Record<string, string> = {
   '1': 'Estadual', '2': 'Estadual', '3': 'Municipal', '4': 'Municipal',
@@ -21,7 +22,7 @@ const TIPO_NATUREZA: Record<string, string> = {
 export function Header({ onLocalFileLoaded }: { onLocalFileLoaded: (data: { type: 'EA11' | 'EA14' | 'EA15' | 'EA20', data: any }) => void }) {
   const { theme, toggleTheme } = useTheme();
   const { ambiente, host } = useEnvironment();
-  const { selectedEleicao, selectedAbrangencia, switchTurno, turnoSwitchAllowed, ea11Data } = useElection();
+  const { selectedEleicao, selectedAbrangencia, selectedZona, switchTurno, turnoSwitchAllowed, ea11Data } = useElection();
   const { captureFavorite, isCurrentContextFavorited, favorites, restoreFavorite, removeFavorite, renameFavorite, pendingFavorite } = useFavorites();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -47,6 +48,20 @@ export function Header({ onLocalFileLoaded }: { onLocalFileLoaded: (data: { type
     const result = captureFavorite();
     setFavToast(result.message);
     setTimeout(() => setFavToast(null), 2000);
+  };
+
+  const handleCopyLink = () => {
+    if (!selectedEleicao) return;
+    const url = buildDeepLinkUrl({
+      eleicaoCd: selectedEleicao.cd,
+      ufCd: selectedAbrangencia?.ufCd,
+      munCdTse: selectedAbrangencia?.munCdTse || undefined,
+      zona: selectedZona !== 'Todas' ? selectedZona : undefined,
+    });
+    navigator.clipboard.writeText(url).then(() => {
+      setFavToast('Link copiado ✓');
+      setTimeout(() => setFavToast(null), 2000);
+    });
   };
 
   const detectFileType = (data: any): 'EA11' | 'EA14' | 'EA15' | 'EA20' | null => {
@@ -163,6 +178,19 @@ export function Header({ onLocalFileLoaded }: { onLocalFileLoaded: (data: { type
                             {favToast}
                           </span>
                         )}
+                      </button>
+                    )}
+
+                    {/* Copy Link */}
+                    {!isPending && (
+                      <button
+                        className="ml-1 p-1 rounded-full hover:bg-white/20 transition-colors"
+                        title="Copiar link compartilhável"
+                        onClick={handleCopyLink}
+                      >
+                        <svg className="w-4 h-4 text-blue-200/60 hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                        </svg>
                       </button>
                     )}
                   </div>
