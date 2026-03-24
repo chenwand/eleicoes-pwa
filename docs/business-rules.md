@@ -23,11 +23,16 @@ Este documento documenta precisamente todas as lógicas essenciais enraizadas na
 
 ## Regra 4: Retenção de Escopo em Troca Semântica de Tempo (Turnos)
 - **Nome:** Navegação Contextual entre Turnos Geográficos
-- **Descrição:** Lógica de negócio orgânica na matriz de Estado do código que decide se uma coordenada geográfica sobrevive ao salto dimensional entre turnos de uma mesma eleição oficial. 
+- **Descrição:** Lógica que decide se a coordenada geográfica e o nível de visualização sobrevivem à troca entre turnos (1º e 2º) da mesma eleição.
 - **Comportamento Lógico:**
-  - Descobre-se quem é a eleição simétrica pelo hook indireto comparando as props `cdt2` (ID cruzado).
-  - Executa-se `shouldPreserveScope`: Checa abertamente o Catálogo Central (EA12 UF) garantindo impiedosamente e de forma coesa se o Município selecionado ou Cargo (como Estado Majoritário) está elegível nos remanescentes daquela disputa temporal T2. Retém, caso afirmativo. Reseta caso inexistente, impedindo requisições HTTPs HTTP 404s ou telas brancas fantasma para o cache do React Query.
-- **Localização:** `src/context/ElectionContext.tsx` e utilitários `utils/electionUtils.ts`.
+  - **Troca T2 -> T1:** Sempre permitida. Assume-se que a abrangência geográfica do 2º turno é obrigatoriamente um subconjunto válido do 1º turno, preservando o escopo (Município/UF) e o visualizador atual (ex.: EA20).
+  - **Troca T1 -> T2:** Permitida apenas se a eleição alvo existir (`cdt2`) e se a abrangência geográfica atual (UF ou Município) estiver listada como elegível nos dados da eleição de 2º turno (`EA11.abr[]`).
+- **Localização:** `src/context/ElectionContext.tsx` e utilitários `src/utils/electionUtils.ts` (especificamente `canSwitchTurno` e `findTargetElectionForTurnoSwitch`).
+
+## Pendências Técnicas Conhecidas
+- **Elegibilidade por Cargo no 2º Turno:** Existe uma falha conhecida onde o botão de troca para o 2º turno permanece visível mesmo para cargos proporcionais (Vereador, Deputados) que não possuem segundo turno. 
+  - **Status:** Uma tentativa de resolver isso via sincronização de estado global de cargo introduziu regressões em cenários majoritários válidos e foi revertida.
+  - **Recomendação Futura:** Implementar a restrição de cargo de forma puramente localizada nos visualizadores (como o `EA20Viewer`), evitando o superacoplamento com o estado global do `ElectionContext` ou do `Header`.
 
 ## Regra 5: Visibilidade e Restrição Legal Geográfica de Filtro (Cargos)
 - **Nome:** Filtro Dinâmico Discriminador Territorial Unificado
