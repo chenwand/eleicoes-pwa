@@ -3,7 +3,7 @@ import { TrendIndicator } from '../TrendIndicator';
 import type { UI_EA20Votos } from '../../utils/adapters/ea20Adapters';
 
 export function VoteVisualization({ v, previousV, isProportional, isConsultaPopular }: { v: UI_EA20Votos, previousV?: Partial<UI_EA20Votos>, isProportional: boolean, isConsultaPopular?: boolean }) {
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(false);
 
   const tv = v._tvNum;
   const vvc = v._vvcNum;

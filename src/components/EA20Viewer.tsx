@@ -566,14 +566,12 @@ export function EA20Viewer({
                     );
                   })()}
 
-                  {/* Section + Elector summary */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* Section + Elector + Vote summary */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                     <SecoesSummary s={localData.s} previousS={previousData?.s} />
                     <EleitoresSummary e={localData.e} previousE={previousData?.e} />
+                    <VoteVisualization v={localData.v} previousV={previousData?.v} isProportional={!isMajority && !isConsultaPopular} isConsultaPopular={isConsultaPopular} />
                   </div>
-
-                  {/* Votes breakdown */}
-                  <VoteVisualization v={localData.v} previousV={previousData?.v} isProportional={!isMajority && !isConsultaPopular} isConsultaPopular={isConsultaPopular} />
 
                   {!isConsultaPopular && (
                     <>
