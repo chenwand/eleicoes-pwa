@@ -113,8 +113,9 @@ export function useFavorites() {
 
   const applyFavorite = useCallback((fav: Favorite) => {
     if (!ea11Data) {
+      // Don't clear pending — we're still waiting for data
       setRestoreStatus({ success: false, message: 'EA11 ainda carregando' });
-      return;
+      return false;
     }
 
     const eleicao = ea11Data.pl
@@ -124,7 +125,7 @@ export function useFavorites() {
     if (!eleicao) {
       setRestoreStatus({ success: false, message: 'Eleição não disponível neste ambiente' });
       pendingFavoriteRef.current = null;
-      return;
+      return false;
     }
 
     // Select the election
@@ -165,6 +166,7 @@ export function useFavorites() {
 
     setRestoreStatus({ success: true, message: 'Favorito restaurado ✓' });
     pendingFavoriteRef.current = null;
+    return true;
   }, [ea11Data, selectEleicao, selectAbrangencia, setZona]);
 
   // --- Restore (cross-environment) ---
@@ -189,11 +191,17 @@ export function useFavorites() {
   }, [ambiente, host, setAmbiente, setHost, applyFavorite]);
 
   // Watch for EA11 load after environment switch
+  // Critical: only apply when the environment actually matches the pending favorite's env
   useEffect(() => {
-    if (pendingFavoriteRef.current && ea11Data && !isEA11Loading) {
-      applyFavorite(pendingFavoriteRef.current);
-    }
-  }, [ea11Data, isEA11Loading, applyFavorite]);
+    const pending = pendingFavoriteRef.current;
+    if (!pending) return;
+    if (isEA11Loading) return;
+    if (!ea11Data) return;
+    // Guard: ensure we're in the correct environment before applying
+    if (pending.environment.ambiente !== ambiente || pending.environment.host !== host) return;
+
+    applyFavorite(pending);
+  }, [ea11Data, isEA11Loading, applyFavorite, ambiente, host]);
 
   // --- Helpers ---
 
