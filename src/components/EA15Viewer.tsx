@@ -47,7 +47,7 @@ export function EA15Viewer({ ciclo, eleicaoCd, uf, onBack, ea14dg, ea14hg, cargo
   const [sortMode, setSortMode] = useState<'default' | 'recent' | 'eleitores' | 'comparecimento' | 'abstencao' | 'pst'>('default');
   const [isClosing, setIsClosing] = useState(false);
   const { ambiente, host } = useEnvironment();
-  const { selectedEleicao, switchTurno } = useElection();
+  const { selectedEleicao, switchTurno, turnoSwitchAllowed } = useElection();
   const [localData, setLocalData] = useState<any>(initialLocalData || null);
   const [isEditing, setIsEditing] = useState(false);
   const [isModified, setIsModified] = useState(false);
@@ -279,14 +279,14 @@ export function EA15Viewer({ ciclo, eleicaoCd, uf, onBack, ea14dg, ea14hg, cargo
                   <span>Acompanhamento UF (EA15)</span>
                   <span className="uppercase text-gray-500 dark:text-gray-400 text-base font-semibold">· {uf}</span>
                 </h2>
-                {selectedEleicao && (selectedEleicao.cdt2 || selectedEleicao.t === '2') && (
+                {turnoSwitchAllowed && (
                   <div className="mt-1">
                     <button
                       onClick={switchTurno}
                       className="flex items-center gap-1.5 px-2 py-0.5 text-xs font-semibold bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 rounded border border-blue-200 dark:border-blue-800 hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors inline-flex"
                     >
                       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
-                      Ir para {selectedEleicao.t === '1' ? '2º' : '1º'} Turno
+                      Ir para {selectedEleicao?.t === '1' ? '2º' : '1º'} Turno
                     </button>
                   </div>
                 )}

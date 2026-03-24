@@ -144,7 +144,7 @@ export function EA20Viewer({
     return localData.carg[0] ?? null;
   }, [localData]);
 
-  const { selectedAbrangencia, selectedEleicao, switchTurno } = useElection();
+  const { selectedAbrangencia, selectedEleicao, switchTurno, turnoSwitchAllowed } = useElection();
   // Logic for candidate photo URLs: use 'br' only for President (cargo '1')
   // For other cargos (even in Federal elections), use the actual state identifier
   const isPresident = selectedCargo?.cd === '1' || cargoData?.cd === '1';
@@ -307,14 +307,14 @@ export function EA20Viewer({
                   <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
                   Resultados (EA20) — {munNome || localData?.cdabr || 'Arquivo Local'} {selectedZona ? ` — Zona ${selectedZona}` : ''}
                 </h2>
-                {selectedEleicao && (selectedEleicao.cdt2 || selectedEleicao.t === '2') && (
+                {turnoSwitchAllowed && (
                   <div className="mt-1 mb-1">
                     <button
                       onClick={switchTurno}
                       className="flex items-center gap-1.5 px-2 py-0.5 text-xs font-semibold bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 rounded border border-blue-200 dark:border-blue-800 hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors inline-flex"
                     >
                       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
-                      Ir para {selectedEleicao.t === '1' ? '2º' : '1º'} Turno
+                      Ir para {selectedEleicao?.t === '1' ? '2º' : '1º'} Turno
                     </button>
                   </div>
                 )}

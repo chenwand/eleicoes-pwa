@@ -10,7 +10,7 @@ import { adaptStatsResponse } from '../utils/adapters/statsAdapters';
 export function Header({ onLocalFileLoaded }: { onLocalFileLoaded: (data: { type: 'EA11' | 'EA14' | 'EA15' | 'EA20', data: any }) => void }) {
   const { theme, toggleTheme } = useTheme();
   const { ambiente } = useEnvironment();
-  const { selectedEleicao, selectedAbrangencia, switchTurno } = useElection();
+  const { selectedEleicao, selectedAbrangencia, switchTurno, turnoSwitchAllowed } = useElection();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -85,7 +85,7 @@ export function Header({ onLocalFileLoaded }: { onLocalFileLoaded: (data: { type
                   </div>
 
                   {/* Round Switcher */}
-                  {(selectedEleicao.cdt2 || selectedEleicao.t === '2') && (
+                  {turnoSwitchAllowed && (
                     <button
                       className="ml-2 px-2 py-0.5 text-[9px] bg-white/20 hover:bg-white/30 rounded uppercase font-bold transition-colors"
                       title={selectedEleicao.t === '1' ? "Mudar para 2º Turno" : "Mudar para 1º Turno"}

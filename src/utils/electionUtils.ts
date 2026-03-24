@@ -133,23 +133,30 @@ export function findTargetElectionForTurnoSwitch(
     targetEleicao = ea11Data.pl.flatMap(p => p.e).find(e => e.cd === targetCd);
     if (targetEleicao) {
       if (selectedAbrangencia) {
-        const isBrasil = selectedAbrangencia.ufCd.toLowerCase() === 'br';
-        const targetAbr = targetEleicao.abr.find(a =>
-          a.cd.toLowerCase() === (isBrasil ? 'br' : selectedAbrangencia.ufCd.toLowerCase())
-        );
+        // If we are switching from T2 to T1, the geographic scope is inherently valid
+        // since T2 is always a geographic subset of T1.
+        if (selectedEleicao.t === '2') {
+          shouldPreserveScope = true;
+        } else {
+          // Switching T1 to T2: need to verify if the scope participates in T2
+          const isBrasil = selectedAbrangencia.ufCd.toLowerCase() === 'br';
+          const targetAbr = targetEleicao.abr.find(a =>
+            a.cd.toLowerCase() === (isBrasil ? 'br' : selectedAbrangencia.ufCd.toLowerCase())
+          );
 
-        if (targetAbr) {
-          // If our current selection is state-wide ("Todas" as municipality) or National
-          if (!selectedAbrangencia.munCdTse || isBrasil) {
-            shouldPreserveScope = true;
-          } else if (targetAbr.mu?.some(m => m.cd === selectedAbrangencia.munCdTse)) {
-            // Specific municipality remains valid if explicitly listed in target
-            shouldPreserveScope = true;
-          } else if (['1', '2', '5', '6', '8', '9'].includes(targetEleicao.tp)) {
-             // For Federal/Estadual elections, the entire UF is covered.
-             // TSE often omits 'mu' lists for 1st round state-wide elections.
-             // If targetAbr matches our UF, we can safely preserve the municipality scope.
-             shouldPreserveScope = true;
+          if (targetAbr) {
+            // If our current selection is state-wide ("Todas" as municipality) or National
+            if (!selectedAbrangencia.munCdTse || isBrasil) {
+              shouldPreserveScope = true;
+            } else if (targetAbr.mu?.some(m => m.cd === selectedAbrangencia.munCdTse)) {
+              // Specific municipality remains valid if explicitly listed in target
+              shouldPreserveScope = true;
+            } else if (['1', '2', '3', '5', '6', '7', '8', '9'].includes(targetEleicao.tp)) {
+               // For Federal/Estadual elections, the entire UF is covered.
+               // TSE often omits 'mu' lists for 1st round state-wide elections.
+               // If targetAbr matches our UF, we can safely preserve the municipality scope.
+               shouldPreserveScope = true;
+            }
           }
         }
       }
@@ -157,4 +164,55 @@ export function findTargetElectionForTurnoSwitch(
   }
 
   return { targetEleicao, shouldPreserveScope };
+}
+
+/**
+ * Determines whether the "Mudar Turno" button should be visible.
+ *
+ * Rules:
+ * - From T2 → T1: always allowed (the 1st round always exists).
+ * - From T1 → T2: only if the current abrangência is eligible in the T2 election.
+ *   - No abrangência selected (global/BR): allowed if the T2 election exists.
+ *   - UF-wide scope: allowed if the UF appears in T2's `abr[]`.
+ *   - Municipality scope: allowed if the municipality appears in T2's `abr[].mu[]`,
+ *     OR if the T2 election type is federal/estadual (mu list often omitted by TSE).
+ */
+export function canSwitchTurno(
+  selectedEleicao: EleicaoEA11 | null,
+  ea11Data: EA11Response | undefined,
+  selectedAbrangencia: FlatMunicipio | null
+): boolean {
+  if (!selectedEleicao || !ea11Data) return false;
+
+  // T2 → T1: always possible
+  if (selectedEleicao.t === '2') return true;
+
+  // T1 without a linked T2: no switch possible
+  if (!selectedEleicao.cdt2) return false;
+
+  // Find the target T2 election in EA11
+  const targetEleicao = ea11Data.pl.flatMap(p => p.e).find(e => e.cd === selectedEleicao.cdt2);
+  if (!targetEleicao) return false;
+
+  // No abrangência selected or BR-wide: eligible
+  if (!selectedAbrangencia || selectedAbrangencia.ufCd.toLowerCase() === 'br') return true;
+
+  // UF-wide scope: check if the UF exists in target's abr
+  const targetAbr = targetEleicao.abr.find(a =>
+    a.cd.toLowerCase() === selectedAbrangencia.ufCd.toLowerCase()
+  );
+  if (!targetAbr) return false;
+
+  // UF-wide selection (no specific municipality): eligible since UF exists
+  if (!selectedAbrangencia.munCdTse) return true;
+
+  // Municipality scope: check if it exists in target's abr[].mu[]
+  if (targetAbr.mu?.some(m => m.cd === selectedAbrangencia.munCdTse)) return true;
+
+  // For federal/estadual election types, TSE often omits the mu list.
+  // If the UF itself exists in abr, the municipality is implicitly covered.
+  if (['1', '2', '5', '6', '8', '9'].includes(targetEleicao.tp)) return true;
+
+  // Municipality not found and can't be inferred: not eligible
+  return false;
 }

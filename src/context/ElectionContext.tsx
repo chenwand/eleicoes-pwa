@@ -2,7 +2,7 @@ import { createContext, useContext, useState, type ReactNode, useEffect } from '
 import { useQuery } from '@tanstack/react-query';
 import { fetchEA11 } from '../services/ea11Service';
 import { useEnvironment } from './EnvironmentContext';
-import { findTargetElectionForTurnoSwitch } from '../utils/electionUtils';
+import { findTargetElectionForTurnoSwitch, canSwitchTurno as checkCanSwitchTurno } from '../utils/electionUtils';
 import type { EleicaoEA11, EA11Response } from '../types/ea11';
 import type { FlatMunicipio } from '../services/ea12Service';
 
@@ -27,6 +27,7 @@ interface ElectionContextType {
   // Derived state
   isOrdinary: boolean;
   hasSelection: boolean;
+  turnoSwitchAllowed: boolean;
 }
 
 const ElectionContext = createContext<ElectionContextType | undefined>(undefined);
@@ -133,6 +134,7 @@ export function ElectionProvider({ children }: { children: ReactNode }) {
 
   const isOrdinary = selectedEleicao ? ['1', '3', '8'].includes(selectedEleicao.tp) : false;
   const hasSelection = !!selectedEleicao;
+  const turnoSwitchAllowed = checkCanSwitchTurno(selectedEleicao, displayEA11Data, selectedAbrangencia);
 
   return (
     <ElectionContext.Provider value={{
@@ -151,7 +153,8 @@ export function ElectionProvider({ children }: { children: ReactNode }) {
       refetchEA11,
       updateEA11Data: setEditedEA11Data,
       isOrdinary,
-      hasSelection
+      hasSelection,
+      turnoSwitchAllowed
     }}>
       {children}
     </ElectionContext.Provider>
