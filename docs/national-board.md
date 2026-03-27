@@ -73,7 +73,18 @@ Cada card de UF na grid e no Resumo Nacional possui um "ping dot" que indica o e
 - **Definição Matemática**: O badge "Definido" (vindo do campo `md`) só é exibido se o valor for `s` ou `e` e a totalização ainda não estiver completa (`tf !== true`).
 - **Skeletons**: Cada card da grid possui seu próprio estado de loading, permitindo carregamento progressivo assíncrono.
 
-### Ocultação e Agregação de Resumos
+### Fotos de Candidatos
+Novas miniaturas de identificação visual foram integradas:
+- **UFCard**: Exibe o Top 2 candidatos com fotos circulares (20x24px).
+- **Resumo Nacional**: Exibe a foto do líder de cada agrupamento (32x32px).
+- **Fallback**: Caso a imagem falhe (erro 404), o sistema aplica um ícone de perfil genérico com **`opacity-70`** via `onError`.
+
+### Regionalização de Fotos (Regra de Diretório)
+- **Cargos Federais (Presidente)**: Todas as fotos de candidatos são buscadas no diretório global `/fotos/br/`, independente da UF de origem do dado.
+- **Cargos Estaduais**: As fotos são buscadas no diretório da respectiva UF (ex: `/fotos/sp/`).
+- **Implementação**: Controlado via prop `isPresidente` nos componentes de visualização.
+
+### Regionalização e Agregação
 - **Indicadores Regionais**: Ocultados automaticamente quando o cargo é **Estadual** (Governador/Senador) ou quando não há dados para processar (Eleição sem participação em certas regiões).
 - **Exterior (ZZ)**: Os votos do exterior são incluídos na contagem de vitórias do **Resumo Nacional** quando o cargo é Presidente.
 

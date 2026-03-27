@@ -325,6 +325,7 @@ export const NationalBoardModal: React.FC<NationalBoardModalProps> = ({ isOpen, 
                             onSelect={handleClose}
                             onRetry={brRefetch}
                             showElectedCheck={true}
+                            isPresidente={isPresidente}
                           />
                         ) : brData ? (
                           <UFCard
@@ -332,6 +333,7 @@ export const NationalBoardModal: React.FC<NationalBoardModalProps> = ({ isOpen, 
                             onSelect={handleClose}
                             onRetry={brRefetch}
                             showElectedCheck={true}
+                            isPresidente={isPresidente}
                           />
                         ) : (
                           <UFCard isLoading onSelect={() => { }} />
@@ -372,6 +374,7 @@ export const NationalBoardModal: React.FC<NationalBoardModalProps> = ({ isOpen, 
                         onRetry={() => { }} // No individualized retry for simulated data
                         isLoading={false}
                         showElectedCheck={!isPresidente}
+                        isPresidente={isPresidente}
                       />
                     ))
                   }
@@ -385,6 +388,7 @@ export const NationalBoardModal: React.FC<NationalBoardModalProps> = ({ isOpen, 
                         onRetry={res.refetch}
                         isLoading={res.isLoading && !res.data}
                         showElectedCheck={!isPresidente}
+                        isPresidente={isPresidente}
                       />
                     )
                   ))}

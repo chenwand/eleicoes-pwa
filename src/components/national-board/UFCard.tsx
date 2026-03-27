@@ -1,6 +1,8 @@
 import React from 'react';
 import type { UFSummary } from '../../utils/nationalBoardUtils';
 import { useElection } from '../../context/ElectionContext';
+import { useEnvironment } from '../../context/EnvironmentContext';
+import { buildCandidatoFotoUrl } from '../../services/ea20Service';
 
 interface UFCardProps {
   summary?: UFSummary;
@@ -8,10 +10,13 @@ interface UFCardProps {
   isLoading?: boolean;
   onRetry?: () => void;
   showElectedCheck?: boolean;
+  isPresidente?: boolean;
 }
 
-export const UFCard: React.FC<UFCardProps> = ({ summary, onSelect, isLoading, onRetry, showElectedCheck = true }) => {
-  const { selectAbrangencia } = useElection();
+export const UFCard: React.FC<UFCardProps> = ({ summary, onSelect, isLoading, onRetry, showElectedCheck = true, isPresidente }) => {
+  const { ambiente, host } = useEnvironment();
+  const { selectAbrangencia, ciclo, selectedEleicao } = useElection();
+  const eleicaoCd = selectedEleicao?.cd || '';
 
   if (isLoading || !summary) {
     return (
@@ -103,27 +108,43 @@ export const UFCard: React.FC<UFCardProps> = ({ summary, onSelect, isLoading, on
           </div>
         ) : summary.top2.length > 0 ? (
           <>
-            {summary.top2.map((cand, idx) => (
-              <div
-                key={cand.id}
-                className={`
-                  flex justify-between items-center text-xs p-1 rounded-md transition-colors
-                  ${idx === 0 ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''}
-                `}
-              >
-                <div className="flex items-center gap-1 truncate mr-2">
-                  <span className={`truncate ${idx === 0 ? 'font-black text-gray-900 dark:text-gray-50' : 'text-gray-500 dark:text-gray-400 font-medium'}`}>
-                    {cand.nm}
+            {summary.top2.map((cand, idx) => {
+              const photoUf = (isPresidente || summary.cd === 'BR') ? 'BR' : summary.cd;
+              const fotoUrl = buildCandidatoFotoUrl(ambiente, ciclo, eleicaoCd, photoUf, cand.id, host);
+
+              return (
+                <div
+                  key={cand.id}
+                  className={`
+                    flex justify-between items-center text-xs p-1 rounded-md transition-colors
+                    ${idx === 0 ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''}
+                  `}
+                >
+                  <div className="flex items-center gap-1.5 truncate mr-2 min-w-0">
+                    <div className="w-5 h-5 rounded-full overflow-hidden bg-gray-100 dark:bg-slate-700 shrink-0 border border-gray-100 dark:border-slate-600 shadow-sm">
+                      <img
+                        src={fotoUrl}
+                        alt=""
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIGZpbGw9Im5vbmUiIHZpZXdCb3g9IjAgMCAyNCAyNCIgc3Ryb2tlPSIjY2NjIiBzdHJva2Utd2lkdGg9IjIiPjxwYXRoIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIgZD0iTTE2IDd2Mk04IDd2Mm0tMiAxMGgxMmExIDEgMCAwMCAtMSAtMWgtMTBhMSAxIDAgMDAtMSAxek04IDIxYTIgMiAwIDAwNCAwTTEyIDExYTMgMyAwIDExMC02IDMgMyAwIDAxMCA2eiIvPjwvc3ZnPg==';
+                          (e.target as HTMLImageElement).classList.add('opacity-70');
+                        }}
+                      />
+                    </div>
+                    <span className={`truncate ${idx === 0 ? 'font-black text-gray-900 dark:text-gray-50' : 'text-gray-500 dark:text-gray-400 font-medium'}`}>
+                      {cand.nm}
+                    </span>
+                    {showElectedCheck && (cand.e === 's' || cand.st === 'eleito') && (
+                      <span className="text-[9px] text-green-600 dark:text-green-400 font-black">✓</span>
+                    )}
+                  </div>
+                  <span className={`font-mono text-[10px] shrink-0 ${idx === 0 ? 'text-blue-700 dark:text-blue-300 font-black' : 'text-gray-500 dark:text-gray-400'}`}>
+                    {cand.pvap.toFixed(2).replace('.', ',')}%
                   </span>
-                  {showElectedCheck && (cand.e === 's' || cand.st === 'eleito') && (
-                    <span className="text-[9px] text-green-600 dark:text-green-400 font-black">✓</span>
-                  )}
                 </div>
-                <span className={`font-mono text-[10px] shrink-0 ${idx === 0 ? 'text-blue-700 dark:text-blue-300 font-black' : 'text-gray-500 dark:text-gray-400'}`}>
-                  {cand.pvap.toFixed(2).replace('.', ',')}%
-                </span>
-              </div>
-            ))}
+              );
+            })}
 
             {summary.leadDiff !== undefined && (
               <div className="mt-2 pt-1.5 border-t border-gray-50 dark:border-slate-700/50 flex justify-between items-center">

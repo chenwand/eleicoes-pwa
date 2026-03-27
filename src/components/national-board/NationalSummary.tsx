@@ -1,5 +1,7 @@
-import React from 'react';
 import type { NationalSummary as NationalSummaryType } from '../../utils/nationalBoardUtils';
+import { useElection } from '../../context/ElectionContext';
+import { useEnvironment } from '../../context/EnvironmentContext';
+import { buildCandidatoFotoUrl } from '../../services/ea20Service';
 
 interface NationalSummaryProps {
   summary: NationalSummaryType;
@@ -10,6 +12,10 @@ const REGIONS_NM: Record<string, string> = {
 };
 
 export const NationalSummary: React.FC<NationalSummaryProps> = ({ summary }) => {
+  const { ambiente, host } = useEnvironment();
+  const { ciclo, selectedEleicao } = useElection();
+  const eleicaoCd = selectedEleicao?.cd || '';
+
   const candidates = Object.entries(summary.vitoriasPorCandidato)
     .sort((a, b) => b[1].vitorias - a[1].vitorias);
 
@@ -23,7 +29,7 @@ export const NationalSummary: React.FC<NationalSummaryProps> = ({ summary }) => 
           Resumo de Lideranças (Estados)
         </h3>
       </div>
-      
+
       <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-8">
         {/* Total por Candidato */}
         <div>
@@ -33,7 +39,17 @@ export const NationalSummary: React.FC<NationalSummaryProps> = ({ summary }) => 
               <div key={id} className="border-b border-gray-50 dark:border-slate-700/50 pb-4 last:border-0 last:pb-0">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-blue-500 shadow-sm shadow-blue-500/20"></div>
+                    <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-100 dark:bg-slate-700 shrink-0 border border-gray-100 dark:border-slate-600 shadow-sm">
+                      <img
+                        src={buildCandidatoFotoUrl(ambiente, ciclo, eleicaoCd, 'BR', id, host)}
+                        alt=""
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIGZpbGw9Im5vbmUiIHZpZXdCb3g9IjAgMCAyNCAyNCIgc3Ryb2tlPSIjY2NjIiBzdHJva2Utd2lkdGg9IjIiPjxwYXRoIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIgZD0iTTE2IDd2Mk04IDd2Mm0tMiAxMGgxMmExIDEgMCAwMCAtMSAtMWgtMTBhMSAxIDAgMDAtMSAxek04IDIxYTIgMiAwIDAwNCAwTTEyIDExYTMgMyAwIDExMC02IDMgMyAwIDAxMCA2eiIvPjwvc3ZnPg==';
+                          (e.target as HTMLImageElement).classList.add('opacity-70');
+                        }}
+                      />
+                    </div>
                     <span className="text-sm font-black text-gray-800 dark:text-gray-100 uppercase tracking-tight">{info.nm}</span>
                   </div>
                   <div className="flex items-center gap-2 bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 rounded-full">
@@ -41,7 +57,7 @@ export const NationalSummary: React.FC<NationalSummaryProps> = ({ summary }) => 
                     <span className="text-[8px] text-blue-600/60 dark:text-blue-400/60 font-black uppercase">UFs</span>
                   </div>
                 </div>
-                
+
                 <div className="flex flex-wrap gap-2">
                   {info.ufVitorias
                     .sort((a, b) => b.pvap - a.pvap)
@@ -49,7 +65,7 @@ export const NationalSummary: React.FC<NationalSummaryProps> = ({ summary }) => 
                       // Status dot color logic
                       let dotColor = 'bg-amber-500'; // Em andamento
                       let pingColor = 'bg-amber-400';
-                      
+
                       if (item.esae) {
                         dotColor = 'bg-orange-600'; // ESAE
                         pingColor = 'bg-orange-400';
@@ -64,8 +80,8 @@ export const NationalSummary: React.FC<NationalSummaryProps> = ({ summary }) => 
                       return (
                         <div key={item.uf} className="flex flex-col items-center group">
                           <div className="relative">
-                            <img 
-                              src={`/flags/${item.uf.toLowerCase()}.svg`} 
+                            <img
+                              src={`/flags/${item.uf.toLowerCase()}.svg`}
                               alt={item.uf}
                               className="w-6 h-4 object-cover rounded-[1px] shadow-sm border border-gray-100 dark:border-slate-700 group-hover:scale-110 transition-transform"
                             />

@@ -180,3 +180,11 @@ As conversões automáticas pré-computadas baseadas nos sufixos `Num` que perco
 180:   - A ação de favoritar é **atômica para o grupo**: ao clicar, todos os turnos do grupo (T1 e T2) são favoritados ou desfavoritados simultaneamente no `localStorage`.
 181:   - O filtro "Favoritas" considera o grupo como um todo; se o ID de qualquer turno do grupo estiver no set de favoritos, o grupo é exibido.
 182: - **Localização:** `src/components/EA11Viewer.tsx`.
+
+## Regra 17: Resolução de Diretório de Fotos (Nacional vs Estadual)
+- **Nome:** Normalização de Path para Fotos de Candidatos
+- **Descrição:** Garante que o sistema aponte para o diretório correto do servidor de mídia do TSE dependendo do escopo do cargo.
+- **Comportamento:**
+  - **Se o cargo for Federal (Presidente/Vice):** O parâmetro `uf` das URLs de fotos é forçado para **`BR`**, refletindo a estrutura centralizada do TSE para pleitos nacionais.
+  - **Para demais cargos (Governador/Senador):** O sistema utiliza a sigla da UF específica onde o candidato concorre.
+- **Localização:** `src/components/national-board/UFCard.tsx`, `src/components/national-board/NationalSummary.tsx` e `src/services/ea20Service.ts`.
