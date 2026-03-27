@@ -15,6 +15,7 @@ import { VoteVisualization } from './ea20/VoteVisualization';
 import { SecoesSummary, EleitoresSummary } from './ea20/SummaryCards';
 import { CandCard } from './ea20/CandidateCards';
 import { RespostaCard } from './ea20/RespostaCard';
+import { mapEA20Destinacao } from '../utils/ea20Mappers';
 
 export function EA20Viewer({
   ciclo,
@@ -54,7 +55,7 @@ export function EA20Viewer({
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'fav' | 'eleitos' | 'valido' | 'legenda' | 'anulado' | 'subjudice'>('all');
   const [partyFilter, setPartyFilter] = useState('all');
-  const [sortMode, setSortMode] = useState<'votos' | 'nome' | 'partido' | 'eleito' | 'idade'>('votos');
+  const [sortMode, setSortMode] = useState<'tse' | 'votos' | 'nome' | 'partido' | 'eleito' | 'idade'>('tse');
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [validationExpanded, setValidationExpanded] = useState(false);
 
@@ -231,12 +232,16 @@ export function EA20Viewer({
     // 2. Status Filter
     if (statusFilter !== 'all') {
       list = list.filter((item: any) => {
+        const rawDvt = (item.cand.dvt || '').toLowerCase();
+        // Robust check: use adapted value OR map on the fly
+        const dvt = item.cand._adaptedDvt || mapEA20Destinacao(item.cand.dvt);
+
         if (statusFilter === 'fav') return favorites.has(item.cand.sqcand);
         if (statusFilter === 'eleitos') return item.cand.e === 's';
-        if (statusFilter === 'legenda') return item.cand.dvt === 'Válidos (legenda)';
-        if (statusFilter === 'valido') return item.cand.dvt === 'Válido';
-        if (statusFilter === 'anulado') return item.cand.dvt === 'Anulado';
-        if (statusFilter === 'subjudice') return item.cand.dvt === 'Sub-Judice';
+        if (statusFilter === 'legenda') return rawDvt.includes('legenda');
+        if (statusFilter === 'valido') return dvt === 'valido' && !rawDvt.includes('legenda');
+        if (statusFilter === 'anulado') return dvt === 'anulado';
+        if (statusFilter === 'subjudice') return dvt === 'sub-judice';
         return true;
       });
     }
@@ -255,6 +260,12 @@ export function EA20Viewer({
 
       if (sortMode === 'votos') {
         return b.cand._vapNum - a.cand._vapNum;
+      }
+      if (sortMode === 'tse') {
+        const aSeq = parseInt(a.cand.seq, 10) || 0;
+        const bSeq = parseInt(b.cand.seq, 10) || 0;
+        if (aSeq !== bSeq) return aSeq - bSeq;
+        return a.cand.nmu.localeCompare(b.cand.nmu);
       }
       if (sortMode === 'nome') {
         return a.cand.nmu.localeCompare(b.cand.nmu);
@@ -294,9 +305,13 @@ export function EA20Viewer({
       all: isConsultaPopular ? allRespostas.length : raw.length,
       fav: raw.filter((c: any) => favorites.has(c.sqcand)).length,
       eleitos: raw.filter((c: any) => c.e === 's').length,
-      legenda: raw.filter((c: any) => c.dvt === 'Válidos (legenda)').length,
-      anulado: raw.filter((c: any) => c.dvt === 'Anulado').length,
-      subjudice: raw.filter((c: any) => c.dvt === 'Sub-Judice').length,
+      valido: raw.filter((c: any) => {
+        const dvt = c._adaptedDvt || mapEA20Destinacao(c.dvt);
+        return dvt === 'valido' && !(c.dvt || '').toLowerCase().includes('legenda');
+      }).length,
+      legenda: raw.filter((c: any) => (c.dvt || '').toLowerCase().includes('legenda')).length,
+      anulado: raw.filter((c: any) => (c._adaptedDvt || mapEA20Destinacao(c.dvt)) === 'anulado').length,
+      subjudice: raw.filter((c: any) => (c._adaptedDvt || mapEA20Destinacao(c.dvt)) === 'sub-judice').length,
     };
   }, [cargoData, favorites, isConsultaPopular, allRespostas]);
 
@@ -500,7 +515,7 @@ export function EA20Viewer({
                           try {
                             const parsed = JSON.parse(editValue);
                             setPreviousData(localData);
-                            setLocalData(parsed);
+                            setLocalData(adaptEA20Response(parsed));
                             setIsModified(true);
                             setIsEditing(false);
                             setShowRawJson(false);
@@ -601,7 +616,7 @@ export function EA20Viewer({
                             { key: 'all', label: `Todos (${filterCounts.all})`, color: 'blue' },
                             { key: 'fav', label: `★ Favoritos (${filterCounts.fav})`, color: 'pink' },
                             { key: 'eleitos', label: `✓ Eleitos (${filterCounts.eleitos})`, color: 'green' },
-                            { key: 'valido', label: `Válido`, color: 'indigo' },
+                            { key: 'valido', label: `Válido (${filterCounts.valido})`, color: 'indigo' },
                             { key: 'legenda', label: `Legenda (${filterCounts.legenda})`, color: 'cyan', hide: isMajority },
                             { key: 'anulado', label: `Anulado (${filterCounts.anulado})`, color: 'orange' },
                             { key: 'subjudice', label: `Sub Judice (${filterCounts.subjudice})`, color: 'yellow' },
@@ -615,6 +630,7 @@ export function EA20Viewer({
                               cyan: 'bg-cyan-600 text-white',
                               orange: 'bg-orange-600 text-white',
                               purple: 'bg-purple-600 text-white',
+                              yellow: 'bg-amber-500 text-white',
                             }[color];
                             return (
                               <button
@@ -633,6 +649,7 @@ export function EA20Viewer({
                           onChange={(e) => setSortMode(e.target.value as any)}
                           className="text-xs bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-gray-300 rounded-lg px-2 py-1.5 transition-colors focus:ring-1 focus:ring-blue-500"
                         >
+                          <option value="tse">Ordenar: Sequencial (TSE)</option>
                           <option value="votos">Ordenar: Votos (↓)</option>
                           <option value="nome">Ordenar: Nome (ABC)</option>
                           <option value="partido">Ordenar: Partido</option>

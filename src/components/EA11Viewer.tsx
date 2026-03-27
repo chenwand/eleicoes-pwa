@@ -167,16 +167,6 @@ export function EA11Viewer({ isOpen, onClose, initialEleicaoCd }: EA11ViewerProp
   const normalizeString = (str: string) =>
     str.normalize('NFD').replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
-  const toggleFavorite = (cd: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setFavorites(prev => {
-      const next = new Set(prev);
-      if (next.has(cd)) next.delete(cd);
-      else next.add(cd);
-      localStorage.setItem('ea11-fav', JSON.stringify([...next]));
-      return next;
-    });
-  };
 
   const allElections = useMemo(() => {
     if (!ea11Data) return [];
@@ -200,7 +190,12 @@ export function EA11Viewer({ isOpen, onClose, initialEleicaoCd }: EA11ViewerProp
   const filteredElections = useMemo(() => {
     return topLevelElections
       .filter((e) => {
-        if (statusFilter === 'fav' && !favorites.has(e.cd)) return false;
+        if (statusFilter === 'fav') {
+          const eT2Link = e.cdt2 ? allElections.find((t) => t.cd === e.cdt2) : null;
+          const isFavT1 = favorites.has(e.cd);
+          const isFavT2 = eT2Link && favorites.has(eT2Link.cd);
+          if (!isFavT1 && !isFavT2) return false;
+        }
         if (typeFilter !== 'all' && e.tp !== typeFilter) return false;
         if (scopeFilter !== 'all') {
           const isFederal = e.abr.some((a) => a.cd === 'br');
@@ -220,8 +215,10 @@ export function EA11Viewer({ isOpen, onClose, initialEleicaoCd }: EA11ViewerProp
         return true;
       })
       .sort((a, b) => {
-        const aFav = favorites.has(a.cd) ? 0 : 1;
-        const bFav = favorites.has(b.cd) ? 0 : 1;
+        const aFavLink = a.cdt2 ? allElections.find((t) => t.cd === a.cdt2)?.cd : null;
+        const bFavLink = b.cdt2 ? allElections.find((t) => t.cd === b.cdt2)?.cd : null;
+        const aFav = (favorites.has(a.cd) || (aFavLink && favorites.has(aFavLink))) ? 0 : 1;
+        const bFav = (favorites.has(b.cd) || (bFavLink && favorites.has(bFavLink))) ? 0 : 1;
         if (aFav !== bFav) return aFav - bFav;
         if (sortMode === 'data') {
           const [dayA, monthA, yearA] = a.pleitoDt.split('/');
@@ -504,42 +501,87 @@ export function EA11Viewer({ isOpen, onClose, initialEleicaoCd }: EA11ViewerProp
               {/* List */}
               <div className="space-y-3">
                 {filteredElections.map((e: any) => {
-                  const isCurrentlySelected = selectedEleicao?.cd === e.cd;
+                  const isCurrentlySelectedT1 = selectedEleicao?.cd === e.cd;
+                  const eT2 = e.cdt2 ? allElections.find((t: any) => t.cd === e.cdt2) : null;
+                  const isCurrentlySelectedT2 = eT2 && selectedEleicao?.cd === eT2.cd;
+
+                  const RenderElectionItem = ({ item, isT2 = false }: { item: any, isT2?: boolean }) => {
+                    const isSelected = selectedEleicao?.cd === item.cd;
+                    return (
+                      <div
+                        onClick={(ev) => {
+                          ev.stopPropagation();
+                          setLocalSelectedEleicaoCd(item.cd);
+                        }}
+                        className={`flex justify-between items-center p-2 rounded-md border transition-all ${isSelected
+                            ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-400 dark:border-blue-700'
+                            : 'bg-gray-50 dark:bg-slate-900/40 border-transparent hover:border-gray-300 dark:hover:border-slate-600'
+                          }`}
+                      >
+                        <div className="flex flex-col gap-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider ${isT2 ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300' : 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'}`}>
+                              {isT2 ? '2º Turno' : '1º Turno'}
+                            </span>
+                            <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{item.pleitoDt}</span>
+                            {isSelected && (
+                              <span className="w-2 h-2 bg-blue-600 dark:bg-blue-400 rounded-full animate-pulse shadow-[0_0_8px_rgba(37,99,235,0.6)]"></span>
+                            )}
+                          </div>
+                          <div className="text-[10px] text-gray-500 dark:text-gray-400 truncate">
+                            ID: {item.cd} • {formatTipoEleicao(item.tp)}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  };
+
                   return (
                     <div
                       key={e.cd}
-                      className={`bg-white dark:bg-slate-800 border-2 rounded-lg p-4 cursor-pointer transition-all ${isCurrentlySelected
-                          ? 'border-blue-600 dark:border-blue-500 shadow-lg shadow-blue-500/10'
+                      className={`bg-white dark:bg-slate-800 border-2 rounded-xl p-4 transition-all ${isCurrentlySelectedT1 || isCurrentlySelectedT2
+                          ? 'border-blue-600 dark:border-blue-500 shadow-xl shadow-blue-500/10'
                           : 'border-gray-200 dark:border-slate-700 hover:border-blue-400 dark:hover:border-blue-600'
                         }`}
-                      onClick={() => setLocalSelectedEleicaoCd(e.cd)}
                     >
-                      <div className="flex justify-between items-start">
-                        <div className="flex flex-col gap-1">
-                          <h3 className="font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
-                            <button onClick={(ev) => toggleFavorite(e.cd, ev)} className={favorites.has(e.cd) ? 'text-pink-500' : 'text-gray-300'}>
-                              <svg className="w-5 h-5" fill={favorites.has(e.cd) ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>
-                            </button>
+                      <div className="flex justify-between items-start mb-4">
+                        <div className="flex items-center gap-2">
+                          <div className="p-2 bg-blue-50 dark:bg-blue-900/30 rounded-lg shrink-0">
+                            <svg className="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                          </div>
+                          <h3 className="font-bold text-gray-800 dark:text-gray-100 leading-tight">
                             {e.nm.replace(/&#186;/g, 'º')}
                           </h3>
-                          {isCurrentlySelected && (
-                            <span className="text-[9px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest flex items-center gap-1 mt-0.5">
-                              <span className="w-1.5 h-1.5 bg-blue-600 dark:bg-blue-400 rounded-full animate-pulse"></span>
-                              Eleição Selecionada
-                            </span>
-                          )}
                         </div>
-                        <span className={`text-xs font-mono px-1.5 py-0.5 rounded ${isCurrentlySelected
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300'
-                          }`}>ID: {e.cd}</span>
+                        <button
+                          onClick={(ev) => {
+                            ev.stopPropagation();
+                            // Logic: If any is already fav, remove all. Otherwise, add all.
+                            const isGroupFav = favorites.has(e.cd) || (eT2 && favorites.has(eT2.cd));
+                            
+                            setFavorites(prev => {
+                              const next = new Set(prev);
+                              if (isGroupFav) {
+                                next.delete(e.cd);
+                                if (eT2) next.delete(eT2.cd);
+                              } else {
+                                next.add(e.cd);
+                                if (eT2) next.add(eT2.cd);
+                              }
+                              localStorage.setItem('ea11-fav', JSON.stringify([...next]));
+                              return next;
+                            });
+                          }}
+                          className={`p-1.5 rounded-full transition-colors shrink-0 ${ (favorites.has(e.cd) || (eT2 && favorites.has(eT2.cd))) ? 'bg-pink-50 dark:bg-pink-900/20 text-pink-500' : 'bg-gray-50 dark:bg-slate-700/50 text-gray-300 hover:text-gray-400'}`}
+                          title="Favoritar grupo de eleições"
+                        >
+                          <svg className="w-5 h-5" fill={(favorites.has(e.cd) || (eT2 && favorites.has(eT2.cd))) ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>
+                        </button>
                       </div>
-                      <div className={`flex gap-2 mt-2 text-xs ${isCurrentlySelected ? 'text-gray-600 dark:text-gray-300 font-medium' : 'text-gray-500'}`}>
-                        <span>Turno {e.t}</span>
-                        <span>•</span>
-                        <span>{formatTipoEleicao(e.tp)}</span>
-                        <span>•</span>
-                        <span>{e.pleitoDt}</span>
+
+                      <div className="space-y-2.5">
+                        <RenderElectionItem item={e} isT2={false} />
+                        {eT2 && <RenderElectionItem item={eT2} isT2={true} />}
                       </div>
                     </div>
                   );

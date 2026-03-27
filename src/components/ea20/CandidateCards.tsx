@@ -27,23 +27,43 @@ export function CandCard({
   const vap = cand._vapNum;
   const pct = totalVotos > 0 ? (vap / totalVotos) * 100 : 0;
   const isEleito = cand.e === 's';
-  const dvtNaoValido = cand.dvt && cand.dvt !== 'Válido';
+  const rawDvt = (cand.dvt || '').toLowerCase();
+  const isAnulado = cand._adaptedDvt === 'anulado' || (rawDvt.includes('anulado') && !rawDvt.includes('sub judice'));
+  const isSubJudice = cand._adaptedDvt === 'sub-judice' || rawDvt.includes('sub judice');
 
   const borderBg = isEleito
-    ? 'border-green-400 dark:border-green-600 bg-green-50/50 dark:bg-green-900/10'
-    : dvtNaoValido
-      ? 'border-orange-300 dark:border-orange-700 bg-orange-50/30 dark:bg-orange-900/10'
-      : 'border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800/40';
+    ? 'border-2 border-green-400 dark:border-green-600 bg-green-50/50 dark:bg-green-900/10'
+    : isAnulado
+      ? '!border-2 !border-red-500 dark:!border-red-700 bg-red-50/40 dark:bg-red-900/10'
+      : isSubJudice
+        ? '!border-2 !border-orange-500 dark:!border-orange-700 bg-orange-50/40 dark:bg-orange-900/10'
+        : 'border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800/40';
 
-  const barColor = isEleito ? 'bg-green-500' : dvtNaoValido ? 'bg-orange-400' : 'bg-blue-500';
-  const pctColor = isEleito ? 'text-green-700 dark:text-green-400' : dvtNaoValido ? 'text-orange-600 dark:text-orange-400' : 'text-blue-700 dark:text-blue-400';
+  const barColor = isEleito 
+    ? 'bg-green-500' 
+    : isAnulado 
+      ? 'bg-red-500' 
+      : isSubJudice 
+        ? 'bg-orange-400' 
+        : 'bg-blue-500';
+
+  const pctColor = isEleito 
+    ? 'text-green-700 dark:text-green-400' 
+    : isAnulado 
+      ? 'text-red-600 dark:text-red-400' 
+      : isSubJudice 
+        ? 'text-orange-600 dark:text-orange-400' 
+        : 'text-blue-700 dark:text-blue-400';
 
   if (isProportional) {
     // Compact table row for proportional cargos
     return (
       <>
         <tr
-          className={`border-b border-gray-100 dark:border-slate-800 cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-800/60 transition-colors ${isEleito ? 'bg-green-50/40 dark:bg-green-900/10' : ''}`}
+          className={`border-b border-gray-100 dark:border-slate-800 cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-800/60 transition-colors 
+            ${isEleito ? 'bg-green-50/40 dark:bg-green-900/10' : 
+              isAnulado ? 'bg-red-50/40 dark:bg-red-900/10' : 
+              isSubJudice ? 'bg-orange-50/40 dark:bg-orange-900/10' : ''}`}
           onClick={() => setExpanded(!expanded)}
         >
           <td className="py-2 px-3 font-mono text-xs text-gray-500 w-10">{cand.n}</td>
@@ -128,7 +148,10 @@ export function CandCard({
           <img
             src={buildCandidatoFotoUrl(ambiente, ciclo, eleicaoCd, uf, cand.sqcand, host)}
             alt={cand.nmu}
-            className="w-12 h-14 object-cover rounded shadow-sm border border-gray-200 dark:border-slate-700 shrink-0"
+            className={`w-12 h-14 object-cover rounded shadow-sm border shrink-0 
+              ${isEleito ? 'border-green-400 dark:border-green-600' : 
+                isAnulado ? 'border-red-400 dark:border-red-600' : 
+                isSubJudice ? 'border-orange-400 dark:border-orange-600' : 'border-gray-200 dark:border-slate-700'}`}
             onError={() => setFotoError(true)}
           />
         )}
@@ -146,7 +169,7 @@ export function CandCard({
                 <span className="font-bold text-gray-800 dark:text-gray-100 truncate">{cand.nmu}</span>
                 {dvtBadge(cand.dvt)}
                 {isEleito && (
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300 font-bold shrink-0">✓ Eleito</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300 font-bold shrink-0">✓ {cand.st}</span>
                 )}
               </div>
               <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
@@ -183,11 +206,24 @@ export function CandCard({
   );
 }
 
-export function CandDetail({ 
-  cand, agr, ambiente, ciclo, eleicaoCd, uf, fotoError, setFotoError, host, isProportional 
-}: { 
-  cand: UI_EA20Candidato; agr: UI_EA20Agrupamento; ambiente: string; ciclo: string; eleicaoCd: string; uf: string; fotoError: boolean; setFotoError: (e: boolean) => void; host: string; isProportional: boolean; 
+export function CandDetail({
+  cand, agr, ambiente, ciclo, eleicaoCd, uf, fotoError, setFotoError, host, isProportional
+}: {
+  cand: UI_EA20Candidato; agr: UI_EA20Agrupamento; ambiente: string; ciclo: string; eleicaoCd: string; uf: string; fotoError: boolean; setFotoError: (e: boolean) => void; host: string; isProportional: boolean;
 }) {
+  const isEleito = cand.e === 's';
+  const rawDvt = (cand.dvt || '').toLowerCase();
+  const isAnulado = cand._adaptedDvt === 'anulado' || (rawDvt.includes('anulado') && !rawDvt.includes('sub judice'));
+  const isSubJudice = cand._adaptedDvt === 'sub-judice' || rawDvt.includes('sub judice');
+
+  const photoBorderCls = isEleito
+    ? 'border-green-400 dark:border-green-600'
+    : isAnulado
+      ? '!border-2 border-red-500 dark:border-red-700'
+      : isSubJudice
+        ? '!border-2 border-orange-500 dark:border-orange-700'
+        : 'border-gray-200 dark:border-slate-600';
+
   const fotoUrl = buildCandidatoFotoUrl(ambiente, ciclo, eleicaoCd, uf, cand.sqcand, host);
   const partido = agr.par.find((p: UI_EA20Partido) => p.cand.some((c: UI_EA20Candidato) => c.sqcand === cand.sqcand));
   const showPhotoInDetail = isProportional; // Only show in detail if not already in card
@@ -198,7 +234,7 @@ export function CandDetail({
         <img
           src={fotoUrl}
           alt={cand.nmu}
-          className="w-16 h-20 object-cover rounded shadow border border-gray-200 dark:border-slate-600 shrink-0"
+          className={`w-16 h-20 object-cover rounded shadow border shrink-0 ${photoBorderCls}`}
           onError={() => setFotoError(true)}
         />
       )}

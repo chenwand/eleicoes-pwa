@@ -147,3 +147,36 @@ As conversões automáticas pré-computadas baseadas nos sufixos `Num` que perco
   2. O hook `useNationalBoard` valida o `cargoCd` fornecido contra a lista de cargos majoritários (`1, 3, 5`) REALMENTE disponíveis na eleição ativa.
   3. Se o cargo selecionado for inválido para o novo contexto, o sistema faz o fallback automático para o melhor cargo majoritário disponível (Presidente > Governador > Senador).
 - **Localização:** `src/components/NationalBoardModal.tsx`, `src/hooks/useNationalBoard.ts`.
+151: 
+152: ## Regra 13: Resiliência e Sincronização de Status (EA20 UI)
+153: - **Nome:** Robustez Visual de Status de Destinação (Votos)
+154: - **Descrição:** Garante que a sinalização visual nos cards de candidatos (border/badges) e os contadores nos filtros superiores (`filterCounts`) estejam sempre sincronizados, mesmo sob condições de dados imprecisos ou parciais.
+155: - **Comportamento Lógico:**
+156:   - **Prioridade de Propriedade:** O sistema prioriza a propriedade adaptada (`_adaptedDvt`), mas **sempre** utiliza a função utilitária `mapEA20Destinacao` como fallback síncrono.
+157:   - **Escopo:** Aplicado tanto no filtro de exibição da lista quanto no cálculo dos contadores das "pílulas" de filtro (Todos, Eleitos, Válidos, Anulados, Sub Judice).
+158: - **Localização:** `src/components/EA20Viewer.tsx`, `src/utils/ea20Mappers.ts`.
+159: 
+160: ## Regra 14: Integridade de Dados em Edição Local (JSON Editor)
+161: - **Nome:** Adaptação Reativa de Injeção Manual de Dados
+162: - **Descrição:** Ao editar ou injetar manualmente um JSON de resultados via Editor (ou Upload Local), o sistema garante a paridade de funcionalidades com o fluxo de rede.
+163: - **Comportamento:** O dado injetado é imediatamente processado pelo `adaptEA20Response()` antes de ser persistido no estado `localData`.
+164: - **Objetivo:** Garante que todas as propriedades computadas (sufixos `_Num`, `_adaptedStatus`, etc.) sejam regeneradas, mantendo o funcionamento dos filtros, contadores e tendências visuais sem depender de um novo fetch.
+165: - **Localização:** `src/components/EA20Viewer.tsx` (fluxo de salvamento do editor).
+165: 
+166: ## Regra 15: Agrupamento de Eleições por Ciclo de Turnos (EA11)
+167: - **Nome:** Consolidação Visual de 1º e 2º Turnos
+168: - **Descrição:** Garante que eleições relacionadas (mesma localidade/cargo, mas turnos diferentes) sejam apresentadas como uma única unidade lógica para o usuário.
+169: - **Comportamento Lógico:**
+170:   - O sistema identifica o "par" de eleições usando a propriedade `cdt2` da eleição de 1º turno.
+171:   - Na listagem principal, apenas a eleição de "topo" (geralmente T1) é listada, mas o card exibe sub-itens para cada turno disponível.
+172:   - A busca (Search) e os filtros (Tipo/Abrangência) operam sobre as propriedades de ambos os turnos no grupo, garantindo que o grupo apareça se qualquer um dos turnos for compatível.
+173: - **Localização:** `src/components/EA11Viewer.tsx` (lógica de `topLevelElections` e `RenderElectionItem`).
+174: 
+175: ## Regra 16: Unificação de Favoritos em Grupos de Eleição
+176: - **Nome:** Favorito Mestre por Unidade Eleitoral
+177: - **Descrição:** Simplifica a gestão de favoritos em cenários de múltiplos turnos.
+178: - **Comportamento:**
+179:   - Existe apenas **um botão de favorito (coração)** por grupo, localizado no cabeçalho do card.
+180:   - A ação de favoritar é **atômica para o grupo**: ao clicar, todos os turnos do grupo (T1 e T2) são favoritados ou desfavoritados simultaneamente no `localStorage`.
+181:   - O filtro "Favoritas" considera o grupo como um todo; se o ID de qualquer turno do grupo estiver no set de favoritos, o grupo é exibido.
+182: - **Localização:** `src/components/EA11Viewer.tsx`.

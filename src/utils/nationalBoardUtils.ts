@@ -6,7 +6,8 @@ export interface CandidateSummary {
   nm: string;
   v: number;            // Votos nominais (exibição amigável)
   pvap: number;         // % de votos válidos
-  st: 'eleito' | 'nao-eleito';
+  st: 'eleito' | 'nao-eleito' | 'segundo-turno' | 'suplente';
+  e: 's' | 'n';
   dvt: 'valido' | 'anulado' | 'sub-judice';
 }
 
@@ -63,6 +64,7 @@ export function extractUFSummary(response: UI_EA20Response, ufCd: string, ufNome
             v: cand._vapNum,
             pvap: cand._pvapNum,
             st: cand._adaptedSt,
+            e: cand.e,
             dvt: cand._adaptedDvt
           });
         });

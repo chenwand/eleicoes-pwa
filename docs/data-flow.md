@@ -32,7 +32,8 @@ sequenceDiagram
 
 ### 1. Extremos de Origem: Online Pollings vs Arquivo Local
 - **Rotina Padrão Network:** Origem puramente na infraestrutura TSE via requisição REST perene aos servidores estáticos remotos configurados no Painel.
-- **Rotina Override (Auditoria Offline):** Em modo Sandboxed sem internet, o usuário despacha arquivos `EA14`, `EA15` ou `EA20` pelo Header. O Blobs invadem os Modais saltando `Services` inteiramente.
+- **Rotina Override (Auditoria Offline):** Em modo Sandboxed sem internet, o usuário despacha arquivos `EA14`, `EA15` ou `EA20` pelo Header. Os Blobs invadem os Modais saltando `Services` inteiramente.
+- **Rotina de Edição (JSON Editor):** Ao salvar alterações no editor visual, o JSON stringificado é re-parseado e forçado através do `adaptEA20Response`, garantindo a atualização imediata dos contadores e estilos baseados em propriedades computadas.
   *(Aprimoramento 4B)*: Arquivos locais no ato da Dropzone são forçados pela interceptação manual aos mesmos métodos `Adapters`, mantendo a igual tipagem rígida unificada de leitura em Componentes do que os canais Online.
 
 ### 2. A Camada "UI Adapters" (Fase 4B)

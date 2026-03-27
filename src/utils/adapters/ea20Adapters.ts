@@ -1,6 +1,6 @@
-import type { 
-  EA20Response, EA20Cargo, EA20Agrupamento, EA20Partido, 
-  EA20Candidato, EA20Pergunta, EA20Resposta, EA20Secoes, EA20Eleitores, EA20Votos 
+import type {
+  EA20Response, EA20Cargo, EA20Agrupamento, EA20Partido,
+  EA20Candidato, EA20Pergunta, EA20Resposta, EA20Secoes, EA20Eleitores, EA20Votos
 } from '../../types/ea20';
 import { parseNum, parsePct } from '../parsers';
 import { mapEA20Status, mapEA20Destinacao } from '../ea20Mappers';
@@ -8,7 +8,7 @@ import { mapEA20Status, mapEA20Destinacao } from '../ea20Mappers';
 export interface UI_EA20Candidato extends EA20Candidato {
   _vapNum: number;
   _pvapNum: number;
-  _adaptedSt: 'eleito' | 'nao-eleito';
+  _adaptedSt: 'eleito' | 'nao-eleito' | 'segundo-turno' | 'suplente';
   _adaptedDvt: 'valido' | 'anulado' | 'sub-judice';
 }
 
@@ -104,8 +104,8 @@ export function adaptEA20Response(data: EA20Response): UI_EA20Response {
     ...data,
     s: { ...data.s, _pstNum: parsePct(data.s?.pst) },
     e: { ...data.e, _pcNum: parsePct(data.e?.pc), _paNum: parsePct(data.e?.pa) },
-    v: { 
-      ...data.v, 
+    v: {
+      ...data.v,
       _tvNum: parseNum(data.v?.tv),
       _vvcNum: parseNum(data.v?.vvc),
       _vvNum: parseNum(data.v?.vv),

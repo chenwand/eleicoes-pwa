@@ -7,9 +7,10 @@ interface UFCardProps {
   onSelect: () => void;
   isLoading?: boolean;
   onRetry?: () => void;
+  showElectedCheck?: boolean;
 }
 
-export const UFCard: React.FC<UFCardProps> = ({ summary, onSelect, isLoading, onRetry }) => {
+export const UFCard: React.FC<UFCardProps> = ({ summary, onSelect, isLoading, onRetry, showElectedCheck = true }) => {
   const { selectAbrangencia } = useElection();
 
   if (isLoading || !summary) {
@@ -114,7 +115,7 @@ export const UFCard: React.FC<UFCardProps> = ({ summary, onSelect, isLoading, on
                   <span className={`truncate ${idx === 0 ? 'font-black text-gray-900 dark:text-gray-50' : 'text-gray-500 dark:text-gray-400 font-medium'}`}>
                     {cand.nm}
                   </span>
-                  {cand.st === 'eleito' && (
+                  {showElectedCheck && (cand.e === 's' || cand.st === 'eleito') && (
                     <span className="text-[9px] text-green-600 dark:text-green-400 font-black">✓</span>
                   )}
                 </div>
