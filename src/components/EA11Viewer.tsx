@@ -70,7 +70,8 @@ export function EA11Viewer({ isOpen, onClose, initialEleicaoCd }: EA11ViewerProp
     ea11Data,
     isEA11Fetching,
     refetchEA11,
-    updateEA11Data
+    updateEA11Data,
+    setEA11Required,
   } = useElection();
 
   const [isClosing, setIsClosing] = useState(false);
@@ -109,12 +110,13 @@ export function EA11Viewer({ isOpen, onClose, initialEleicaoCd }: EA11ViewerProp
 
   useEffect(() => {
     if (isOpen) {
+      setEA11Required(true);
       if (initialEleicaoCd === null) {
         setLocalSelectedEleicaoCd(null);
       } else {
         setLocalSelectedEleicaoCd(initialEleicaoCd || selectedEleicao?.cd || null);
       }
-      
+
       if (selectedAbrangencia && (initialEleicaoCd || selectedEleicao?.cd)) {
         const munPart = selectedAbrangencia.munCdTse ? ` - Cód: ${selectedAbrangencia.munCdTse}` : '';
         setMunSearchText(`${selectedAbrangencia.munNome} (${selectedAbrangencia.ufCd})${munPart}`);
@@ -189,7 +191,7 @@ export function EA11Viewer({ isOpen, onClose, initialEleicaoCd }: EA11ViewerProp
 
   const t2ElectionCodes = useMemo(() => new Set(allElections.map((e) => e.cdt2).filter(Boolean)), [allElections]);
   const topLevelElections = useMemo(() => allElections.filter((e) => !t2ElectionCodes.has(e.cd)), [allElections, t2ElectionCodes]);
-  
+
   const availableTypes = useMemo(() => {
     const types = new Set(allElections.map(e => e.tp));
     return Array.from(types).sort();
@@ -230,17 +232,17 @@ export function EA11Viewer({ isOpen, onClose, initialEleicaoCd }: EA11ViewerProp
         }
         if (sortMode === 'tipo') return formatTipoEleicao(a.tp).localeCompare(formatTipoEleicao(b.tp));
         if (sortMode === 'nome') return a.nm.localeCompare(b.nm);
-        
+
         // Default: Sort by type priority, then date descending
         const TIPO_PRIORITY: Record<string, number> = {
           '8': 1, '1': 2, '3': 3, // Ordinary: Federal > Estadual > Municipal
           '9': 4, '2': 5, '4': 6, // Supplementary: Federal > Estadual > Municipal
           '5': 7, '6': 8, '7': 9, // Popular: Nacional > Estadual > Municipal
         };
-        
+
         const prioA = TIPO_PRIORITY[a.tp] || 99;
         const priob = TIPO_PRIORITY[b.tp] || 99;
-        
+
         if (prioA !== priob) return prioA - priob;
 
         const [dayA, monthA, yearA] = a.pleitoDt.split('/');
@@ -250,16 +252,16 @@ export function EA11Viewer({ isOpen, onClose, initialEleicaoCd }: EA11ViewerProp
         return dateB.getTime() - dateA.getTime();
       });
   }, [topLevelElections, statusFilter, favorites, typeFilter, scopeFilter, searchTerm, allElections, sortMode]);
-  
+
   const availableScopes = useMemo(() => {
     if (!ea12Data) return [];
     let list = flattenEA12Municipios(ea12Data);
-    
+
     const currentEleicao = allElections.find(e => e.cd === localSelectedEleicaoCd);
-    
+
     // Strict Federal check: types 8 (Fed. Ord), 9 (Fed. Sup), 5 (Cons. Pop. Nac)
     const isFederal = !!currentEleicao && ['8', '9', '5'].includes(currentEleicao.tp);
-    
+
     if (isFederal) {
       if (!list.some(m => m.ufCd.toUpperCase() === 'BR')) {
         list.unshift({
@@ -274,9 +276,9 @@ export function EA11Viewer({ isOpen, onClose, initialEleicaoCd }: EA11ViewerProp
       }
     } else {
       // If NOT federal, strictly remove anything that looks like "Brasil" or "BR" scope
-      list = list.filter(m => 
-        m.ufCd.toUpperCase() !== 'BR' && 
-        m.ufNome.toUpperCase() !== 'BRASIL' && 
+      list = list.filter(m =>
+        m.ufCd.toUpperCase() !== 'BR' &&
+        m.ufNome.toUpperCase() !== 'BRASIL' &&
         m.munNome.toUpperCase() !== 'BRASIL'
       );
 
@@ -285,7 +287,7 @@ export function EA11Viewer({ isOpen, onClose, initialEleicaoCd }: EA11ViewerProp
         list = list.filter(m => !m.isUfWide);
       }
     }
-    
+
     return list;
   }, [ea12Data, localSelectedEleicaoCd, allElections]);
 
@@ -466,11 +468,11 @@ export function EA11Viewer({ isOpen, onClose, initialEleicaoCd }: EA11ViewerProp
                 <div className="flex flex-wrap gap-2">
                   <button onClick={() => setStatusFilter('all')} className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase transition-all ${statusFilter === 'all' ? 'bg-blue-600 text-white shadow-md' : 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-400'}`}>Todas</button>
                   <button onClick={() => setStatusFilter('fav')} className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase transition-all ${statusFilter === 'fav' ? 'bg-pink-500 text-white shadow-md' : 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-400'}`}>Favoritas</button>
-                  
+
                   {/* Dynamic Type Filter */}
-                  <select 
-                    value={typeFilter} 
-                    onChange={(e) => setTypeFilter(e.target.value)} 
+                  <select
+                    value={typeFilter}
+                    onChange={(e) => setTypeFilter(e.target.value)}
                     className="text-[10px] font-bold uppercase bg-gray-100 dark:bg-slate-800 border-none rounded-full px-3 py-1 text-gray-600 dark:text-gray-400 focus:ring-1 focus:ring-blue-500 outline-none"
                   >
                     <option value="all">Tipo: Todos</option>
@@ -479,9 +481,9 @@ export function EA11Viewer({ isOpen, onClose, initialEleicaoCd }: EA11ViewerProp
                     ))}
                   </select>
 
-                  <select 
-                    value={scopeFilter} 
-                    onChange={(e) => setScopeFilter(e.target.value as any)} 
+                  <select
+                    value={scopeFilter}
+                    onChange={(e) => setScopeFilter(e.target.value as any)}
                     className="text-[10px] font-bold uppercase bg-gray-100 dark:bg-slate-800 border-none rounded-full px-3 py-1 text-gray-600 dark:text-gray-400 focus:ring-1 focus:ring-blue-500 outline-none"
                   >
                     <option value="all">Abrangência: Todas</option>
@@ -501,26 +503,47 @@ export function EA11Viewer({ isOpen, onClose, initialEleicaoCd }: EA11ViewerProp
 
               {/* List */}
               <div className="space-y-3">
-                {filteredElections.map((e: any) => (
-                  <div key={e.cd} className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg p-4 hover:border-blue-500 cursor-pointer transition-colors" onClick={() => setLocalSelectedEleicaoCd(e.cd)}>
-                    <div className="flex justify-between items-start">
-                      <h3 className="font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
-                        <button onClick={(ev) => toggleFavorite(e.cd, ev)} className={favorites.has(e.cd) ? 'text-pink-500' : 'text-gray-300'}>
-                          <svg className="w-5 h-5" fill={favorites.has(e.cd) ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>
-                        </button>
-                        {e.nm.replace(/&#186;/g, 'º')}
-                      </h3>
-                      <span className="text-xs font-mono bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 px-1.5 py-0.5 rounded">ID: {e.cd}</span>
+                {filteredElections.map((e: any) => {
+                  const isCurrentlySelected = selectedEleicao?.cd === e.cd;
+                  return (
+                    <div
+                      key={e.cd}
+                      className={`bg-white dark:bg-slate-800 border-2 rounded-lg p-4 cursor-pointer transition-all ${isCurrentlySelected
+                          ? 'border-blue-600 dark:border-blue-500 shadow-lg shadow-blue-500/10'
+                          : 'border-gray-200 dark:border-slate-700 hover:border-blue-400 dark:hover:border-blue-600'
+                        }`}
+                      onClick={() => setLocalSelectedEleicaoCd(e.cd)}
+                    >
+                      <div className="flex justify-between items-start">
+                        <div className="flex flex-col gap-1">
+                          <h3 className="font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
+                            <button onClick={(ev) => toggleFavorite(e.cd, ev)} className={favorites.has(e.cd) ? 'text-pink-500' : 'text-gray-300'}>
+                              <svg className="w-5 h-5" fill={favorites.has(e.cd) ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>
+                            </button>
+                            {e.nm.replace(/&#186;/g, 'º')}
+                          </h3>
+                          {isCurrentlySelected && (
+                            <span className="text-[9px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest flex items-center gap-1 mt-0.5">
+                              <span className="w-1.5 h-1.5 bg-blue-600 dark:bg-blue-400 rounded-full animate-pulse"></span>
+                              Eleição Selecionada
+                            </span>
+                          )}
+                        </div>
+                        <span className={`text-xs font-mono px-1.5 py-0.5 rounded ${isCurrentlySelected
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300'
+                          }`}>ID: {e.cd}</span>
+                      </div>
+                      <div className={`flex gap-2 mt-2 text-xs ${isCurrentlySelected ? 'text-gray-600 dark:text-gray-300 font-medium' : 'text-gray-500'}`}>
+                        <span>Turno {e.t}</span>
+                        <span>•</span>
+                        <span>{formatTipoEleicao(e.tp)}</span>
+                        <span>•</span>
+                        <span>{e.pleitoDt}</span>
+                      </div>
                     </div>
-                    <div className="flex gap-2 mt-2 text-xs text-gray-500">
-                      <span>Turno {e.t}</span>
-                      <span>•</span>
-                      <span>{formatTipoEleicao(e.tp)}</span>
-                      <span>•</span>
-                      <span>{e.pleitoDt}</span>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </>
           ) : (
@@ -593,14 +616,14 @@ export function EA11Viewer({ isOpen, onClose, initialEleicaoCd }: EA11ViewerProp
                             if (eleicaoObj) {
                               selectEleicao(eleicaoObj, ciclo);
                               selectAbrangencia(m);
-                              
+
                               // Always set munSearchText correctly
                               const munPart = m.munCdTse ? ` - Cód: ${m.munCdTse}` : '';
                               setMunSearchText(`${m.munNome} (${m.ufCd})${munPart}`);
-                              
+
                               // Always open EA20 when a scope is selected
                               window.dispatchEvent(new CustomEvent('open-ea20'));
-                              
+
                               handleClose();
                             }
                           }}

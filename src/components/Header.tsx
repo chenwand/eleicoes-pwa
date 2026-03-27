@@ -114,7 +114,6 @@ export function Header({ onLocalFileLoaded }: { onLocalFileLoaded: (data: { type
               <Link to="/" className="flex items-center gap-2 group">
                 <div className="bg-white/10 p-1.5 rounded-lg group-hover:bg-white/20 transition-colors">
                   <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                    {/* Simplified modern logo: chart bars + checkmark */}
                     <path d="M4 11h3v10H4zM10 6h3v15h-3zM16 2h3v19h-3z" className="opacity-70" />
                     <path fill="var(--success)" d="M19.5 5.5l-8 8-4-4-1.5 1.5 5.5 5.5 9.5-9.5z" />
                   </svg>
@@ -136,11 +135,15 @@ export function Header({ onLocalFileLoaded }: { onLocalFileLoaded: (data: { type
 
                 return (
                   <div className={`flex items-center gap-2 mt-1 px-1 transition-all duration-300 ${isPending ? 'opacity-50 animate-pulse' : ''}`}>
-                    <div className="flex flex-col leading-tight">
-                      <span className="text-xs font-bold text-blue-100/80 uppercase tracking-widest">
+                    <div 
+                      className="flex flex-col leading-tight cursor-pointer hover:bg-white/10 rounded px-1 -ml-1 transition-colors group/ele"
+                      title="Clique para mudar de eleição"
+                      onClick={() => window.dispatchEvent(new CustomEvent('open-ea11', { detail: { cd: activeCd } }))}
+                    >
+                      <span className="text-xs font-bold text-blue-100/80 uppercase tracking-widest group-hover/ele:text-white transition-colors">
                         {activeNm}
                       </span>
-                      <span className="text-[10px] text-blue-200/60 font-medium truncate max-w-[250px] sm:max-w-none">
+                      <span className="text-[10px] text-blue-200/60 font-medium truncate max-w-[250px] sm:max-w-none group-hover/ele:text-blue-100 transition-colors">
                         Turno {activeT} • {activeMun} • ID {activeCd}
                       </span>
                     </div>
@@ -283,7 +286,6 @@ export function Header({ onLocalFileLoaded }: { onLocalFileLoaded: (data: { type
                                   </div>
                                 ) : (
                                   <>
-                                    {/* Line 1: Code + Macro+Nature + Turno */}
                                     <div className={`flex items-center gap-1.5 text-xs font-bold ${
                                       isInvalid ? 'text-gray-400 dark:text-gray-500 line-through' : 'text-gray-800 dark:text-gray-100'
                                     }`}>
@@ -293,7 +295,6 @@ export function Header({ onLocalFileLoaded }: { onLocalFileLoaded: (data: { type
                                       <span className="text-gray-300 dark:text-gray-600">·</span>
                                       <span>{fav.context.turno === '2' ? '2T' : '1T'}</span>
                                     </div>
-                                    {/* Line 2: Scope + Location + Ambiente */}
                                     <div className="flex items-center gap-1.5 flex-wrap">
                                       <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${
                                         fav.context.scopeLevel === 'br'
@@ -317,7 +318,6 @@ export function Header({ onLocalFileLoaded }: { onLocalFileLoaded: (data: { type
                                         </span>
                                       )}
                                     </div>
-                                    {/* Alias (secondary, only if renamed differently from auto-name) */}
                                     {fav.name && !fav.name.includes(fav.context.eleicaoNm) && (
                                       <span className="text-[10px] text-gray-400 dark:text-gray-500 truncate italic">
                                         {fav.name}

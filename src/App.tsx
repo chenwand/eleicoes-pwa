@@ -2,11 +2,13 @@ import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { Header } from './components/Header';
+import { NationalBoardModal } from './components/NationalBoardModal';
 import { Home } from './pages/Home';
 import { Dashboard } from './pages/Dashboard';
 import { EA20Viewer } from './components/EA20Viewer';
 import { EA14Viewer } from './components/EA14Viewer';
 import { EA15Viewer } from './components/EA15Viewer';
+import { EA11Viewer } from './components/EA11Viewer';
 import { useAvailableRoles } from './hooks/useAvailableRoles';
 import { useDeepLinkRestore } from './hooks/useDeepLinkRestore';
 import type { Turno } from './types/election';
@@ -27,9 +29,13 @@ export function AppContent({ onLocalFileLoaded, localFile, setLocalFile, turno }
   const [openEA14, setOpenEA14] = useState(false);
   const [openEA15, setOpenEA15] = useState(false);
   const [openEA20, setOpenEA20] = useState(false);
+  const [openEA11, setOpenEA11] = useState(false);
 
   const cargosDisponiveis = useAvailableRoles(selectedEleicao, selectedAbrangencia);
   const { deepLinkError } = useDeepLinkRestore();
+  const [fromNationalBoard, setFromNationalBoard] = useState(false);
+  const [isNationalBoardOpen, setIsNationalBoardOpen] = useState(false);
+  const [ea11InitialCd, setEa11InitialCd] = useState<string | null>();
 
   useEffect(() => {
     if (deepLinkError) {
@@ -43,16 +49,29 @@ export function AppContent({ onLocalFileLoaded, localFile, setLocalFile, turno }
       setOpenEA14(true);
     };
     const handleOpenEA15 = () => setOpenEA15(true);
-    const handleOpenEA20 = () => setOpenEA20(true);
+    const handleOpenEA20 = (e: any) => {
+      setOpenEA20(true);
+      setFromNationalBoard(e.detail?.fromNationalBoard || false);
+      setIsNationalBoardOpen(false);
+    };
+    const handleOpenNationalBoard = () => setIsNationalBoardOpen(true);
+    const handleOpenEA11 = (e: any) => {
+      setEa11InitialCd(e.detail?.cd || null);
+      setOpenEA11(true);
+    };
 
     window.addEventListener('open-ea14', handleOpenEA14);
     window.addEventListener('open-ea15', handleOpenEA15);
     window.addEventListener('open-ea20', handleOpenEA20);
+    window.addEventListener('open-national-board', handleOpenNationalBoard);
+    window.addEventListener('open-ea11', handleOpenEA11);
 
     return () => {
       window.removeEventListener('open-ea14', handleOpenEA14);
       window.removeEventListener('open-ea15', handleOpenEA15);
       window.removeEventListener('open-ea20', handleOpenEA20);
+      window.removeEventListener('open-national-board', handleOpenNationalBoard);
+      window.removeEventListener('open-ea11', handleOpenEA11);
     };
   }, []);
 
@@ -94,11 +113,14 @@ export function AppContent({ onLocalFileLoaded, localFile, setLocalFile, turno }
           cdMun={selectedAbrangencia.munCdTse}
           munNome={selectedAbrangencia.munNome}
           cargosDisponiveis={cargosDisponiveis}
-          onBack={() => setOpenEA20(false)}
+          onBack={() => {
+            setOpenEA20(false);
+            if (fromNationalBoard) {
+              setIsNationalBoardOpen(true);
+            }
+          }}
         />
       )}
-
-    
 
       {localFile?.type === 'EA20' && (
         <EA20Viewer
@@ -136,21 +158,21 @@ export function AppContent({ onLocalFileLoaded, localFile, setLocalFile, turno }
                 Arquivo EA11 Local — Lista de Eleições
               </h2>
               <button onClick={() => setLocalFile(null)} className="p-1.5 hover:bg-gray-200 dark:hover:bg-slate-700 rounded-full transition-colors text-gray-500">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l18 18"></path></svg>
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
               </button>
             </div>
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
               <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-100 dark:border-blue-900/30">
                 Este é o conteúdo do arquivo de configuração (EA11) que você carregou. Mostrando pleitos e eleições disponíveis:
               </p>
-              {localFile.data.pl?.map((pl: { cd: string; dt: string; e: any[] }) => (
+              {localFile.data.pl?.map((pl: any) => (
                 <div key={pl.cd} className="border border-gray-100 dark:border-slate-800 rounded-lg p-3 bg-gray-50/50 dark:bg-slate-800/30">
                   <div className="font-bold text-gray-700 dark:text-gray-300 text-xs uppercase tracking-wider mb-2 flex justify-between">
                     <span>Pleito {pl.cd}</span>
                     <span>{pl.dt}</span>
                   </div>
                   <div className="space-y-2">
-                    {pl.e?.map((e: { cd: string; nm: string; t: string; tp: string }) => (
+                    {pl.e?.map((e: any) => (
                       <div
                         key={e.cd}
                         className="bg-white dark:bg-slate-900 p-3 rounded border border-gray-200 dark:border-slate-700 shadow-sm cursor-pointer hover:border-blue-500 transition-colors"
@@ -174,6 +196,17 @@ export function AppContent({ onLocalFileLoaded, localFile, setLocalFile, turno }
           </div>
         </div>
       )}
+
+      <NationalBoardModal 
+        isOpen={isNationalBoardOpen} 
+        onClose={() => setIsNationalBoardOpen(false)} 
+      />
+
+      <EA11Viewer
+        isOpen={openEA11}
+        onClose={() => setOpenEA11(false)}
+        initialEleicaoCd={ea11InitialCd}
+      />
     </div>
   );
 }
@@ -201,4 +234,3 @@ export default function App() {
     </EnvironmentProvider>
   );
 }
-

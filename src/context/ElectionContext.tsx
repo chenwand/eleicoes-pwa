@@ -23,6 +23,7 @@ interface ElectionContextType {
   switchTurno: () => void;
   refetchEA11: () => Promise<any>;
   updateEA11Data: (data: EA11Response) => void;
+  setEA11Required: (required: boolean) => void;
 
   // Derived state
   isOrdinary: boolean;
@@ -35,9 +36,17 @@ const ElectionContext = createContext<ElectionContextType | undefined>(undefined
 export function ElectionProvider({ children }: { children: ReactNode }) {
   const { ambiente, host } = useEnvironment();
 
+  const [isEA11Required, setEA11Required] = useState(() => {
+    // Enable automatically if we have a deep link or existing selection
+    const hasDeepLink = window.location.search.includes('e=');
+    return hasDeepLink;
+  });
+  
   const { data: ea11Data, isLoading: isEA11Loading, isFetching: isEA11Fetching, refetch: refetchEA11 } = useQuery({
     queryKey: ['ea11-config', ambiente, host],
     queryFn: () => fetchEA11(ambiente, host),
+    enabled: isEA11Required,
+    staleTime: Infinity, // Prevent "toda hora" fetching as requested
   });
 
   const [editedEA11Data, setEditedEA11Data] = useState<EA11Response | null>(null);
@@ -159,6 +168,7 @@ export function ElectionProvider({ children }: { children: ReactNode }) {
       switchTurno,
       refetchEA11,
       updateEA11Data: setEditedEA11Data,
+      setEA11Required,
       isOrdinary,
       hasSelection,
       turnoSwitchAllowed

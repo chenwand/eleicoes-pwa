@@ -112,3 +112,38 @@ As conversões automáticas pré-computadas baseadas nos sufixos `Num` que perco
   - **Restauração:** Depende obrigatoriamente do carregamento dos dados de configuração (`ea11Data`).
 - **Limitação Conhecida:** O processo de restauração entre ambientes (cross-environment) pode apresentar inconsistência visual transitória (flash de estado vazio) no Header/Dashboard durante a transição.
 - **Localização:** `src/hooks/useFavorites.ts`, `src/utils/favoritesStorage.ts`.
+## Regra 10: Quadro Nacional — Estratégia de Descoberta e Fetching
+- **Nome:** Descoberta Dinâmica de Participação (EA11 vs EA12)
+- **Descrição:** Define como o sistema identifica quais arquivos EA20 devem ser solicitados para compor o dashboard nacional/estadual consolidado.
+- **Comportamento por Escopo:**
+  - **Eleição Nacional (Presidente):**
+    1. O sistema verifica se a abrangência `br` consta no `EA11.abr`.
+    2. Se positivo, solicita o arquivo consolidado `BR` (Brasil) **apenas se o cargo for Presidente (1)**.
+    3. Simultaneamente, solicita o arquivo de configuração `EA12` da eleição para descobrir a lista exata de UFs participantes.
+    4. Dispara requisições `EA20` individuais para todas as UFs retornadas pelo `EA12` (incluindo Exterior - `ZZ`, se presente).
+  - **Eleição Estadual (Governador/Senador/etc):**
+    1. O sistema ignora o arquivo `BR` (inexistente para cargos locais).
+    2. Baseia-se exclusivamente na lista de UFs presente no `EA11.abr` da eleição selecionada.
+    3. Filtra apenas as UFs que possuem o cargo alvo (`targetCargoCode`) em sua lista de cargos (`cp[]`).
+- **Restrição de Cargo**: O Quadro Nacional é restrito a cargos majoritários: Presidente (1) > Governador (3) > Senador (5).
+- **Sincronização**: O fetch é puramente manual via botão **Refresh** (staleTime: Infinity), ou automático apenas na **Troca de Cargo** ou **Abertura do Painel**.
+- **Localização:** `src/hooks/useNationalBoard.ts`.
+
+## Regra 11: Navegação Retornável Inteligente (Back-stack Contextual)
+- **Nome:** Rastreamento de Origem para Retorno ao Quadro Nacional
+- **Descrição:** Garante que o fluxo de exploração do usuário não seja interrompido ao mergulhar em detalhes de uma UF.
+- **Comportamento Lógico:**
+  - Ao clicar em um card no Quadro Nacional, o sistema dispara um evento global `open-ea20` com o metadado `fromNationalBoard: true`.
+  - O visualizador `EA20Viewer` captura esse estado de origem.
+  - Se `fromNationalBoard` for verdadeiro, o botão "Voltar" do visualizador não apenas fecha o painel atual, mas dispara um evento `open-national-board` para reabrir o Quadro Nacional no estado em que o usuário o deixou.
+- **Entrada (Entry Point)**: O acesso ao Quadro Nacional é realizado via botão no **Dashboard principal**, posicionado após o botão do painel EA20.
+- **Localização:** `src/components/national-board/UFCard.tsx`, `src/App.tsx`, `src/pages/Dashboard.tsx`, `src/components/Header.tsx`.
+
+## Regra 12: Resiliência de Estado entre Contextos de Eleição
+- **Nome:** Isolamento e Validação de Cargo em Troca de EA11
+- **Descrição:** Garante que seleções de cargo realizadas em uma eleição (ex: Federal) não causem erros de rede ao navegar para outra (ex: Estadual).
+- **Comportamento:**
+  1. O estado de `selectedCargoCd` do Quadro Nacional é resetado (`undefined`) sempre que o `selectedEleicao.cd` muda.
+  2. O hook `useNationalBoard` valida o `cargoCd` fornecido contra a lista de cargos majoritários (`1, 3, 5`) REALMENTE disponíveis na eleição ativa.
+  3. Se o cargo selecionado for inválido para o novo contexto, o sistema faz o fallback automático para o melhor cargo majoritário disponível (Presidente > Governador > Senador).
+- **Localização:** `src/components/NationalBoardModal.tsx`, `src/hooks/useNationalBoard.ts`.

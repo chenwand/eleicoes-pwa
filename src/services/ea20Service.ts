@@ -27,7 +27,7 @@ export function buildEA20Url(
   const paddedCargo = cdCargo.padStart(4, '0');
   const ufLower = uf.toLowerCase();
   const base = `${host}/${ambiente}/${ciclo}/${eleicaoCd}/dados/${ufLower}`;
-  const munPart = `${ufLower}${cdMun}`;
+  const munPart = cdMun === '00000' ? ufLower : `${ufLower}${cdMun}`;
   const zonaPart = zona ? `-z${zona}` : '';
   return `${base}/${munPart}${zonaPart}-c${paddedCargo}-e${paddedEle}-u.json`;
 }

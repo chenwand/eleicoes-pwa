@@ -1,6 +1,5 @@
 import { useElection } from '../context/ElectionContext';
 import { useState } from 'react';
-import { EA11Viewer } from '../components/EA11Viewer';
 import { SettingsModal } from '../components/SettingsModal';
 
 interface DashboardButtonProps {
@@ -9,15 +8,20 @@ interface DashboardButtonProps {
   onClick: () => void;
   description?: string;
   visible?: boolean;
+  highlight?: boolean;
 }
 
-function DashboardButton({ label, icon, onClick, description, visible = true }: DashboardButtonProps) {
+function DashboardButton({ label, icon, onClick, description, visible = true, highlight = false }: DashboardButtonProps) {
   if (!visible) return null;
 
   return (
     <button
       onClick={onClick}
-      className="group relative flex flex-col items-center justify-center p-8 bg-white dark:bg-slate-800 rounded-2xl shadow-lg border border-gray-100 dark:border-slate-700 transition-all duration-300 hover:shadow-2xl hover:-translate-y-2 hover:border-blue-500/50 overflow-hidden"
+      className={`group relative flex flex-col items-center justify-center p-8 bg-white dark:bg-slate-800 rounded-2xl shadow-lg border-2 transition-all duration-300 hover:shadow-2xl hover:-translate-y-2 overflow-hidden ${
+        highlight 
+          ? 'border-blue-500 bg-blue-50/30 dark:bg-blue-900/10 animate-pulse' 
+          : 'border-gray-100 dark:border-slate-700 hover:border-blue-500/50'
+      }`}
     >
       <div className="absolute inset-0 bg-blue-600/5 opacity-0 group-hover:opacity-100 transition-opacity" />
       <div className="text-blue-600 dark:text-blue-400 mb-4 transform group-hover:scale-110 transition-transform duration-300">
@@ -37,13 +41,10 @@ function DashboardButton({ label, icon, onClick, description, visible = true }: 
 
 export function Dashboard() {
   const { hasSelection, isOrdinary, selectedEleicao, selectedAbrangencia } = useElection();
-  const [isEA11Open, setIsEA11Open] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [ea11InitialCd, setEa11InitialCd] = useState<string | null | undefined>();
-
+  
   const openEA11 = (cd?: string | null) => {
-    setEa11InitialCd(cd);
-    setIsEA11Open(true);
+    window.dispatchEvent(new CustomEvent('open-ea11', { detail: { cd } }));
   };
 
   const handleLocalFileClick = () => {
@@ -56,12 +57,13 @@ export function Dashboard() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
         {/* 1. Seleção de eleição (EA11) */}
         <DashboardButton
-          label="Seleção de Eleição (EA11)"
-          description="Acesse a lista de eleições disponíveis"
+          label="Eleição"
+          description={selectedEleicao ? selectedEleicao.nm.replace(/&#186;/g, 'º') : "Selecionar Eleição"}
           icon={
-            <svg className="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
+            <svg className="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
           }
-          onClick={() => openEA11(null)}
+          onClick={() => window.dispatchEvent(new CustomEvent('open-ea11'))}
+          highlight={!selectedEleicao}
         />
 
         {/* 2. Seleção de abrangência (EA12) */}
@@ -124,6 +126,21 @@ export function Dashboard() {
           }}
         />
 
+        {/* 5. Quadro Nacional */}
+        <DashboardButton
+          label="Quadro Nacional"
+          description="Resultados consolidados por UF"
+          visible={!!(selectedEleicao && !['3', '4', '7'].includes(selectedEleicao.tp))}
+          icon={
+            <svg className="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+          }
+          onClick={() => {
+            window.dispatchEvent(new CustomEvent('open-national-board'));
+          }}
+        />
+
         {/* 4. Visualização de arquivos locais */}
         <DashboardButton
           label="Arquivos Locais"
@@ -145,12 +162,6 @@ export function Dashboard() {
         />
 
       </div>
-
-      <EA11Viewer
-        isOpen={isEA11Open}
-        onClose={() => setIsEA11Open(false)}
-        initialEleicaoCd={ea11InitialCd}
-      />
 
       <SettingsModal
         isOpen={isSettingsOpen}

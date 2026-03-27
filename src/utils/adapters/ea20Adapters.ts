@@ -3,10 +3,13 @@ import type {
   EA20Candidato, EA20Pergunta, EA20Resposta, EA20Secoes, EA20Eleitores, EA20Votos 
 } from '../../types/ea20';
 import { parseNum, parsePct } from '../parsers';
+import { mapEA20Status, mapEA20Destinacao } from '../ea20Mappers';
 
 export interface UI_EA20Candidato extends EA20Candidato {
   _vapNum: number;
   _pvapNum: number;
+  _adaptedSt: 'eleito' | 'nao-eleito';
+  _adaptedDvt: 'valido' | 'anulado' | 'sub-judice';
 }
 
 export interface UI_EA20Partido extends Omit<EA20Partido, 'cand'> {
@@ -67,6 +70,8 @@ export function adaptEA20Response(data: EA20Response): UI_EA20Response {
     ...c,
     _vapNum: parseNum(c.vap),
     _pvapNum: parsePct(c.pvap),
+    _adaptedSt: mapEA20Status(c.st),
+    _adaptedDvt: mapEA20Destinacao(c.dvt),
   });
 
   const adaptPartido = (p: EA20Partido): UI_EA20Partido => ({
